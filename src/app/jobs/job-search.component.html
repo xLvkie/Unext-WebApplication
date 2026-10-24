@@ -1,0 +1,251 @@
+<section class="mx-auto max-w-7xl px-4 py-6">
+  <div class="mb-5">
+    <p class="text-sm font-semibold uppercase tracking-wide text-primary">Empleos</p>
+    <h1 class="mt-1 text-3xl font-extrabold tracking-tight text-ink">Buscar trabajo</h1>
+    <p class="mt-1 text-sm text-ink-muted">Vacantes para prácticas y primer empleo. Elige una card para ver el detalle.</p>
+  </div>
+
+  <form class="card mb-4 flex flex-col gap-3 p-3 sm:flex-row" (submit)="$event.preventDefault(); search()">
+    <label class="relative min-w-0 flex-1">
+      <span class="sr-only">Palabra clave</span>
+      <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="M20 20l-3.5-3.5"></path>
+      </svg>
+      <input class="field pl-10" type="search" placeholder="Cargo, empresa o palabra clave" [value]="keyword()" (input)="onKeyword($event)" />
+    </label>
+    <button class="btn-primary sm:w-40" type="submit">Buscar empleo</button>
+  </form>
+
+  <div class="grid items-start gap-4 xl:grid-cols-[250px_minmax(0,1fr)]">
+    <aside class="card p-4">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-sm font-bold text-ink">Filtros</h2>
+        <button class="text-xs font-semibold text-primary" type="button" (click)="clearFilters()">Limpiar</button>
+      </div>
+
+      <label class="mb-3 block text-xs font-semibold text-ink-muted">
+        Modalidad
+        <select class="field mt-1" [value]="modality()" (change)="onModality($event)">
+          @for (option of modalities; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="mb-3 block text-xs font-semibold text-ink-muted">
+        Experiencia
+        <select class="field mt-1" [value]="experience()" (change)="onExperience($event)">
+          @for (option of experiences; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="mb-3 block text-xs font-semibold text-ink-muted">
+        Ubicación
+        <input class="field mt-1" type="search" placeholder="Ciudad o distrito" [value]="location()" (input)="onLocation($event)" />
+      </label>
+
+      <label class="block text-xs font-semibold text-ink-muted">
+        Habilidad
+        <input class="field mt-1" type="search" placeholder="Java, SQL, Figma…" [value]="skill()" (input)="onSkill($event)" />
+      </label>
+    </aside>
+
+    <div class="grid items-start gap-4" [class.job-split]="!!selected() && isWide()">
+      @if (!selected() || isWide()) {
+        <div class="min-w-0">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm text-ink-muted">
+              @if (!auth.session()) {
+                Inicia sesión para buscar
+              } @else if (loading()) {
+                Buscando empleos…
+              } @else {
+                <span class="font-semibold text-ink">{{ filtered().length }}</span>
+                {{ filtered().length === 1 ? 'empleo' : 'empleos' }}
+                @if (mode() === 'recommended') {
+                  afines a tu perfil
+                }
+              }
+            </p>
+            @if (auth.session()?.role === 'POSTULANT') {
+              <div class="flex rounded-lg bg-white p-1 shadow-sm">
+                <button
+                  class="rounded-md px-3 py-1.5 text-xs font-semibold"
+                  [class.bg-primary]="mode() === 'search'"
+                  [class.text-white]="mode() === 'search'"
+                  [class.text-ink-muted]="mode() !== 'search'"
+                  type="button"
+                  (click)="search()"
+                >
+                  Todas
+                </button>
+                <button
+                  class="rounded-md px-3 py-1.5 text-xs font-semibold"
+                  [class.bg-primary]="mode() === 'recommended'"
+                  [class.text-white]="mode() === 'recommended'"
+                  [class.text-ink-muted]="mode() !== 'recommended'"
+                  type="button"
+                  (click)="loadRecommended()"
+                >
+                  Afines a mi perfil
+                </button>
+              </div>
+            }
+          </div>
+
+          @if (error()) {
+            <p class="mb-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{{ error() }}</p>
+          }
+
+          @if (!auth.session()) {
+            <div class="card px-6 py-12 text-center">
+              <h2 class="text-lg font-bold">Ingresa para ver las vacantes</h2>
+              <p class="mt-2 text-sm text-ink-muted">La búsqueda usa tu cuenta de Unext.</p>
+            </div>
+          } @else if (loading()) {
+            <div class="space-y-3">
+              @for (item of [1, 2, 3, 4]; track item) {
+                <div class="card h-36 animate-pulse bg-slate-100"></div>
+              }
+            </div>
+          } @else if (filtered().length === 0) {
+            <div class="card px-6 py-12 text-center">
+              <h2 class="text-lg font-bold">No hay empleos con esos filtros</h2>
+              <p class="mt-2 text-sm text-ink-muted">Prueba otra palabra clave o limpia los filtros.</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (job of visibleJobs(); track job.id) {
+                <article
+                  class="card cursor-pointer p-4 transition hover:border-primary/40"
+                  [class.border-primary]="selected()?.id === job.id"
+                  [class.ring-2]="selected()?.id === job.id"
+                  [class.ring-primary/20]="selected()?.id === job.id"
+                  (click)="select(job)"
+                >
+                  <div class="flex gap-3">
+                    <div class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-bold text-primary">
+                      {{ logo(job) }}
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-start justify-between gap-3">
+                        <h2 class="text-base font-bold text-primary">{{ job.title }}</h2>
+                        @if (job.compatibilityPercent != null) {
+                          <span class="shrink-0 rounded-full bg-success-soft px-2 py-1 text-[11px] font-bold text-accent">{{ affinity(job) }}</span>
+                        }
+                      </div>
+                      <p class="text-sm font-medium text-ink">{{ job.companyName }}</p>
+                      <p class="mt-1 text-xs text-ink-muted">
+                        {{ job.location || 'Ubicación no indicada' }} · {{ modalityText(job) }} · {{ experienceText(job) }}
+                      </p>
+                      <p class="mt-2 text-sm font-semibold text-ink">{{ salary(job) }}</p>
+                      <p class="mt-2 line-clamp-2 text-sm text-ink-muted">{{ preview(job) }}</p>
+                      @if (skills(job).length) {
+                        <div class="mt-3 flex flex-wrap gap-1.5">
+                          @for (skillName of skills(job, 3); track skillName) {
+                            <span class="rounded-full bg-secondary-soft px-2 py-0.5 text-[11px] font-semibold text-primary">{{ skillName }}</span>
+                          }
+                        </div>
+                      }
+                      <div class="mt-3 flex items-center justify-between text-xs text-ink-muted">
+                        <span>{{ posted(job) }}</span>
+                        @if (mode() === 'recommended') {
+                          <button class="font-semibold text-ink-muted hover:text-danger" type="button" (click)="dismiss(job, $event)">No me interesa</button>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+
+            <div class="mt-4 flex flex-col items-center gap-2">
+              <p class="text-xs text-ink-muted">Mostrando {{ visibleJobs().length }} de {{ filtered().length }}</p>
+              @if (canLoadMore()) {
+                <button class="btn-secondary" type="button" (click)="loadMore()">Ver más empleos</button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @if (selected(); as job) {
+        <article class="card sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto p-5">
+          @if (!isWide()) {
+            <button class="mb-3 text-sm font-semibold text-primary" type="button" (click)="closeDetail()">← Volver al listado</button>
+          }
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h2 class="text-2xl font-extrabold tracking-tight text-ink">{{ job.title }}</h2>
+              <p class="mt-1 text-sm font-semibold text-primary">{{ job.companyName }}</p>
+            </div>
+            <div class="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary-soft text-sm font-bold text-primary">
+              {{ logo(job) }}
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+            <span class="rounded-full bg-surface px-2.5 py-1 text-ink-muted">{{ job.location || 'Ubicación no indicada' }}</span>
+            <span class="rounded-full bg-secondary-soft px-2.5 py-1 text-primary">{{ modalityText(job) }}</span>
+            <span class="rounded-full bg-lavender-soft px-2.5 py-1 text-ink">{{ experienceText(job) }}</span>
+            @if (job.compatibilityPercent != null) {
+              <span class="rounded-full bg-success-soft px-2.5 py-1 text-accent">{{ affinity(job) }}</span>
+            }
+          </div>
+
+          <p class="mt-4 text-lg font-bold text-ink">{{ salary(job) }}</p>
+          <p class="text-xs text-ink-muted">{{ posted(job) }}</p>
+
+          <div class="mt-5">
+            @if (auth.session()?.role !== 'POSTULANT') {
+              <p class="rounded-lg bg-surface px-3 py-2 text-sm text-ink-muted">Solo un postulante puede enviar su postulación.</p>
+            } @else if (appliedText(job); as applied) {
+              <p class="rounded-lg bg-success-soft px-3 py-2 text-sm font-semibold text-accent">{{ applied }}</p>
+            } @else {
+              <button class="btn-primary w-full" type="button" [disabled]="applying()" (click)="apply(job)">
+                {{ applying() ? 'Enviando…' : 'Postular' }}
+              </button>
+            }
+            @if (applyMessage()) {
+              <p class="mt-2 text-sm text-ink-muted">{{ applyMessage() }}</p>
+            }
+          </div>
+
+          <section class="mt-6">
+            <h3 class="text-sm font-bold uppercase tracking-wide text-ink-muted">Descripción</h3>
+            <p class="mt-2 whitespace-pre-line text-sm leading-6 text-ink">{{ job.description }}</p>
+          </section>
+
+          @if (job.requirements) {
+            <section class="mt-6">
+              <h3 class="text-sm font-bold uppercase tracking-wide text-ink-muted">Requisitos</h3>
+              <p class="mt-2 whitespace-pre-line text-sm leading-6 text-ink">{{ job.requirements }}</p>
+            </section>
+          }
+
+          @if (skills(job).length) {
+            <section class="mt-6">
+              <h3 class="text-sm font-bold uppercase tracking-wide text-ink-muted">Habilidades</h3>
+              <div class="mt-2 flex flex-wrap gap-2">
+                @for (skillName of skills(job); track skillName) {
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                    [class.bg-success-soft]="matched(job, skillName)"
+                    [class.text-accent]="matched(job, skillName)"
+                    [class.bg-primary-soft]="!matched(job, skillName)"
+                    [class.text-primary]="!matched(job, skillName)"
+                  >
+                    {{ skillName }}
+                  </span>
+                }
+              </div>
+            </section>
+          }
+        </article>
+      }
+    </div>
+  </div>
+</section>

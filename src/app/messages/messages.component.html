@@ -1,0 +1,154 @@
+<section class="h-[calc(100vh-4rem)] bg-surface p-3 sm:p-4">
+  <div class="card flex h-full overflow-hidden">
+    <aside
+      class="w-full flex-col border-line md:w-[340px] md:border-r"
+      [class.flex]="!selected()"
+      [class.hidden]="!!selected()"
+      [class.md:flex]="!!selected()"
+    >
+      <header class="flex items-center justify-between px-4 py-3">
+        <div>
+          <h1 class="text-lg font-extrabold">Mensajes</h1>
+          <p class="text-xs text-ink-muted">Conversaciones directas</p>
+        </div>
+        <button class="grid h-10 w-10 place-items-center rounded-full bg-primary text-white" type="button" title="Nuevo chat" (click)="showPeople.set(!showPeople())">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
+          </svg>
+        </button>
+      </header>
+
+      <div class="px-3 pb-2">
+        <input class="field" type="search" placeholder="Buscar un chat" [value]="query()" (input)="onQuery($event)" />
+      </div>
+
+      @if (showPeople()) {
+        <div class="border-y border-line bg-primary-soft/40 px-3 py-3">
+          <input class="field" type="search" placeholder="Buscar persona, empresa o institución" [value]="peopleQuery()" (input)="onPeopleQuery($event)" />
+          <div class="mt-2 max-h-56 space-y-1 overflow-y-auto">
+            @for (person of people(); track person.userId) {
+              <button class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-white" type="button" (click)="openConversation(person.userId)">
+                <span class="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-white">{{ initialsOf(person.name) }}</span>
+                <span class="min-w-0">
+                  <span class="block truncate text-sm font-semibold">{{ person.name }}</span>
+                  <span class="block text-xs text-ink-muted">{{ person.kind }} · {{ person.subtitle }}</span>
+                </span>
+              </button>
+            } @empty {
+              <p class="px-2 py-3 text-xs text-ink-muted">No hay contactos para mostrar.</p>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        @if (!auth.session()) {
+          <p class="px-4 py-8 text-center text-sm text-ink-muted">Ingresa para ver tus mensajes.</p>
+        } @else if (error()) {
+          <p class="mx-3 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{{ error() }}</p>
+        } @else if (loading() && visibleConversations().length === 0) {
+          <p class="px-4 py-8 text-center text-sm text-ink-muted">Cargando conversaciones…</p>
+        } @else if (visibleConversations().length === 0) {
+          <p class="px-4 py-8 text-center text-sm text-ink-muted">Todavía no tienes chats. Empieza uno con el botón de arriba.</p>
+        } @else {
+          @for (conversation of visibleConversations(); track conversation.userId) {
+            <button
+              class="flex w-full items-center gap-3 px-3 py-3 text-left transition hover:bg-surface"
+              [class.bg-primary-soft]="selectedId() === conversation.userId"
+              type="button"
+              (click)="openConversation(conversation.userId)"
+            >
+              <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-white">
+                {{ initialsOf(conversation.name) }}
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="flex items-baseline justify-between gap-2">
+                  <span class="truncate text-sm font-semibold">{{ conversation.name }}</span>
+                  <span class="shrink-0 text-[11px] text-ink-muted">{{ day(conversation.createdAt) }}</span>
+                </span>
+                <span class="mt-0.5 flex items-center justify-between gap-2">
+                  <span class="truncate text-xs text-ink-muted">{{ conversation.preview }}</span>
+                  @if (conversation.unread) {
+                    <span class="h-2.5 w-2.5 shrink-0 rounded-full bg-primary"></span>
+                  }
+                </span>
+              </span>
+            </button>
+          }
+        }
+      </div>
+    </aside>
+
+    <section class="min-w-0 flex-1 flex-col bg-[#F4F7FB] md:flex" [class.hidden]="!selected()" [class.flex]="!!selected()">
+      @if (selected(); as conversation) {
+        <header class="flex items-center gap-3 border-b border-line bg-white px-4 py-3">
+          <button class="text-sm font-semibold text-primary md:hidden" type="button" (click)="selectedId.set(null)">←</button>
+          <span class="grid h-10 w-10 place-items-center rounded-full bg-primary text-sm font-bold text-white">{{ initialsOf(conversation.name) }}</span>
+          <div class="min-w-0">
+            <h2 class="truncate text-sm font-bold">{{ conversation.name }}</h2>
+            <p class="text-xs text-ink-muted">{{ context(conversation.contextType) || 'Chat directo' }}</p>
+          </div>
+        </header>
+
+        <div #scroller class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4" (scroll)="onScroll($event)">
+          @if (rows().length === 0) {
+            <p class="py-10 text-center text-sm text-ink-muted">Aún no hay mensajes. Escribe el primero.</p>
+          }
+          @for (row of rows(); track row.key) {
+            @if (row.kind === 'day') {
+              <p class="mx-auto w-fit rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-ink-muted shadow-sm">{{ row.label }}</p>
+            } @else {
+              <div class="flex" [class.justify-end]="row.mine" [class.justify-start]="!row.mine">
+                <div
+                  class="max-w-[75%] rounded-2xl px-3 py-2 text-sm shadow-sm"
+                  [class.bg-primary]="row.mine"
+                  [class.text-white]="row.mine"
+                  [class.rounded-br-md]="row.mine"
+                  [class.bg-white]="!row.mine"
+                  [class.text-ink]="!row.mine"
+                  [class.rounded-bl-md]="!row.mine"
+                >
+                  <p class="whitespace-pre-wrap break-words">{{ row.message?.content }}</p>
+                  <p class="mt-1 text-right text-[10px]" [class.text-white/80]="row.mine" [class.text-ink-muted]="!row.mine">
+                    {{ clock(row.message?.createdAt) }}
+                  </p>
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        @if (threadError()) {
+          <p class="mx-4 mb-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{{ threadError() }}</p>
+        }
+
+        <form class="flex items-end gap-2 border-t border-line bg-white px-3 py-3" (submit)="$event.preventDefault(); send()">
+          <textarea
+            class="field max-h-32 min-h-11 resize-none"
+            rows="1"
+            placeholder="Escribe un mensaje"
+            [value]="draft()"
+            (input)="onDraft($event)"
+            (keydown)="onComposerKeydown($event)"
+          ></textarea>
+          <button class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-white disabled:opacity-60" type="submit" [disabled]="sending() || !draft().trim()">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3.4 20.6 21 12 3.4 3.4 3.4 10.2 15.2 12 3.4 13.8z"></path>
+            </svg>
+          </button>
+        </form>
+      } @else {
+        <div class="hidden flex-1 flex-col items-center justify-center px-6 text-center md:flex">
+          <div class="grid h-16 w-16 place-items-center rounded-full bg-primary-soft text-primary">
+            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 12a8.5 8.5 0 0 1-8.5 8.5c-1.4 0-2.7-.3-3.9-.9L3 21l1.5-5.2A8.5 8.5 0 1 1 21 12Z"></path>
+            </svg>
+          </div>
+          <h2 class="mt-4 text-xl font-extrabold">Tus mensajes</h2>
+          <p class="mt-2 max-w-sm text-sm text-ink-muted">Elige una conversación o empieza un chat nuevo. El hilo queda a la derecha, como en WhatsApp.</p>
+        </div>
+      }
+    </section>
+  </div>
+</section>
