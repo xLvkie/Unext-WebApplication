@@ -1,11 +1,64 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #274DEA;
+  --primary-hover: #1E3BB8;
+  --secondary: #8EB9FC;
+  --accent: #8EB9FC;
+  --success: #10B981;
+  --match: #C3A7FF;
+  --destructive: #EF4444;
+  --muted: #6B7280;
+  --muted-foreground: #6B7280;
+  --warning: #F59E0B;
+  --verification: #059669;
+}
+
 body {
   font-family: 'Montserrat', sans-serif;
   color: #111827;
   background-color: #F8FAFC;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Clases de Botones oficiales según la Guía de Diseño UNEXT */
+.btn-primary {
+  @apply bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-semibold rounded-xl px-4 py-2.5 transition-all duration-150 shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply bg-[#8EB9FC] hover:bg-[#79A7F5] text-[#1E3BB8] font-semibold rounded-xl px-4 py-2.5 transition-all duration-150 shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2;
+}
+
+.btn-match {
+  @apply bg-[#C3A7FF] hover:bg-[#B392F8] text-[#2E1065] font-semibold rounded-xl px-4 py-2.5 transition-all duration-150 shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2;
+}
+
+.btn-destructive {
+  @apply bg-[#EF4444] hover:bg-[#DC2626] text-white font-semibold rounded-xl px-4 py-2.5 transition-all duration-150 shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2;
+}
+
+.btn-institutional {
+  @apply bg-[#059669] hover:bg-[#047857] text-white font-semibold rounded-xl px-4 py-2.5 transition-all duration-150 shadow-sm hover:shadow active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2;
+}
+
+/* Badges de Estado con Iconos según la Guía de Diseño UNEXT */
+.icon-badge-success {
+  @apply w-10 h-10 rounded-2xl bg-[#DCFCE7] text-[#10B981] flex items-center justify-center shrink-0;
+}
+
+.icon-badge-warning {
+  @apply w-10 h-10 rounded-2xl bg-[#FEF3C7] text-[#F59E0B] flex items-center justify-center shrink-0;
+}
+
+.icon-badge-info {
+  @apply w-10 h-10 rounded-2xl bg-[#DBEAFE] text-[#274DEA] flex items-center justify-center shrink-0;
+}
+
+.icon-badge-error {
+  @apply w-10 h-10 rounded-2xl bg-[#FEE2E2] text-[#EF4444] flex items-center justify-center shrink-0;
+}
