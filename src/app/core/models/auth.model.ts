@@ -1,8 +1,5 @@
 export type UserRole = 'POSTULANT' | 'RECRUITER' | 'INSTITUTION';
-
-// Indicamos el tipo de datos que se espera recibir en la solicitud de inicio de sesión y registro, 
-// así como la respuesta de autenticación. Esto nos permite tener un control más estricto sobre los datos 
-// que manejamos en nuestra aplicación y facilita la detección de errores en tiempo de compilación.
+export type Role = UserRole;
 
 export interface LoginRequest {
   email: string;
@@ -15,9 +12,12 @@ export interface RegisterRequest {
   role: UserRole;
 }
 
-export interface AuthResponse {
+export interface Session {
   token: string;
-  role?: UserRole;
+  userId: string;
+  role: UserRole;
+  isProfileCompleted: boolean;
   email?: string;
-  isProfileCompleted?: boolean;
 }
+
+export type AuthResponse = Session;

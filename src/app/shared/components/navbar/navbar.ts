@@ -41,7 +41,7 @@ export class Navbar {
   currentRole = this.authService.currentUserRole;
   isLoggedIn = computed(() => !!this.authService.getToken());
 
-  // Configuración escalable: Aquí agregas o editas botones para cualquier segmento en un solo lugar
+  // Configuración escalable: Aquí agregamos o editamos botones para cualquier segmento en un solo lugar
   private readonly allNavItems: NavItem[] = [
     {
       id: 'feed',
