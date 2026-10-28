@@ -1,0 +1,620 @@
+<!-- NAVBAR SUPERIOR REUTILIZABLE -->
+<app-navbar
+  [userName]="fullName()"
+  [userSubtitle]="profile().headline || 'Ver perfil'"
+  [userAvatarUrl]="profile().avatarUrl || null"
+/>
+
+<!-- Inputs ocultos para archivos -->
+<input #avatarInput type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onAvatarSelected($event)" />
+<input #cvInput type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="hidden" (change)="onCvSelected($event)" />
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- COLUMNA PRINCIPAL IZQUIERDA (lg:col-span-9) -->
+      <div class="lg:col-span-9 space-y-4">
+
+        <!-- CARD 1: CABECERA DEL PERFIL -->
+        <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden relative">
+          
+          <div class="h-44 sm:h-52 relative overflow-hidden bg-gradient-to-r from-[#0A192F] via-[#112240] to-[#1E3BB8]">
+            @if (profile().bannerUrl) {
+              <img [src]="profile().bannerUrl" alt="Banner" class="w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-black/15"></div>
+            } @else {
+              <div class="w-full h-full flex flex-col justify-center px-6 sm:pl-48 sm:pr-16">
+                <p class="text-white text-lg sm:text-2xl md:text-3xl font-bold tracking-tight truncate max-w-full">
+                  {{ safeBannerTitle() }}
+                </p>
+                <p class="text-[#8EB9FC] font-mono text-xs sm:text-sm mt-1 truncate max-w-full">
+                  {{ safeBannerSubtitle() }}
+                </p>
+              </div>
+            }
+
+            <button
+              type="button"
+              (click)="isBannerModalOpen.set(true)"
+              class="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-gray-800 text-xs font-semibold flex items-center gap-1.5 shadow-md transition"
+            >
+              <span>Cambiar portada</span>
+            </button>
+          </div>
+
+          <div class="px-6 pb-6 relative">
+            <div class="flex flex-wrap justify-between items-end -mt-16 sm:-mt-20 mb-4 relative z-10 gap-3">
+              <div class="flex items-end gap-3 sm:gap-4 flex-wrap">
+                <div class="relative group">
+                  <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white p-1.5 shadow-md">
+                    <div class="w-full h-full rounded-full bg-gradient-to-br from-[#274DEA] to-[#1E3BB8] text-white font-extrabold text-4xl flex items-center justify-center relative overflow-hidden border-4 border-[#059669]">
+                      @if (profile().avatarUrl) {
+                        <img [src]="profile().avatarUrl" alt="Foto de perfil" class="w-full h-full object-cover" />
+                      } @else {
+                        <span>{{ initials() }}</span>
+                      }
+
+                      <button
+                        type="button"
+                        (click)="avatarInput.click()"
+                        class="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-semibold"
+                      >
+                        <span>Cambiar foto</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                @if (profile().isInstitutionVerified) {
+                  <div class="flex items-center gap-2 pb-2 animate-fade-in">
+                    <div
+                      class="w-11 h-11 rounded-full bg-white border-2 border-[#059669] shadow-sm flex items-center justify-center overflow-hidden"
+                      [title]="'Verificado académicamente por ' + (profile().institutionName || 'Institución')"
+                    >
+                      @if (profile().institutionLogoUrl) {
+                        <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                      } @else {
+                        <span class="text-[11px] font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
+                      }
+                    </div>
+
+                    <div class="px-3 py-1.5 rounded-full bg-[#ECFDF5] border border-[#059669]/30 flex items-center gap-1.5 shadow-2xs">
+                      <span class="text-[11px] font-bold text-[#059669]">
+                        ✓ {{ profile().hasUniversityBase ? 'Estudiante Verificado' : 'Egresado Verificado' }}
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <button
+                type="button"
+                (click)="openEditModal()"
+                class="p-2.5 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+                title="Editar presentación"
+              >
+                ✎
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+              <div class="md:col-span-8">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <h1 class="text-2xl font-bold text-gray-900">{{ fullName() }}</h1>
+
+                  @if (profile().isInstitutionVerified) {
+                    <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border border-[#059669] text-[#059669] bg-[#ECFDF5]">
+                      ✓ Acreditado por {{ profile().institutionName }}
+                    </span>
+                  } @else if (hasPendingAcademicRequest()) {
+                    <button
+                      type="button"
+                      (click)="openAcademicVerificationModal()"
+                      class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border border-[#F59E0B] text-[#B45309] bg-[#FEF3C7]"
+                    >
+                      ⏳ Verificación en revisión por {{ profile().institutionName || 'tu institución' }}
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="openAcademicVerificationModal()"
+                      class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold border border-dashed border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 transition"
+                    >
+                      <span>🎓 Solicitar verificación académica (Estudiante o Egresado)</span>
+                    </button>
+                  }
+                </div>
+
+                <p class="text-[15px] text-gray-800 mt-1.5 leading-snug break-words">
+                  {{ profile().headline || 'Añade un titular profesional para destacar tus habilidades e intereses.' }}
+                </p>
+
+                @if (profile().isInstitutionVerified && profile().hasUniversityBase) {
+                  <div class="mt-3 p-3 rounded-xl bg-[#ECFDF5]/70 border border-[#059669]/25 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
+                    <span class="font-bold text-[#059669]">Carrera: {{ profile().career }}</span>
+                    <span class="text-gray-700 font-semibold">· Ciclo actual: {{ profile().currentCycle }}° Ciclo</span>
+                    <span class="text-gray-600 font-mono">· Código: {{ profile().studentCode }}</span>
+                  </div>
+                }
+
+                <p class="text-[13px] text-[#6B7280] mt-2">
+                  Perú ·
+                  <button type="button" (click)="cvInput.click()" class="text-[#274DEA] font-semibold hover:underline">
+                    {{ profile().cvUrl ? 'Actualizar archivo de CV' : 'Adjuntar archivo de CV (PDF / Word)' }}
+                  </button>
+                </p>
+              </div>
+
+              @if (profile().isInstitutionVerified && profile().institutionName) {
+                <div class="md:col-span-4 flex items-center gap-2.5 md:justify-end">
+                  <div class="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                    @if (profile().institutionLogoUrl) {
+                      <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                    } @else {
+                      <span class="text-xs font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
+                    }
+                  </div>
+                  <div class="text-left">
+                    <p class="text-[13px] font-bold text-gray-900 leading-tight">{{ profile().institutionName }}</p>
+                    <p class="text-[11px] text-[#059669] font-semibold">
+                      {{ profile().hasUniversityBase ? (profile().career + ' · Ciclo ' + profile().currentCycle) : 'Verificación Académica Oficial' }}
+                    </p>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <div class="mt-5 flex flex-wrap items-center gap-2.5">
+              <a routerLink="/jobs" class="px-4 py-1.5 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-semibold text-[14px] shadow-xs transition">
+                Buscar empleos
+              </a>
+              <button type="button" (click)="openSkillModal()" class="px-4 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 font-semibold text-[14px] transition">
+                Añadir aptitud
+              </button>
+              <button type="button" (click)="openSkillValidationFlow()" class="px-4 py-1.5 rounded-full border border-[#059669] text-[#059669] hover:bg-[#ECFDF5] font-semibold text-[14px] transition">
+                Validar mis skills con mi institución
+              </button>
+              <button type="button" (click)="openEditModal()" class="px-4 py-1.5 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 font-semibold text-[14px] transition">
+                Editar presentación
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- CARD 2: ACERCA DE + PRINCIPALES APTITUDES -->
+        <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-[18px] font-bold text-gray-900">Acerca de</h2>
+            <button type="button" (click)="openEditModal()" class="text-xs font-bold text-[#274DEA] hover:underline">
+              Editar resumen
+            </button>
+          </div>
+
+          <p class="text-[14px] text-gray-700 leading-relaxed whitespace-pre-line">
+            {{ profile().bio || 'Aún no has agregado un resumen sobre tu perfil, experiencia o intereses laborales.' }}
+          </p>
+
+          <div class="p-4 rounded-xl border border-gray-200 bg-[#F8FAFC]/60 flex items-start justify-between gap-4">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-lg bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center shrink-0 mt-0.5">
+                💎
+              </div>
+              <div>
+                <h3 class="text-[14px] font-bold text-gray-900">Principales aptitudes (Máx. 3)</h3>
+                @if (topSkills().length > 0) {
+                  <p class="text-[13px] text-gray-800 font-medium mt-0.5">
+                    @for (sk of topSkills(); track sk.id; let last = $last) {
+                      <span>{{ sk.name }}</span>@if (!last) {<span> • </span>}
+                    }
+                  </p>
+                } @else {
+                  <p class="text-[12px] text-[#6B7280] mt-0.5">
+                    Marca con una estrella (★) hasta 3 habilidades para destacarlas aquí.
+                  </p>
+                }
+              </div>
+            </div>
+
+            <button type="button" (click)="openSkillModal()" class="text-xs font-bold text-[#274DEA] hover:underline shrink-0">
+              + Añadir
+            </button>
+          </div>
+        </section>
+
+        <!-- CARD 3 (COMPONENTE LOCAL): HABILIDADES CERTIFICADAS -->
+        <app-profile-skills-card
+          [skills]="profile().skills"
+          [validations]="validations()"
+          [institutionName]="profile().institutionName"
+          [institutionLogoUrl]="profile().institutionLogoUrl"
+          [institutionInitials]="institutionInitials()"
+          (addSkillClick)="openSkillModal()"
+          (validateSkillClick)="openSkillValidationFlow($event)"
+          (toggleTopSkillClick)="handleToggleTopSkill($event)"
+          (deleteSkillClick)="handleDeleteSkill($event)"
+        />
+
+        <!-- CARD 4 (COMPONENTE LOCAL): CURRÍCULUM VITAE CON PREVIEW -->
+        <app-profile-cv-card
+          [cvUrl]="profile().cvUrl"
+          [cvFileName]="profile().cvFileName"
+          [cvFileSize]="profile().cvFileSize"
+          [fullName]="fullName()"
+          (uploadClick)="cvInput.click()"
+          (downloadClick)="downloadOrOpenCv()"
+          (removeClick)="removeCv()"
+        />
+
+      </div>
+
+      <!-- COLUMNA LATERAL DERECHA (COMPONENTE LOCAL) -->
+      <aside class="lg:col-span-3">
+        <app-profile-sidebar
+          [publicProfileUrl]="publicProfileUrl()"
+          [suggestedPeers]="suggestedPeers()"
+        />
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<!-- COMPONENTE UNIVERSAL: MODAL DE ADVERTENCIA DE BLOQUEO -->
+<app-alert-modal
+  [isOpen]="isUnverifiedWarningModalOpen()"
+  title="Verificación académica requerida"
+  message="Para solicitar que una institución educativa valide tus habilidades técnicas, primero debes haber validado tu vínculo académico (como estudiante o egresado) con dicha institución."
+  variant="warning"
+  confirmText="Solicitar verificación académica"
+  cancelText="Cerrar"
+  (close)="isUnverifiedWarningModalOpen.set(false)"
+  (confirm)="isUnverifiedWarningModalOpen.set(false); openAcademicVerificationModal()"
+/>
+
+<!-- MODAL DE VERIFICACIÓN ACADÉMICA (CASO 1 Y CASO 2) -->
+@if (isAcademicModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-gray-200 my-8 animate-fade-in space-y-5">
+      <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+        <div>
+          <h3 class="text-[19px] font-bold text-gray-900">Solicitud de Verificación Académica</h3>
+          <p class="text-[12px] text-[#6B7280]">Vincula tu perfil con una institución oficial registrada en Unext.</p>
+        </div>
+        <button type="button" (click)="isAcademicModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
+      </div>
+
+      @if (academicError()) {
+        <div class="p-3 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+          {{ academicError() }}
+        </div>
+      }
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <button
+          type="button"
+          (click)="academicForm.academicStatus = 'STUDENT'"
+          [ngClass]="academicForm.academicStatus === 'STUDENT'
+            ? 'border-[#274DEA] bg-[#274DEA]/5 ring-2 ring-[#274DEA]/20'
+            : 'border-gray-200 hover:bg-gray-50'"
+          class="p-3.5 rounded-xl border text-left transition"
+        >
+          <p class="text-[13px] font-bold text-gray-900">🎓 Soy estudiante actual</p>
+          <p class="text-[11px] text-[#6B7280] mt-0.5">Con correo institucional, código, carrera y ciclo.</p>
+        </button>
+
+        <button
+          type="button"
+          (click)="academicForm.academicStatus = 'GRADUATE'"
+          [ngClass]="academicForm.academicStatus === 'GRADUATE'
+            ? 'border-[#274DEA] bg-[#274DEA]/5 ring-2 ring-[#274DEA]/20'
+            : 'border-gray-200 hover:bg-gray-50'"
+          class="p-3.5 rounded-xl border text-left transition"
+        >
+          <p class="text-[13px] font-bold text-gray-900">📜 Ya culminé / Egresado</p>
+          <p class="text-[11px] text-[#6B7280] mt-0.5">Adjuntando diploma, bachiller o constancia.</p>
+        </button>
+      </div>
+
+      <div>
+        <label class="block text-[13px] font-medium text-gray-700 mb-1">Institución Educativa *</label>
+        @if (institutions().length > 0) {
+          <select
+            [(ngModel)]="academicForm.institutionProfileId"
+            name="institutionProfileId"
+            class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px] bg-white"
+          >
+            @for (inst of institutions(); track inst.id) {
+              <option [value]="inst.id">{{ inst.name }} ({{ inst.domain }})</option>
+            }
+          </select>
+        } @else {
+          <p class="p-3 rounded-xl bg-[#FEF3C7] text-[#B45309] text-xs font-semibold">
+            Aún no hay cuentas de tipo INSTITUCIÓN registradas en la base de datos.
+          </p>
+        }
+      </div>
+
+      @if (academicForm.academicStatus === 'STUDENT') {
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-[13px] font-medium text-gray-700 mb-1">Correo institucional *</label>
+              <input type="email" [(ngModel)]="academicForm.institutionalEmail" placeholder="u202312345@upc.edu.pe" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+            </div>
+            <div>
+              <label class="block text-[13px] font-medium text-gray-700 mb-1">Código de estudiante *</label>
+              <input type="text" [(ngModel)]="academicForm.studentCode" placeholder="Ej. u202312345" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="sm:col-span-2">
+              <label class="block text-[13px] font-medium text-gray-700 mb-1">Carrera actual *</label>
+              <input type="text" [(ngModel)]="academicForm.career" placeholder="Ej. Ingeniería de Software" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+            </div>
+            <div>
+              <label class="block text-[13px] font-medium text-gray-700 mb-1">Ciclo (1 - 12) *</label>
+              <input type="number" min="1" max="12" [(ngModel)]="academicForm.currentCycle" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="space-y-4">
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Especialidad o Carrera culminada (Opcional)</label>
+            <input type="text" [(ngModel)]="academicForm.career" placeholder="Ej. Ciencias de la Computación" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+          </div>
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Documento de acreditación (PDF o Imagen) *</label>
+            <div class="flex items-center justify-between p-3.5 rounded-xl border border-dashed border-gray-400 bg-[#F8FAFC]">
+              <span class="text-xs font-semibold text-gray-700 truncate pr-3">
+                {{ academicForm.academicEvidenceName || 'Ningún documento adjuntado' }}
+              </span>
+              <label class="px-4 py-1.5 rounded-full bg-[#274DEA] text-white text-xs font-bold cursor-pointer shrink-0">
+                Adjuntar documento
+                <input type="file" accept=".pdf,image/*" class="hidden" (change)="onAcademicEvidenceSelected($event)" />
+              </label>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="p-3 rounded-xl bg-slate-100 text-[11px] text-gray-600">
+        ℹ️ Al enviar esta solicitud, el backend dispara una notificación automática a la institución. (La vista de recepción de notificaciones de la institución aún está por desarrollar).
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+        <button type="button" (click)="isAcademicModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold hover:bg-gray-100">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          [disabled]="isSaving() || institutions().length === 0"
+          (click)="submitAcademicVerification()"
+          class="px-5 py-2 rounded-full bg-[#274DEA] text-white text-xs font-bold hover:bg-[#1E3BB8] disabled:opacity-50"
+        >
+          {{ isSaving() ? 'Enviando...' : 'Enviar solicitud a la institución' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL PARA VALIDAR UNA HABILIDAD TÉCNICA CON LA INSTITUCIÓN -->
+@if (isValidateSkillModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 space-y-4 animate-fade-in">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-gray-900">Validar habilidad con {{ profile().institutionName }}</h3>
+        <button type="button" (click)="isValidateSkillModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
+      </div>
+
+      @if (skillValidationError()) {
+        <div class="p-3 rounded-xl bg-[#EF4444]/10 text-[#EF4444] text-xs font-semibold">
+          {{ skillValidationError() }}
+        </div>
+      }
+
+      <div>
+        <label class="block text-[13px] font-medium text-gray-700 mb-1">Selecciona la habilidad a certificar *</label>
+        <select [(ngModel)]="skillValidationForm.technicalSkillId" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px] bg-white">
+          @for (sk of profile().skills; track sk.id) {
+            @if (!sk.isValidatedByInstitution) {
+              <option [value]="sk.id">{{ sk.name }} ({{ sk.masteryLevel }})</option>
+            }
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-[13px] font-medium text-gray-700 mb-1">URL de evidencia (Repositorio GitHub o Certificado) *</label>
+        <input type="text" [(ngModel)]="skillValidationForm.evidenceUrl" placeholder="https://github.com/tu-usuario/proyecto" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+        <div class="mt-2 flex items-center justify-between text-xs text-[#6B7280]">
+          <span>{{ skillValidationForm.evidenceFileName || 'O adjunta un certificado en PDF/Imagen:' }}</span>
+          <label class="text-[#274DEA] font-bold cursor-pointer hover:underline">
+            Subir archivo
+            <input type="file" accept=".pdf,image/*" class="hidden" (change)="onSkillEvidenceFileSelected($event)" />
+          </label>
+        </div>
+      </div>
+
+      <div class="p-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 text-[11px] text-gray-700">
+        🔔 <strong>Gatillo de Notificación:</strong> El backend creará un registro en <code>NotificationService</code> para la institución (interfaz de bandeja institucional aún por desarrollar).
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+        <button type="button" (click)="isValidateSkillModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold hover:bg-gray-100">
+          Cancelar
+        </button>
+        <button type="button" (click)="submitSkillValidationRequest()" class="px-5 py-2 rounded-full bg-[#059669] text-white text-xs font-bold hover:bg-[#047857]">
+          Solicitar sello institucional
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL DE PERSONALIZAR BANNER -->
+@if (isBannerModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-gray-900">Personalizar portada (Banner)</h3>
+        <button type="button" (click)="isBannerModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 text-[12px] text-gray-700 space-y-1">
+        <p class="font-bold text-[#274DEA]">Dimensiones recomendadas: 1584 × 396 px (Relación 4:1)</p>
+        <p>Si subes una imagen con otras dimensiones, se redimensionará automáticamente.</p>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <label class="px-4 py-2 rounded-full bg-[#274DEA] text-white text-xs font-bold cursor-pointer">
+          Seleccionar imagen
+          <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onBannerSelected($event)" />
+        </label>
+        @if (profile().bannerUrl || form.bannerUrl) {
+          <button type="button" (click)="removeCustomBanner()" class="px-4 py-2 rounded-full border border-[#EF4444] text-[#EF4444] text-xs font-bold">
+            Usar banner autogenerado
+          </button>
+        }
+      </div>
+
+      <div class="pt-3 border-t border-gray-100">
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-[13px] font-semibold text-gray-800">Título del banner autogenerado</label>
+          <span class="text-[11px] text-[#6B7280]">{{ (form.bannerText || '').length }} / {{ MAX_BANNER_TEXT }}</span>
+        </div>
+        <input type="text" [(ngModel)]="form.bannerText" [maxlength]="MAX_BANNER_TEXT" placeholder="Ej. Desarrollador Full Stack" class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-[14px]" />
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+        <button type="button" (click)="isBannerModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold">Cancelar</button>
+        <button type="button" (click)="saveBannerSettings()" class="px-5 py-2 rounded-full bg-[#274DEA] text-white text-xs font-bold">Guardar portada</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL PRINCIPAL: EDITAR PRESENTACIÓN -->
+@if (isEditModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-gray-200 overflow-hidden my-8 animate-fade-in">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-[20px] font-bold text-gray-900">
+          {{ isFirstTimeOnboarding() ? 'Completa tu presentación' : 'Editar presentación' }}
+        </h2>
+        @if (!isFirstTimeOnboarding()) {
+          <button type="button" (click)="closeEditModal()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100">✕</button>
+        }
+      </div>
+
+      <form (ngSubmit)="saveProfile()" class="p-6 max-h-[75vh] overflow-y-auto space-y-5">
+        @if (errorMessage()) {
+          <div class="p-3.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-[13px] font-semibold">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Nombre *</label>
+            <input type="text" name="firstName" [(ngModel)]="form.firstName" maxlength="60" required class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+          </div>
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Apellidos *</label>
+            <input type="text" name="lastName" [(ngModel)]="form.lastName" maxlength="60" required class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[13px] font-medium text-gray-700">Titular profesional</label>
+            <span class="text-[11px] text-[#6B7280]">{{ (form.headline || '').length }} / {{ MAX_HEADLINE }}</span>
+          </div>
+          <input type="text" name="headline" [(ngModel)]="form.headline" [maxlength]="MAX_HEADLINE" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[13px] font-medium text-gray-700">Acerca de ti</label>
+            <span class="text-[11px] text-[#6B7280]">{{ (form.bio || '').length }} / {{ MAX_BIO }}</span>
+          </div>
+          <textarea name="bio" [(ngModel)]="form.bio" [maxlength]="MAX_BIO" rows="3" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px] resize-none"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+          @if (!isFirstTimeOnboarding()) {
+            <button type="button" (click)="closeEditModal()" class="px-5 py-2 rounded-full border border-gray-400 text-gray-700 font-semibold text-[14px]">Cancelar</button>
+          }
+          <button type="submit" [disabled]="isSaving()" class="px-6 py-2 rounded-full bg-[#274DEA] text-white font-bold text-[14px]">
+            {{ isSaving() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- MODAL AÑADIR HABILIDAD -->
+@if (isSkillModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 animate-fade-in">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-[18px] font-bold text-gray-900">Añadir aptitud o habilidad</h3>
+        <button type="button" (click)="isSkillModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
+      </div>
+
+      <form (ngSubmit)="handleAddSkill()" class="space-y-4">
+        <div>
+          <label class="block text-[13px] font-medium text-gray-700 mb-1">Habilidad o competencia *</label>
+          <input type="text" name="skillName" [(ngModel)]="newSkill.name" required placeholder="Ej. Diseño de Software, Angular, Spring Boot..." class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]" />
+        </div>
+
+        <div>
+          <label class="block text-[13px] font-medium text-gray-700 mb-1">Nivel de dominio *</label>
+          <select name="masteryLevel" [(ngModel)]="newSkill.masteryLevel" class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px] bg-white">
+            <option value="BASICO">Básico</option>
+            <option value="INTERMEDIO">Intermedio</option>
+            <option value="AVANZADO">Avanzado</option>
+          </select>
+        </div>
+
+        <div
+          [ngClass]="!canAddMoreTopSkills() && !newSkill.isTopSkill ? 'opacity-60 bg-gray-50' : 'bg-[#274DEA]/5 border-[#274DEA]/20'"
+          class="p-3.5 rounded-xl border border-gray-200 flex items-start gap-3 transition"
+        >
+          <input
+            id="topSkillCheck"
+            type="checkbox"
+            name="isTopSkill"
+            [(ngModel)]="newSkill.isTopSkill"
+            [disabled]="!canAddMoreTopSkills() && !newSkill.isTopSkill"
+            class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#274DEA] cursor-pointer disabled:cursor-not-allowed"
+          />
+          <label for="topSkillCheck" class="text-[12px] leading-snug cursor-pointer select-none flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-gray-900">Destacar como Principal Aptitud</span>
+              <span class="text-[11px] font-bold text-[#274DEA]">{{ topSkillsCount() }} / {{ MAX_TOP_SKILLS }}</span>
+            </div>
+            @if (canAddMoreTopSkills()) {
+              <p class="text-[#6B7280] mt-0.5">Aparecerá destacada en tu sección "Acerca de" (máximo 3).</p>
+            } @else {
+              <p class="text-[#F59E0B] font-semibold mt-0.5">Ya tienes 3 aptitudes principales seleccionadas.</p>
+            }
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+          <button type="button" (click)="isSkillModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold hover:bg-gray-100">Cancelar</button>
+          <button type="submit" class="px-5 py-2 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold">Guardar habilidad</button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- COMPONENTE UNIVERSAL: TOAST NOTIFICATION -->
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

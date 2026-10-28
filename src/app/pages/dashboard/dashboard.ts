@@ -3,19 +3,21 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Navbar } from '../../shared/components/navbar/navbar';
+import { Toast, ToastData, ToastType } from '../../shared/components/toast/toast';
 import { FeedService } from '../../core/services/feed.service';
 import { JobService } from '../../core/services/job.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FeedPostResponse } from '../../core/models/feed.model';
-import { JobRecommendationResponse } from '../../core/models/job.model';
+import { JobApplication, JobRecommendationResponse } from '../../core/models/job.model';
 import { PostulantProfileResponse } from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
+import { applicationLabel } from '../../core/utils/labels';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Navbar],
+  imports: [CommonModule, FormsModule, RouterLink, Navbar, Toast],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
@@ -29,23 +31,28 @@ export class Dashboard implements OnInit {
   // Estados Reactivos conectados al Backend
   posts = signal<FeedPostResponse[]>([]);
   recommendations = signal<JobRecommendationResponse[]>([]);
+  myApplications = signal<JobApplication[]>([]);
   isLoadingFeed = signal(false);
   isProfileIncomplete = signal(false);
 
-  // Estado inicial vacío hasta que responda el backend
+  // Estado inicial limpio (sin datos falsos)
   profile = signal<PostulantProfileResponse>({
     id: '',
     userId: '',
     firstName: '',
     lastName: '',
-    studentCode: '—',
-    career: 'Sin registrar',
-    currentCycle: 0,
-    headline: 'Completa tu perfil para destacar en la red',
-    bio: '',
+    studentCode: null,
+    career: null,
+    currentCycle: null,
+    avatarUrl: null,
+    bannerUrl: null,
+    headline: null,
+    bio: null,
     hasUniversityBase: false,
     isInstitutionVerified: false,
-    institutionProfile: '',
+    institutionProfile: null,
+    institutionName: null,
+    institutionLogoUrl: null,
     skills: []
   });
 
@@ -64,6 +71,42 @@ export class Dashboard implements OnInit {
     return (first + last).toUpperCase() || 'U';
   });
 
+  // Separación clara entre habilidades validadas por institución y habilidades generales
+  validatedSkills = computed(() =>
+    (this.profile().skills || []).filter((s) => Boolean(s.isValidatedByInstitution))
+  );
+
+  unvalidatedSkills = computed(() =>
+    (this.profile().skills || []).filter((s) => !s.isValidatedByInstitution)
+  );
+
+  // Estado real del trámite académico / convenio
+  academicProcedureStatus = computed(() => {
+    const p = this.profile();
+    if (p.isInstitutionVerified && p.hasUniversityBase) {
+      return {
+        label: 'Convenio Universitario Activo',
+        sublabel: `Acreditado por ${p.institutionName || 'tu institución'}`,
+        badge: 'success' as const
+      };
+    }
+    if (p.isInstitutionVerified && !p.hasUniversityBase) {
+      return {
+        label: 'Egresado Acreditado',
+        sublabel: `Verificado por ${p.institutionName || 'tu institución'}`,
+        badge: 'success' as const
+      };
+    }
+    if (p.institutionProfile && !p.isInstitutionVerified) {
+      return {
+        label: 'Trámite de Acreditación',
+        sublabel: `En revisión por ${p.institutionName || 'la institución'}`,
+        badge: 'warning' as const
+      };
+    }
+    return null;
+  });
+
   // Formulario de Crear Post
   newPostContent = '';
   newPostMediaUrl = '';
@@ -73,7 +116,7 @@ export class Dashboard implements OnInit {
   // Comentarios y Notificaciones Toast
   openComments = signal<Record<string, boolean>>({});
   commentDrafts: Record<string, string> = {};
-  toast = signal<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+  toast = signal<ToastData | null>(null);
 
   // Modales
   selectedJobForAi = signal<JobRecommendationResponse | null>(null);
@@ -116,10 +159,16 @@ export class Dashboard implements OnInit {
         }
       });
 
-      // 3. Cargar Recomendaciones Laborales (solo para Postulantes)
+      // 3. Cargar Recomendaciones Laborales
       this.jobService.getRecommendations().subscribe({
         next: (data) => this.recommendations.set(data),
         error: () => this.recommendations.set([])
+      });
+
+      // 4. Cargar Estado de mis Postulaciones a Vacantes (para la Card de Notificaciones Rápidas)
+      this.jobService.myApplications().subscribe({
+        next: (apps) => this.myApplications.set(apps.slice(0, 3)),
+        error: () => this.myApplications.set([])
       });
     } else if (role === 'RECRUITER') {
       this.profileService.getMyRecruiterProfile().subscribe({
@@ -129,12 +178,10 @@ export class Dashboard implements OnInit {
             userId: data.userId || '',
             firstName: data.companyName || 'Empresa',
             lastName: '',
-            studentCode: data.ruc || '—',
-            career: data.industry || 'Sector Corporativo',
-            currentCycle: 0,
+            avatarUrl: data.logoUrl || null,
             headline: data.industry ? `${data.industry} · Cuenta Reclutador` : 'Empresa Reclutadora',
             isInstitutionVerified: Boolean(data.isValidated || data.isVerified),
-            institutionProfile: 'Cuenta Corporativa',
+            institutionName: 'Cuenta Corporativa',
             skills: []
           });
         },
@@ -148,12 +195,10 @@ export class Dashboard implements OnInit {
             userId: data.userId || '',
             firstName: data.name || 'Institución',
             lastName: '',
-            studentCode: data.domain || '—',
-            career: 'Educación Superior',
-            currentCycle: 0,
+            avatarUrl: data.logoUrl || null,
             headline: data.domain ? `Dominio oficial: ${data.domain}` : 'Institución Educativa',
             isInstitutionVerified: Boolean(data.isVerified),
-            institutionProfile: 'Institución Oficial',
+            institutionName: 'Institución Oficial',
             skills: []
           });
         },
@@ -174,7 +219,13 @@ export class Dashboard implements OnInit {
 
     this.feedService.createPost({ content, mediaUrls: media }).subscribe({
       next: (created) => {
-        this.posts.update((prev) => [created, ...prev]);
+        // Si el backend no adjuntó el avatar en la respuesta inmediata, usamos el de nuestro perfil cargado
+        const enrichedPost: FeedPostResponse = {
+          ...created,
+          authorAvatarUrl: created.authorAvatarUrl || this.profile().avatarUrl || undefined,
+          authorHeadline: created.authorHeadline || this.profile().headline || ''
+        };
+        this.posts.update((prev) => [enrichedPost, ...prev]);
         this.newPostContent = '';
         this.newPostMediaUrl = '';
         this.showMediaInput.set(false);
@@ -183,7 +234,10 @@ export class Dashboard implements OnInit {
       },
       error: (err) => {
         this.isPosting.set(false);
-        this.showToast(readApiError(err, 'Completa y verifica tu perfil antes de publicar en el feed.'), 'error');
+        this.showToast(
+          readApiError(err, 'Completa tu perfil antes de publicar en el feed.'),
+          'error'
+        );
       }
     });
   }
@@ -216,12 +270,13 @@ export class Dashboard implements OnInit {
       [postId]: willOpen
     }));
 
-    // Cuando se abre la sección de comentarios, consultamos los comentarios reales del backend
     if (willOpen) {
       this.feedService.getCommentsByPost(postId).subscribe({
         next: (comments) => {
           this.posts.update((items) =>
-            items.map((p) => (p.id === postId ? { ...p, comments, commentsCount: comments.length } : p))
+            items.map((p) =>
+              p.id === postId ? { ...p, comments, commentsCount: comments.length } : p
+            )
           );
         }
       });
@@ -238,13 +293,18 @@ export class Dashboard implements OnInit {
 
     this.feedService.addComment(postId, text).subscribe({
       next: (comment) => {
+        const enrichedComment = {
+          ...comment,
+          authorAvatarUrl: comment.authorAvatarUrl || this.profile().avatarUrl || undefined,
+          authorHeadline: comment.authorHeadline || this.profile().headline || undefined
+        };
         this.posts.update((items) =>
           items.map((p) => {
             if (p.id === postId) {
               const currentComments = p.comments || [];
               return {
                 ...p,
-                comments: [...currentComments, comment],
+                comments: [...currentComments, enrichedComment],
                 commentsCount: currentComments.length + 1
               };
             }
@@ -268,7 +328,10 @@ export class Dashboard implements OnInit {
           this.showToast('Publicación eliminada correctamente.', 'info');
         },
         error: (err) => {
-          this.showToast(readApiError(err, 'No tienes permiso para eliminar esta publicación.'), 'error');
+          this.showToast(
+            readApiError(err, 'No tienes permiso para eliminar esta publicación.'),
+            'error'
+          );
         }
       });
     }
@@ -282,6 +345,10 @@ export class Dashboard implements OnInit {
         this.recommendations.update((items) =>
           items.map((j) => (j.id === job.id ? { ...j, isApplied: true } : j))
         );
+        // Actualizamos también la lista de postulaciones rápidas en la Card 3
+        this.jobService.myApplications().subscribe({
+          next: (apps) => this.myApplications.set(apps.slice(0, 3))
+        });
         this.showToast(`¡Postulación enviada a ${job.companyName}!`, 'success');
       },
       error: (err) => {
@@ -301,6 +368,10 @@ export class Dashboard implements OnInit {
         this.showToast(readApiError(err, 'No se pudo descartar la vacante.'), 'error');
       }
     });
+  }
+
+  applicationStatusLabel(status: string): string {
+    return applicationLabel(status);
   }
 
   openAiAnalysis(job: JobRecommendationResponse | undefined): void {
@@ -327,7 +398,7 @@ export class Dashboard implements OnInit {
     this.showValidationModal.set(false);
   }
 
-  showToast(message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info'): void {
+  showToast(message: string, type: ToastType = 'info'): void {
     this.toast.set({ message, type });
     setTimeout(() => {
       this.toast.set(null);

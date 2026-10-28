@@ -1,30 +1,33 @@
-<!-- NAVBAR INTEGRADA DEL PROYECTO -->
-<app-navbar/>
+<!-- NAVBAR SUPERIOR SINCRONIZADA CON TU LOGO, NOMBRE Y HEADLINE -->
+<app-navbar
+  [userName]="fullName()"
+  [userSubtitle]="profile().headline || 'Ver perfil'"
+  [userAvatarUrl]="profile().avatarUrl || null"
+/>
 
 <!-- CONTENEDOR PRINCIPAL DEL DASHBOARD -->
 <main class="min-h-screen bg-[#F8FAFC] pb-16">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
 
-    <!-- CABECERA PRINCIPAL: H1 SEGÚN GUÍA DE TIPOGRAFÍA (28px Bold Montserrat) -->
+    <!-- CABECERA PRINCIPAL -->
     <header class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <div class="flex items-center gap-2">
           <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider text-[#274DEA] bg-[#274DEA]/10 uppercase">
             Plataforma Unext
           </span>
-          <span class="text-xs text-[#6B7280]">· Red Universitaria & Empleabilidad</span>
+          <span class="text-xs text-[#6B7280]">· Red Profesional & Empleabilidad</span>
         </div>
         <h1 class="text-[28px] font-bold text-gray-900 tracking-tight mt-1">
           Dashboard Principal
         </h1>
         <p class="text-[14px] text-[#6B7280] mt-0.5">
-          Conéctate con tu red universitaria, comparte avances de proyectos y accede a vacantes con matching de IA.
+          Conéctate con tu red profesional, comparte avances de proyectos y accede a vacantes con matching de IA.
         </p>
       </div>
 
-      <!-- BOTONES DE ACCIÓN RÁPIDA SEGÚN GUÍA DE BOTONES -->
+      <!-- BOTONES DE ACCIÓN RÁPIDA -->
       <div class="flex items-center gap-2.5 flex-wrap">
-        <!-- Botón Institutional / Validación Formal (#059669) -->
         <button
           type="button"
           (click)="openValidationModal()"
@@ -36,7 +39,6 @@
           <span>Validación Formal</span>
         </button>
 
-        <!-- Botón Match / Función Inteligente (#C3A7FF) -->
         <button
           type="button"
           (click)="openAiAnalysis(recommendations()[0])"
@@ -50,24 +52,29 @@
       </div>
     </header>
 
-    <!-- GRID DE 3 COLUMNAS: PERFIL (IZQ) - FEED Y PUBLICAR (CENTRO) - RECOMENDACIONES (DER) -->
+    <!-- GRID DE 3 COLUMNAS -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
       <!-- ========================================================================= -->
-      <!-- COLUMNA IZQUIERDA (lg:col-span-3): RESUMEN DE PERFIL                     -->
+      <!-- COLUMNA IZQUIERDA (lg:col-span-3): RESUMEN DE PERFIL, SKILLS Y ESTADOS    -->
       <!-- ========================================================================= -->
       <aside class="lg:col-span-3 space-y-5">
         
-        <!-- CARD 1: RESUMEN DE PERFIL (CAMPOS REALES DE POSTULANT_PROFILES) -->
+        <!-- CARD 1: RESUMEN DE PERFIL (ADAPTADO A PERFIL INICIAL O VALIDADO) -->
         <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
           <div class="flex flex-col items-center text-center">
-            <!-- Avatar oficial -->
+            <!-- Avatar oficial (Muestra la imagen subida o las iniciales sin duplicar) -->
             <div class="relative">
-              <div class="w-20 h-20 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-2xl flex items-center justify-center border-2 border-[#274DEA]/30 shadow-xs mx-auto">
-                {{ userInitials() }}{{ profile().lastName.charAt(0) }}
+              <div class="w-20 h-20 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-2xl flex items-center justify-center border-2 border-[#274DEA]/30 shadow-xs mx-auto overflow-hidden">
+                @if (profile().avatarUrl) {
+                  <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover" />
+                } @else {
+                  <span>{{ userInitials() }}</span>
+                }
               </div>
+
               @if (profile().isInstitutionVerified) {
-                <span class="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#059669] text-white flex items-center justify-center border-2 border-white shadow-xs" title="Perfil formalmente verificado">
+                <span class="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#059669] text-white flex items-center justify-center border-2 border-white shadow-xs" title="Perfil verificado académicamente">
                   <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                   </svg>
@@ -78,40 +85,55 @@
             <h2 class="text-[17px] font-bold text-gray-900 mt-3">
               {{ fullName() }}
             </h2>
-            <p class="text-[12px] text-[#6B7280] font-medium mt-0.5 leading-snug">
-              {{ profile().headline }}
+            <p class="text-[12px] text-[#6B7280] font-medium mt-0.5 leading-snug break-words">
+              {{ profile().headline || 'Añade un titular profesional en tu perfil' }}
             </p>
-            <p class="text-[11px] text-[#274DEA] font-semibold mt-1">
-              {{ profile().institutionProfile }}
-            </p>
+
+            @if (profile().isInstitutionVerified && profile().institutionName) {
+              <p class="text-[11px] text-[#274DEA] font-semibold mt-1.5">
+                {{ profile().institutionName }}
+              </p>
+            }
 
             <!-- Estado de Verificación Institucional Real -->
-            <div class="mt-3.5 w-full py-2 px-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-center gap-1.5">
-              <svg class="w-4 h-4 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              <span class="text-[11px] font-bold text-[#059669]">
-                {{ profile().isInstitutionVerified ? 'Acreditación Oficial UPC' : 'Pendiente de Validación' }}
-              </span>
-            </div>
+            @if (profile().isInstitutionVerified) {
+              <div class="mt-3.5 w-full py-2 px-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-center gap-1.5">
+                <svg class="w-4 h-4 text-[#059669] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span class="text-[11px] font-bold text-[#059669] truncate">
+                  {{ profile().hasUniversityBase ? 'Estudiante Verificado' : 'Egresado Verificado' }}
+                </span>
+              </div>
+            } @else if (profile().institutionProfile) {
+              <div class="mt-3.5 w-full py-2 px-3 rounded-xl bg-[#FEF3C7] border border-[#F59E0B]/30 flex items-center justify-center gap-1.5">
+                <span class="text-[11px] font-bold text-[#B45309]">
+                  ⏳ Acreditación en revisión
+                </span>
+              </div>
+            }
 
-            <!-- Datos Académicos Reales de la BD (career, currentCycle, studentCode) -->
-            <div class="w-full mt-4 pt-3 border-t border-gray-100 text-left space-y-2 text-[12px]">
-              <div class="flex items-center justify-between">
-                <span class="text-[#6B7280]">Código:</span>
-                <span class="font-semibold text-gray-900 font-mono">{{ profile().studentCode }}</span>
+            <!-- Datos Académicos (SOLO visibles si el postulante ya se validó como Estudiante Activo) -->
+            @if (profile().isInstitutionVerified && profile().hasUniversityBase) {
+              <div class="w-full mt-4 pt-3 border-t border-gray-100 text-left space-y-2 text-[12px]">
+                <div class="flex items-center justify-between">
+                  <span class="text-[#6B7280]">Código:</span>
+                  <span class="font-semibold text-gray-900 font-mono">{{ profile().studentCode }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#6B7280]">Carrera:</span>
+                  <span class="font-semibold text-gray-900 truncate max-w-[150px]" [title]="profile().career || ''">
+                    {{ profile().career }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#6B7280]">Ciclo Actual:</span>
+                  <span class="font-semibold text-gray-900">Ciclo {{ profile().currentCycle }}</span>
+                </div>
               </div>
-              <div class="flex items-center justify-between">
-                <span class="text-[#6B7280]">Carrera:</span>
-                <span class="font-semibold text-gray-900 truncate max-w-[150px]" [title]="profile().career">{{ profile().career }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-[#6B7280]">Ciclo Actual:</span>
-                <span class="font-semibold text-gray-900">Ciclo {{ profile().currentCycle }}</span>
-              </div>
-            </div>
+            }
 
-            <!-- Botón Secundario (#8EB9FC) según Guía -->
+            <!-- Botón ir a Mi Perfil -->
             <div class="mt-4 w-full">
               <a
                 routerLink="/profile/me"
@@ -120,99 +142,168 @@
                 <svg class="w-4 h-4 shrink-0 text-[#1E3BB8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                 </svg>
-                <span>Ver Plan y Perfil</span>
+                <span>Ver mi Perfil</span>
               </a>
             </div>
           </div>
         </div>
 
-        <!-- CARD 2: HABILIDADES TÉCNICAS VALIDADAS -->
+        <!-- CARD 2: HABILIDADES Y VALIDACIONES (DISTINGUE VALIDADAS DE GENERALES) -->
         <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center justify-between mb-2">
             <h3 class="text-[14px] font-bold text-gray-900">
-              Habilidades Validadas
+              Mis Habilidades
             </h3>
-            <span class="text-[11px] font-semibold text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full">
-              Oficial
-            </span>
-          </div>
-          <p class="text-[12px] text-[#6B7280] mb-3">
-            Certificadas por tus docentes de carrera en la plataforma.
-          </p>
-
-          <div class="flex flex-wrap gap-1.5">
-            @for (sk of profile().skills; track sk.id) {
-              <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-[#F8FAFC] border border-gray-200/90 text-gray-800 hover:border-[#274DEA]/40 transition-colors">
-                @if (sk.isValidatedByInstitution) {
-                  <svg class="w-3 h-3 text-[#10B981] shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                  </svg>
-                }
-                {{ sk.name }} ({{ sk.masteryLevel }})
+            @if (validatedSkills().length > 0) {
+              <span class="text-[11px] font-semibold text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full">
+                {{ validatedSkills().length }} Validada{{ validatedSkills().length === 1 ? '' : 's' }}
+              </span>
+            } @else {
+              <span class="text-[10px] font-semibold text-[#6B7280] bg-gray-100 px-2 py-0.5 rounded-full">
+                Sin certificar
               </span>
             }
           </div>
 
-          <!-- Botón de Acreditación según Guía ("Validación Formal") -->
+          @if (validatedSkills().length > 0) {
+            <p class="text-[12px] text-[#6B7280] mb-3">
+              Competencias con sello institucional y habilidades de tu perfil.
+            </p>
+          } @else {
+            <p class="text-[12px] text-[#6B7280] mb-3">
+              Aún no tienes habilidades certificadas por una institución educativa.
+            </p>
+          }
+
+          @if (profile().skills && profile().skills.length > 0) {
+            <div class="flex flex-wrap gap-1.5">
+              @for (sk of profile().skills; track sk.id) {
+                <span
+                  [ngClass]="sk.isValidatedByInstitution
+                    ? 'bg-[#ECFDF5] border-[#059669]/40 text-[#059669] font-semibold'
+                    : 'bg-[#F8FAFC] border-gray-200/90 text-gray-700 font-medium'"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] border transition-colors"
+                  [title]="sk.isValidatedByInstitution ? 'Validada por institución' : 'Habilidad registrada (No validada aún)'"
+                >
+                  @if (sk.isValidatedByInstitution) {
+                    <svg class="w-3 h-3 text-[#059669] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  }
+                  {{ sk.name }} ({{ sk.masteryLevel }})
+                </span>
+              }
+            </div>
+          } @else {
+            <p class="text-[12px] text-[#6B7280] italic">
+              Todavía no has registrado habilidades en tu perfil.
+            </p>
+          }
+
           <div class="mt-4 pt-3 border-t border-gray-100">
-            <button
-              type="button"
-              (click)="openValidationModal()"
+            <a
+              routerLink="/profile/me"
               class="w-full text-center text-[12px] font-semibold text-[#059669] hover:text-[#047857] hover:underline flex items-center justify-center gap-1.5"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
-              <span>Acreditar nueva competencia</span>
-            </button>
+              <span>Gestionar o acreditar competencias</span>
+            </a>
           </div>
         </div>
 
-        <!-- CARD 3: BADGES DE ESTADO (SEGÚN GUÍA DE ICONOS: SUCCESS, WARNING, INFO) -->
+        <!-- CARD 3: NOTIFICACIONES RÁPIDAS (POSTULACIONES Y TRÁMITE DE CONVENIO REALES) -->
         <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-3">
-          <h3 class="text-[13px] font-bold text-gray-900 tracking-tight">
-            Trámites y Notificaciones
-          </h3>
-
-          <!-- Estado Exitoso: Success Squircle Badge -->
-          <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50/70 border border-gray-100">
-            <div class="icon-badge-success">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/>
-              </svg>
-            </div>
-            <div class="text-left flex-1 min-w-0">
-              <p class="text-[12px] font-bold text-gray-900 truncate">Convenio Aprobado</p>
-              <p class="text-[10px] text-[#6B7280]">Registrado con éxito por UPC</p>
-            </div>
+          <div class="flex items-center justify-between">
+            <h3 class="text-[13px] font-bold text-gray-900 tracking-tight">
+              Estado de Postulaciones y Convenio
+            </h3>
+            <a routerLink="/jobs" class="text-[11px] font-semibold text-[#274DEA] hover:underline">
+              Ver todo
+            </a>
           </div>
 
-          <!-- Advertencia de Trámite: Warning Squircle Badge -->
-          <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50/70 border border-gray-100">
-            <div class="icon-badge-warning">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
+          <!-- 1. Estado del Trámite de Convenio / Verificación Académica (Si existe) -->
+          @if (academicProcedureStatus(); as proc) {
+            <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50/70 border border-gray-100">
+              <div [ngClass]="proc.badge === 'success' ? 'icon-badge-success' : 'icon-badge-warning'">
+                @if (proc.badge === 'success') {
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                } @else {
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                }
+              </div>
+              <div class="text-left flex-1 min-w-0">
+                <p class="text-[12px] font-bold text-gray-900 truncate">{{ proc.label }}</p>
+                <p
+                  [ngClass]="proc.badge === 'success' ? 'text-[#059669]' : 'text-[#F59E0B]'"
+                  class="text-[10px] font-semibold truncate"
+                >
+                  {{ proc.sublabel }}
+                </p>
+              </div>
             </div>
-            <div class="text-left flex-1 min-w-0">
-              <p class="text-[12px] font-bold text-gray-900 truncate">Informe de Prácticas</p>
-              <p class="text-[10px] text-[#F59E0B] font-medium">Vence en 5 días hábiles</p>
+          }
+
+          <!-- 2. Estado de mis Postulaciones a Vacantes (Datos reales del Backend) -->
+          @for (app of myApplications(); track app.id) {
+            <div class="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50/70 border border-gray-100">
+              <div
+                [ngClass]="{
+                  'icon-badge-success': app.status === 'ACCEPTED',
+                  'icon-badge-warning': app.status === 'RECEIVED' || app.status === 'UNDER_REVIEW',
+                  'bg-[#EF4444]/10 text-[#EF4444] w-9 h-9 rounded-xl flex items-center justify-center shrink-0': app.status === 'REJECTED'
+                }"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <div class="text-left flex-1 min-w-0">
+                <p class="text-[12px] font-bold text-gray-900 truncate" [title]="app.jobTitle">
+                  {{ app.jobTitle }}
+                </p>
+                <p class="text-[10px] text-[#6B7280] truncate">
+                  {{ app.companyName }} ·
+                  <span class="font-semibold text-[#274DEA]">{{ applicationStatusLabel(app.status) }}</span>
+                </p>
+              </div>
             </div>
-          </div>
+          }
+
+          <!-- Estado vacío si no tiene ni postulaciones ni trámites activos -->
+          @if (!academicProcedureStatus() && myApplications().length === 0) {
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-100 text-center">
+              <p class="text-[12px] font-semibold text-gray-700">Sin trámites ni postulaciones activas</p>
+              <p class="text-[11px] text-[#6B7280] mt-0.5">
+                Cuando postules a una vacante o solicites tu convenio universitario, verás el estado aquí.
+              </p>
+            </div>
+          }
         </div>
 
       </aside>
 
       <!-- ========================================================================= -->
-      <!-- COLUMNA CENTRAL (lg:col-span-6): PUBLICAR + FEED DE OTROS USUARIOS        -->
+      <!-- COLUMNA CENTRAL (lg:col-span-6): PUBLICAR + FEED DE USUARIOS              -->
       <!-- ========================================================================= -->
       <section class="lg:col-span-6 space-y-5">
 
-        <!-- 1. CAJA PARA CREAR PUBLICACIÓN (OPCIÓN PARA PUBLICAR UN POST) -->
+        <!-- 1. CAJA PARA CREAR PUBLICACIÓN -->
         <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 transition-all">
           <div class="flex items-start gap-3.5">
-            <div class="w-10 h-10 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0 border border-[#274DEA]/30">
-              {{ userInitials() }}{{ profile().lastName.charAt(0) }}
+            <!-- Avatar sincronizado del usuario actual -->
+            <div class="w-10 h-10 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0 border border-[#274DEA]/30 overflow-hidden">
+              @if (profile().avatarUrl) {
+                <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover" />
+              } @else {
+                <span>{{ userInitials() }}</span>
+              }
             </div>
 
             <div class="flex-1">
@@ -220,13 +311,12 @@
                 name="newPostContent"
                 [(ngModel)]="newPostContent"
                 rows="3"
-                placeholder="Comparte un avance de tesis, proyecto académico, consulta o logro con la red UNEXT..."
+                placeholder="Comparte un avance de proyecto, consulta profesional o logro con la red UNEXT..."
                 class="w-full p-3 bg-[#F8FAFC] focus:bg-white border border-gray-200/90 rounded-xl text-[14px] text-gray-900 placeholder-[#6B7280] focus:outline-none focus:border-[#274DEA] focus:ring-2 focus:ring-[#274DEA]/15 transition-all resize-none"
               ></textarea>
             </div>
           </div>
 
-          <!-- Input para adjuntar URL de multimedia (opcional) -->
           @if (showMediaInput()) {
             <div class="mt-3 p-3 rounded-xl bg-[#F8FAFC] border border-gray-200 animate-fade-in space-y-2">
               <label class="block text-[11px] font-semibold text-gray-700">
@@ -250,7 +340,6 @@
             </div>
           }
 
-          <!-- Vista previa de imagen si fue añadida -->
           @if (newPostMediaUrl.trim()) {
             <div class="mt-3 relative rounded-xl overflow-hidden border border-gray-200 max-h-48 group">
               <img [src]="newPostMediaUrl" alt="Vista previa adjunto" class="w-full h-48 object-cover" />
@@ -267,9 +356,7 @@
             </div>
           }
 
-          <!-- Barra de Acciones y Botón Publicar (#274DEA) -->
           <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-            <!-- Botón para adjuntar foto/multimedia (mediaUrls) -->
             <button
               type="button"
               (click)="toggleMediaInput()"
@@ -281,7 +368,6 @@
               <span>Foto / Media</span>
             </button>
 
-            <!-- Botón Primary (#274DEA) según Guía -->
             <button
               type="button"
               (click)="handleCreatePost()"
@@ -289,10 +375,6 @@
               class="btn-primary text-[13px] py-2 px-5 shadow-sm"
             >
               @if (isPosting()) {
-                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                </svg>
                 <span>Publicando...</span>
               } @else {
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -304,17 +386,16 @@
           </div>
         </div>
 
-        <!-- 2. LISTADO DE PUBLICACIONES DEL FEED (CONEXIÓN DIRECTA CON /api/feed) -->
+        <!-- 2. LISTADO DE PUBLICACIONES DEL FEED -->
         <div class="space-y-4">
           @for (post of posts(); track post.id) {
             <article class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 transition-all hover:border-gray-300/80">
               
-              <!-- Cabecera del Post: Autor, Rol, Verificación y Tiempo -->
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                  @if (post.authorAvatarUrl) {
+                  @if (post.authorAvatarUrl || (post.authorUserId === profile().userId && profile().avatarUrl)) {
                     <img
-                      [src]="post.authorAvatarUrl"
+                      [src]="post.authorAvatarUrl || profile().avatarUrl"
                       [alt]="post.authorName"
                       class="w-11 h-11 rounded-full object-cover border border-gray-200 shrink-0"
                     />
@@ -330,7 +411,6 @@
                         {{ post.authorName }}
                       </h3>
 
-                      <!-- Sello de Verificación Oficial (#059669) -->
                       @if (post.isAuthorVerified) {
                         <span class="inline-flex items-center text-[#059669]" title="Perfil formalmente verificado">
                           <svg class="w-4 h-4 fill-[#059669]" viewBox="0 0 20 20">
@@ -339,7 +419,6 @@
                         </span>
                       }
 
-                      <!-- Badge de Rol -->
                       <span
                         [ngClass]="{
                           'bg-[#274DEA]/10 text-[#274DEA]': post.authorRole === 'RECRUITER',
@@ -348,7 +427,7 @@
                         }"
                         class="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                       >
-                        {{ post.authorRole === 'RECRUITER' ? 'Empresa' : post.authorRole === 'INSTITUTION' ? 'Institución' : 'Estudiante' }}
+                        {{ post.authorRole === 'RECRUITER' ? 'Empresa' : post.authorRole === 'INSTITUTION' ? 'Institución' : 'Postulante' }}
                       </span>
                     </div>
 
@@ -357,21 +436,15 @@
                     </p>
                     <p class="text-[11px] text-[#6B7280]/80 mt-0.5 flex items-center gap-1">
                       <span>{{ formatDate(post.createdAt) }}</span>
-                      <span>·</span>
-                      <svg class="w-3 h-3 text-[#6B7280]" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v.183l.314.943A6.002 6.002 0 014.332 8.027z" clip-rule="evenodd"/>
-                      </svg>
                     </p>
                   </div>
                 </div>
               </div>
 
-              <!-- Contenido de Texto del Post -->
               <div class="mt-3.5 text-[14px] text-gray-800 leading-relaxed whitespace-pre-line">
                 {{ post.content }}
               </div>
 
-              <!-- Medios / Imágenes Adjuntas -->
               @if (post.mediaUrls && post.mediaUrls.length > 0) {
                 <div class="mt-3.5 rounded-xl overflow-hidden border border-gray-200">
                   <img
@@ -382,7 +455,6 @@
                 </div>
               }
 
-              <!-- Contador de Interacciones -->
               <div class="mt-3 pt-3 flex items-center justify-between text-[12px] text-[#6B7280] border-t border-gray-100">
                 <div class="flex items-center gap-1.5">
                   <span class="w-5 h-5 rounded-full bg-[#274DEA] text-white flex items-center justify-center text-[10px]">
@@ -398,14 +470,10 @@
                   >
                     {{ post.commentsCount }} comentarios
                   </button>
-                  <span>·</span>
-                  <span>Compartido</span>
                 </div>
               </div>
 
-              <!-- Barra de Acciones del Post: Like, Comentar, Compartir -->
               <div class="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-1">
-                <!-- Botón Me Gusta (Interactúa con color Primary #274DEA) -->
                 <button
                   type="button"
                   (click)="handleToggleLike(post)"
@@ -418,7 +486,6 @@
                   <span>{{ post.likedByMe ? 'Te gusta' : 'Me gusta' }}</span>
                 </button>
 
-                <!-- Botón Comentar -->
                 <button
                   type="button"
                   (click)="toggleCommentsSection(post.id)"
@@ -430,7 +497,6 @@
                   <span>Comentar</span>
                 </button>
 
-                <!-- Botón Compartir -->
                 <button
                   type="button"
                   (click)="showToast('Enlace de la publicación copiado al portapapeles.', 'info')"
@@ -446,10 +512,13 @@
               <!-- SECCIÓN DESPLEGABLE DE COMENTARIOS -->
               @if (isCommentsOpen(post.id)) {
                 <div class="mt-4 pt-4 border-t border-gray-100 space-y-3 animate-fade-in">
-                  <!-- Input para añadir comentario -->
                   <div class="flex items-start gap-2.5">
-                    <div class="w-8 h-8 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-xs flex items-center justify-center shrink-0 border border-[#274DEA]/30">
-                      {{ userInitials() }}{{ profile().lastName.charAt(0) }}
+                    <div class="w-8 h-8 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-xs flex items-center justify-center shrink-0 border border-[#274DEA]/30 overflow-hidden">
+                      @if (profile().avatarUrl) {
+                        <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover" />
+                      } @else {
+                        <span>{{ userInitials() }}</span>
+                      }
                     </div>
 
                     <div class="flex-1 flex gap-2">
@@ -470,7 +539,6 @@
                     </div>
                   </div>
 
-                  <!-- Lista de comentarios existentes -->
                   @if (post.comments && post.comments.length > 0) {
                     <div class="space-y-2.5 pt-2">
                       @for (com of post.comments; track com.id) {
@@ -512,11 +580,10 @@
       </section>
 
       <!-- ========================================================================= -->
-      <!-- COLUMNA DERECHA (lg:col-span-3): FEED CORTO DE RECOMENDACIONES LABORALES -->
+      <!-- COLUMNA DERECHA (lg:col-span-3): RECOMENDACIONES LABORALES E IA           -->
       <!-- ========================================================================= -->
       <aside class="lg:col-span-3 space-y-5">
 
-        <!-- CARD 1: RECOMENDACIONES LABORALES (FEED CORTO) -->
         <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
@@ -530,22 +597,19 @@
               </h2>
             </div>
             
-            <!-- Badge Match IA (#C3A7FF) según Guía -->
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#C3A7FF] text-[#2E1065]">
               Match IA
             </span>
           </div>
 
           <p class="text-[12px] text-[#6B7280] mb-4">
-            Vacantes filtradas por compatibilidad con tus habilidades validadas.
+            Vacantes filtradas por compatibilidad con las habilidades de tu perfil.
           </p>
 
-          <!-- LISTA CORTA DE VACANTES RECOMENDADAS (SOLO 1 EJEMPLO) -->
           <div class="space-y-3.5">
             @for (job of recommendations().slice(0, 1); track job.id) {
               <div class="p-3.5 rounded-xl border border-gray-200/90 hover:border-[#274DEA]/40 hover:shadow-xs transition-all bg-[#F8FAFC]/50 group relative">
                 
-                <!-- Encabezado de la vacante y compatibilidad IA -->
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex-1">
                     <span class="inline-block px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[#C3A7FF]/25 text-[#2E1065] mb-1">
@@ -559,7 +623,6 @@
                     </p>
                   </div>
 
-                  <!-- Botón descartar sutil (Destructive #EF4444 en hover) -->
                   <button
                     type="button"
                     (click)="handleDismissJob(job.id, $event)"
@@ -572,12 +635,8 @@
                   </button>
                 </div>
 
-                <!-- Modalidad y Salario -->
                 <div class="mt-2 flex items-center gap-2 text-[11px] text-[#6B7280]">
                   <span class="flex items-center gap-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                    </svg>
                     {{ job.location }}
                   </span>
                 </div>
@@ -588,7 +647,6 @@
                   </p>
                 }
 
-                <!-- Habilidades que coinciden con tu perfil -->
                 <div class="mt-2 flex flex-wrap gap-1">
                   @for (skill of job.matchedSkills; track skill) {
                     <span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-[#274DEA]/10 text-[#274DEA]">
@@ -597,9 +655,7 @@
                   }
                 </div>
 
-                <!-- Botones de Acción de la Vacante según Guía: Primary y Match -->
                 <div class="mt-3 pt-2.5 border-t border-gray-200/80 flex items-center gap-2">
-                  <!-- Botón Primary (#274DEA): Postular en 1 Clic -->
                   <button
                     type="button"
                     (click)="handleApplyJob(job)"
@@ -614,7 +670,6 @@
                     }
                   </button>
 
-                  <!-- Botón Match (#C3A7FF): Analizar con IA -->
                   <button
                     type="button"
                     (click)="openAiAnalysis(job)"
@@ -626,16 +681,22 @@
                 </div>
 
               </div>
+            } @empty {
+              <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-100 text-center">
+                <p class="text-[12px] font-semibold text-gray-700">Sin recomendaciones aún</p>
+                <p class="text-[11px] text-[#6B7280] mt-0.5">
+                  Añade habilidades en tu perfil para calcular tu afinidad con las vacantes activas.
+                </p>
+              </div>
             }
           </div>
 
-          <!-- Enlace a Buscador de Trabajo Completo (Como en la captura de tu compañero) -->
           <div class="mt-4 pt-3 border-t border-gray-100 text-center">
             <a
               routerLink="/jobs"
               class="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#274DEA] hover:underline"
             >
-              <span>Ver todas las vacantes con convenio</span>
+              <span>Explorar todas las vacantes</span>
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
               </svg>
@@ -643,7 +704,7 @@
           </div>
         </div>
 
-        <!-- CARD 2: FUNCIÓN INTELIGENTE / ASISTENTE IA (SEGÚN GUÍA DE BOTONES "MATCH") -->
+        <!-- CARD 2: FUNCIÓN INTELIGENTE / ASISTENTE IA -->
         <div class="bg-gradient-to-br from-[#C3A7FF]/20 via-white to-purple-50 rounded-2xl border border-[#C3A7FF]/40 p-5 shadow-xs">
           <div class="flex items-center gap-2 text-[#2E1065]">
             <svg class="w-5 h-5 text-[#2E1065]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -654,11 +715,10 @@
             </h3>
           </div>
           <p class="text-[11px] text-[#6B7280] mt-1.5 leading-relaxed">
-            Tu perfil alcanza un <span class="font-bold text-[#2E1065]">96% de afinidad</span> con vacantes de desarrollo Frontend y Fullstack en el sector bancario y fintech.
+            Analiza qué habilidades de tu perfil coinciden con las vacantes activas y qué competencias te faltan para subir tu afinidad.
           </p>
 
           <div class="mt-3">
-            <!-- Botón Match con estilo oficial #C3A7FF -->
             <button
               type="button"
               (click)="openAiAnalysis(recommendations()[0])"
@@ -675,10 +735,8 @@
   </div>
 </main>
 
-<!-- ========================================================================= -->
-<!-- MODAL DE ANÁLISIS DE COMPATIBILIDAD CON IA (MATCH #C3A7FF)                 -->
-<!-- ========================================================================= -->
-@if (selectedJobForAi()) {
+<!-- MODAL DE ANÁLISIS DE COMPATIBILIDAD CON IA -->
+@if (selectedJobForAi(); as jobAi) {
   <div class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-fade-in relative">
       <button
@@ -686,9 +744,7 @@
         (click)="closeAiModal()"
         class="absolute top-4 right-4 text-[#6B7280] hover:text-gray-900 p-1.5 rounded-lg"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
+        ✕
       </button>
 
       <div class="flex items-center gap-3 mb-4">
@@ -706,49 +762,45 @@
       </div>
 
       <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200/80 mb-4">
-        <p class="text-[13px] font-bold text-gray-900">{{ selectedJobForAi()?.title }}</p>
-        <p class="text-[12px] text-[#6B7280]">{{ selectedJobForAi()?.companyName }} · {{ selectedJobForAi()?.location }}</p>
+        <p class="text-[13px] font-bold text-gray-900">{{ jobAi.title }}</p>
+        <p class="text-[12px] text-[#6B7280]">{{ jobAi.companyName }} · {{ jobAi.location }}</p>
         
         <div class="mt-3 flex items-center gap-3">
           <div class="flex-1 bg-gray-200 h-2.5 rounded-full overflow-hidden">
             <div
               class="bg-gradient-to-r from-[#274DEA] to-[#C3A7FF] h-full rounded-full transition-all duration-700"
-              [style.width.%]="selectedJobForAi()?.compatibilityPercent"
+              [style.width.%]="jobAi.compatibilityPercent"
             ></div>
           </div>
           <span class="text-[14px] font-extrabold text-[#274DEA]">
-            {{ selectedJobForAi()?.compatibilityPercent }}%
+            {{ jobAi.compatibilityPercent }}%
           </span>
         </div>
       </div>
 
       <div class="space-y-3 text-[13px]">
         <div>
-          <p class="font-bold text-gray-800 mb-1">Habilidades que aseguran tu match:</p>
+          <p class="font-bold text-gray-800 mb-1">Habilidades de tu perfil que coinciden:</p>
           <div class="flex flex-wrap gap-1.5">
-            @for (sk of selectedJobForAi()?.matchedSkills; track sk) {
+            @for (sk of jobAi.matchedSkills; track sk) {
               <span class="px-2.5 py-1 rounded-lg bg-[#DCFCE7] text-[#059669] font-semibold text-xs flex items-center gap-1">
-                ✓ {{ sk }} (Acreditado)
+                ✓ {{ sk }}
               </span>
             }
           </div>
         </div>
 
         <div>
-          <p class="font-bold text-gray-800 mb-1">Competencias complementarias deseadas:</p>
+          <p class="font-bold text-gray-800 mb-1">Competencias complementarias requeridas:</p>
           <div class="flex flex-wrap gap-1.5">
-            @for (sk of selectedJobForAi()?.requiredSkills; track sk) {
-              @if (!selectedJobForAi()?.matchedSkills?.includes(sk)) {
+            @for (sk of jobAi.requiredSkills; track sk) {
+              @if (!jobAi.matchedSkills.includes(sk)) {
                 <span class="px-2.5 py-1 rounded-lg bg-[#F8FAFC] border border-gray-200 text-gray-700 text-xs">
                   + {{ sk }}
                 </span>
               }
             }
           </div>
-        </div>
-
-        <div class="p-3 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 text-[12px] text-gray-700">
-          💡 <span class="font-semibold text-[#274DEA]">Sugerencia IA:</span> Tu postulación cuenta con respaldo institucional de la UPC. Puedes postular en 1 Clic directamente.
         </div>
       </div>
 
@@ -762,7 +814,7 @@
         </button>
         <button
           type="button"
-          (click)="handleApplyJob(selectedJobForAi()!); closeAiModal()"
+          (click)="handleApplyJob(jobAi); closeAiModal()"
           class="btn-primary text-[13px] py-2 px-5"
         >
           Postular en 1 Clic
@@ -772,9 +824,7 @@
   </div>
 }
 
-<!-- ========================================================================= -->
-<!-- MODAL DE VALIDACIÓN INSTITUCIONAL FORMAL (#059669)                        -->
-<!-- ========================================================================= -->
+<!-- MODAL DE ESTADO DE VALIDACIÓN FORMAL (CON DATOS REALES DEL PERFIL) -->
 @if (showValidationModal()) {
   <div class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-fade-in relative">
@@ -783,9 +833,7 @@
         (click)="closeValidationModal()"
         class="absolute top-4 right-4 text-[#6B7280] hover:text-gray-900 p-1.5 rounded-lg"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-        </svg>
+        ✕
       </button>
 
       <div class="flex items-center gap-3 mb-4">
@@ -799,61 +847,46 @@
             Validación Formal
           </span>
           <h3 class="text-[18px] font-bold text-gray-900">
-            Acreditar Prácticas y Habilidades
+            Resumen de Acreditación
           </h3>
         </div>
       </div>
 
       <p class="text-[13px] text-[#6B7280] leading-relaxed mb-4">
-        El sello de convalidación académica certifica ante las empresas que tus horas formativas y proyectos cuentan con el respaldo de la <strong class="text-gray-800">Universidad Peruana de Ciencias Aplicadas (UPC)</strong>.
+        Consulta el estado real de tu verificación académica y de tus habilidades técnicas certificadas en Unext.
       </p>
 
       <div class="space-y-2.5 text-[12px]">
-        <div class="p-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-between">
-          <span class="font-semibold text-gray-800">Convenio Preprofesional Marco</span>
-          <span class="font-bold text-[#059669]">Acreditado</span>
+        <div
+          [ngClass]="profile().isInstitutionVerified ? 'bg-[#ECFDF5] border-[#059669]/20' : 'bg-[#FEF3C7] border-[#F59E0B]/20'"
+          class="p-3 rounded-xl border flex items-center justify-between"
+        >
+          <span class="font-semibold text-gray-800">Vínculo con Institución</span>
+          <span [ngClass]="profile().isInstitutionVerified ? 'text-[#059669]' : 'text-[#B45309]'" class="font-bold">
+            {{ profile().isInstitutionVerified ? ('Acreditado (' + (profile().institutionName || 'Oficial') + ')') : 'Sin acreditar' }}
+          </span>
         </div>
-        <div class="p-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-between">
-          <span class="font-semibold text-gray-800">Habilidades Técnicas Avaladas</span>
-          <span class="font-bold text-[#059669]">1 Verificada</span>
-        </div>
-        <div class="p-3 rounded-xl bg-[#FEF3C7] border border-[#F59E0B]/20 flex items-center justify-between">
-          <span class="font-semibold text-gray-800">Firma digital de la empresa</span>
-          <span class="font-bold text-[#F59E0B]">Pendiente</span>
+
+        <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+          <span class="font-semibold text-gray-800">Habilidades Certificadas</span>
+          <span class="font-bold text-[#274DEA]">
+            {{ validatedSkills().length }} de {{ profile().skills.length }}
+          </span>
         </div>
       </div>
 
       <div class="mt-6 flex justify-end gap-2">
-        <button
-          type="button"
+        <a
+          routerLink="/profile/me"
           (click)="closeValidationModal()"
-          class="btn-institutional text-[13px] py-2 px-5 w-full"
+          class="btn-institutional text-[13px] py-2 px-5 w-full text-center"
         >
-          <span>Entendido</span>
-        </button>
+          <span>Ir a mi perfil para gestionar</span>
+        </a>
       </div>
     </div>
   </div>
 }
 
-<!-- ========================================================================= -->
-<!-- NOTIFICACIÓN TOAST FLOTANTE CON ICONOS DE ESTADO                           -->
-<!-- ========================================================================= -->
-@if (toast()) {
-  <div class="fixed bottom-6 right-6 z-50 animate-fade-in">
-    <div
-      [ngClass]="{
-        'bg-[#10B981] text-white': toast()?.type === 'success',
-        'bg-[#274DEA] text-white': toast()?.type === 'info',
-        'bg-[#F59E0B] text-white': toast()?.type === 'warning',
-        'bg-[#EF4444] text-white': toast()?.type === 'error'
-      }"
-      class="px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-[13px] font-semibold border border-white/20"
-    >
-      <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span>{{ toast()?.message }}</span>
-    </div>
-  </div>
-}
+<!-- COMPONENTE COMPARTIDO TOAST -->
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

@@ -1,0 +1,37 @@
+<div class="space-y-4">
+  <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-4">
+    <div>
+      <h3 class="text-[15px] font-bold text-gray-900">Idioma del perfil</h3>
+      <p class="text-[13px] text-[#6B7280] mt-0.5">Español</p>
+    </div>
+    <div class="border-t border-gray-100 pt-4">
+      <h3 class="text-[15px] font-bold text-gray-900">URL y perfil público</h3>
+      <p class="text-[12px] text-[#6B7280] mt-0.5 truncate">{{ publicProfileUrl() }}</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
+    <h3 class="text-[15px] font-bold text-gray-900">Personas en la red</h3>
+    <p class="text-[12px] text-[#6B7280]">Conecta con otros perfiles en Unext</p>
+
+    <div class="mt-4 space-y-4">
+      @for (peer of suggestedPeers(); track peer.userId) {
+        <div class="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-none last:pb-0">
+          <div class="w-10 h-10 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center shrink-0">
+            {{ peer.name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-[13px] font-bold text-gray-900 truncate">{{ peer.name }}</p>
+            <p class="text-[11px] text-[#6B7280] truncate">{{ peer.subtitle }}</p>
+            <a
+              routerLink="/messages"
+              class="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full border border-gray-500 text-gray-700 hover:bg-gray-100 text-[12px] font-semibold transition"
+            >
+              <span>+ Conectar</span>
+            </a>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>
