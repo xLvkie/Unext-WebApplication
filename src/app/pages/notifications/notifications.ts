@@ -11,6 +11,8 @@ import { Navbar } from '../../shared/components/navbar/navbar';
 
 const PAGE_SIZE = 10;
 
+type NotificationFilter = 'all' | 'unread';
+
 @Component({
   selector: 'app-notifications',
   standalone: true,
@@ -27,11 +29,15 @@ export class Notifications {
   readonly sessionExpired = signal(false);
   readonly visibleCount = signal(PAGE_SIZE);
   readonly actionError = signal('');
+  readonly filter = signal<NotificationFilter>('all');
   private readonly marking = new Set<string>();
 
   readonly unreadCount = computed(() => this.items().filter((item) => !item.isRead).length);
-  readonly visibleItems = computed(() => this.items().slice(0, this.visibleCount()));
-  readonly remaining = computed(() => Math.max(0, this.items().length - this.visibleCount()));
+  readonly filtered = computed(() =>
+    this.filter() === 'unread' ? this.items().filter((item) => !item.isRead) : this.items(),
+  );
+  readonly visibleItems = computed(() => this.filtered().slice(0, this.visibleCount()));
+  readonly remaining = computed(() => Math.max(0, this.filtered().length - this.visibleCount()));
   readonly nextBatch = computed(() => Math.min(PAGE_SIZE, this.remaining()));
 
   readonly formatRelative = formatRelative;
@@ -61,6 +67,11 @@ export class Notifications {
         this.error.set(readApiError(err, 'No se pudieron cargar tus notificaciones.'));
       },
     });
+  }
+
+  setFilter(filter: NotificationFilter): void {
+    this.filter.set(filter);
+    this.visibleCount.set(PAGE_SIZE);
   }
 
   showMore(): void {

@@ -25,6 +25,22 @@
           <button class="btn-secondary mt-4" type="button" (click)="load()">Reintentar</button>
         </div>
       } @else {
+        <div class="flex gap-2 border-b border-line px-4 py-3">
+          <button
+            [class]="filter() === 'all' ? 'btn-primary' : 'btn-secondary'"
+            type="button"
+            (click)="setFilter('all')"
+          >
+            Todas
+          </button>
+          <button
+            [class]="filter() === 'unread' ? 'btn-primary' : 'btn-secondary'"
+            type="button"
+            (click)="setFilter('unread')"
+          >
+            No leídas ({{ unreadCount() }})
+          </button>
+        </div>
         @if (actionError()) {
           <p class="border-b border-line bg-danger-soft px-4 py-2 text-sm text-danger">
             {{ actionError() }}
@@ -63,7 +79,11 @@
             </li>
           } @empty {
             <li class="px-4 py-10 text-center text-sm text-ink-muted">
-              Aún no tienes notificaciones.
+              {{
+                filter() === 'unread'
+                  ? 'No tienes notificaciones sin leer.'
+                  : 'Aún no tienes notificaciones.'
+              }}
             </li>
           }
         </ul>
