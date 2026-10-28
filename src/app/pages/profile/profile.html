@@ -35,6 +35,29 @@
           </div>
         </div>
       </article>
+
+      <article class="card p-6">
+        <h2 class="text-base font-bold">Acerca de</h2>
+        <p class="mt-2 whitespace-pre-line text-sm">
+          {{ p.bio || 'Aún no agregaste tu bio.' }}
+        </p>
+      </article>
+
+      <article class="card p-6">
+        <h2 class="text-base font-bold">Habilidades</h2>
+        @if (p.skills.length) {
+          <ul class="mt-3 flex flex-wrap gap-2">
+            @for (skill of p.skills; track skill.id) {
+              <li class="rounded-full bg-primary-soft px-3 py-1 text-sm">
+                <span class="font-semibold">{{ skill.name }}</span>
+                <span class="ml-1 text-xs text-ink-muted">{{ skill.masteryLevel }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="mt-2 text-sm text-ink-muted">Aún no agregaste habilidades.</p>
+        }
+      </article>
     }
   </div>
 </section>
