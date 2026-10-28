@@ -26,6 +26,8 @@ export class Notifications {
   readonly error = signal('');
   readonly sessionExpired = signal(false);
   readonly visibleCount = signal(PAGE_SIZE);
+  readonly actionError = signal('');
+  private readonly marking = new Set<string>();
 
   readonly visibleItems = computed(() => this.items().slice(0, this.visibleCount()));
   readonly remaining = computed(() => Math.max(0, this.items().length - this.visibleCount()));
@@ -62,5 +64,31 @@ export class Notifications {
 
   showMore(): void {
     this.visibleCount.update((count) => count + PAGE_SIZE);
+  }
+
+  markAsRead(item: AppNotification): void {
+    if (item.isRead || this.marking.has(item.id)) {
+      return;
+    }
+    this.marking.add(item.id);
+    this.actionError.set('');
+    this.api.markAsRead(item.id).subscribe({
+      next: (updated) => {
+        this.marking.delete(item.id);
+        this.items.update((list) =>
+          list.map((current) =>
+            current.id === item.id ? { ...current, ...updated, isRead: true } : current,
+          ),
+        );
+      },
+      error: (err) => {
+        this.marking.delete(item.id);
+        if (err instanceof HttpErrorResponse && err.status === 401) {
+          this.sessionExpired.set(true);
+          return;
+        }
+        this.actionError.set(readApiError(err, 'No se pudo marcar la notificación como leída.'));
+      },
+    });
   }
 }
