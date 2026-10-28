@@ -1,0 +1,44 @@
+<app-navbar />
+
+<section class="bg-surface px-3 py-6 sm:px-4">
+  <div class="mx-auto max-w-3xl">
+    <header class="mb-4">
+      <h1 class="text-lg font-extrabold">Notificaciones</h1>
+      <p class="text-xs text-ink-muted">Novedades de tus postulaciones, convenios y validaciones</p>
+    </header>
+
+    <div class="card overflow-hidden">
+      @if (!auth.session() || sessionExpired()) {
+        <div class="px-4 py-10 text-center">
+          <p class="text-sm text-ink-muted">
+            Tu sesión no es válida o expiró. Ingresa de nuevo para ver tus notificaciones.
+          </p>
+          <a class="btn-primary mt-4" routerLink="/login">Ir a iniciar sesión</a>
+        </div>
+      } @else if (loading()) {
+        <p class="px-4 py-10 text-center text-sm text-ink-muted">Cargando notificaciones...</p>
+      } @else if (error()) {
+        <div class="px-4 py-10 text-center">
+          <p class="mx-auto max-w-md rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+            {{ error() }}
+          </p>
+          <button class="btn-secondary mt-4" type="button" (click)="load()">Reintentar</button>
+        </div>
+      } @else {
+        <ul class="divide-y divide-line">
+          @for (item of items(); track item.id) {
+            <li class="px-4 py-3">
+              <p class="text-sm font-semibold">{{ item.title }}</p>
+              <p class="mt-0.5 text-sm text-ink-muted">{{ item.content }}</p>
+              <p class="mt-1 text-xs text-ink-muted">{{ formatRelative(item.createdAt) }}</p>
+            </li>
+          } @empty {
+            <li class="px-4 py-10 text-center text-sm text-ink-muted">
+              Aún no tienes notificaciones.
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </div>
+</section>
