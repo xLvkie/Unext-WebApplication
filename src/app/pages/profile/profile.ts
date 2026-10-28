@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import {
@@ -16,7 +17,7 @@ import { Navbar } from '../../shared/components/navbar/navbar';
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [RouterLink, Navbar],
+  imports: [FormsModule, RouterLink, Navbar],
   templateUrl: './profile.html',
 })
 export class Profile implements OnInit {
@@ -30,6 +31,11 @@ export class Profile implements OnInit {
   postulant = signal<PostulantProfileResponse | null>(null);
   recruiter = signal<RecruiterProfileResponse | null>(null);
   institution = signal<InstitutionProfileResponse | null>(null);
+
+  editing = signal(false);
+  saving = signal(false);
+  formError = signal<string | null>(null);
+  form = { career: '', currentCycle: null as number | null, cvUrl: '', headline: '', bio: '' };
 
   fullName = computed(() => {
     const profile = this.postulant();
@@ -53,6 +59,59 @@ export class Profile implements OnInit {
       default:
         this.loadPostulant();
     }
+  }
+
+  startEdit(): void {
+    const profile = this.postulant();
+    if (!profile) {
+      return;
+    }
+    this.form = {
+      career: profile.career ?? '',
+      currentCycle: profile.currentCycle,
+      cvUrl: profile.cvUrl ?? '',
+      headline: profile.headline ?? '',
+      bio: profile.bio ?? '',
+    };
+    this.formError.set(null);
+    this.editing.set(true);
+  }
+
+  cancelEdit(): void {
+    this.editing.set(false);
+  }
+
+  saveProfile(): void {
+    const { career, currentCycle, cvUrl, headline, bio } = this.form;
+    if (currentCycle != null && currentCycle < 1) {
+      this.formError.set('El ciclo debe ser un número mayor o igual a 1.');
+      return;
+    }
+    this.saving.set(true);
+    this.formError.set(null);
+    this.profileService
+      .updateMyPostulantProfile({
+        career: career.trim(),
+        ...(currentCycle != null && { currentCycle }),
+        cvUrl: cvUrl.trim(),
+        headline: headline.trim(),
+        bio: bio.trim(),
+      })
+      .subscribe({
+        next: (profile) => {
+          this.postulant.set(profile);
+          this.saving.set(false);
+          this.editing.set(false);
+        },
+        error: (err: unknown) => {
+          this.saving.set(false);
+          if (err instanceof HttpErrorResponse && err.status === 401) {
+            this.sessionInvalid.set(true);
+          } else {
+            this.formError.set(readApiError(err, 'No se pudo guardar tu perfil.'));
+          }
+        },
+      });
   }
 
   private loadPostulant(): void {

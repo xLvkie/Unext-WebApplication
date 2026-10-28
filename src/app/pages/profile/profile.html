@@ -81,6 +81,52 @@
           <p class="mt-1 text-sm text-ink-muted">Sin verificar por tu institución</p>
         }
       </article>
+      <article class="card p-6">
+        @if (editing()) {
+          <form class="flex flex-col gap-3" (ngSubmit)="saveProfile()">
+            <h2 class="text-base font-bold">Editar perfil</h2>
+            <label class="text-sm font-semibold">
+              Titular
+              <input class="field mt-1" name="headline" [(ngModel)]="form.headline" />
+            </label>
+            <label class="text-sm font-semibold">
+              Carrera
+              <input class="field mt-1" name="career" [(ngModel)]="form.career" />
+            </label>
+            <label class="text-sm font-semibold">
+              Ciclo actual
+              <input
+                class="field mt-1"
+                type="number"
+                min="1"
+                name="currentCycle"
+                [(ngModel)]="form.currentCycle"
+              />
+            </label>
+            <label class="text-sm font-semibold">
+              Enlace a tu CV
+              <input class="field mt-1" type="url" name="cvUrl" [(ngModel)]="form.cvUrl" />
+            </label>
+            <label class="text-sm font-semibold">
+              Bio
+              <textarea class="field mt-1" rows="4" name="bio" [(ngModel)]="form.bio"></textarea>
+            </label>
+            @if (formError()) {
+              <p class="text-sm text-danger">{{ formError() }}</p>
+            }
+            <div class="flex gap-2">
+              <button class="btn-primary" type="submit" [disabled]="saving()">
+                {{ saving() ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+              <button class="btn-secondary" type="button" (click)="cancelEdit()">Cancelar</button>
+            </div>
+          </form>
+        } @else {
+          <button class="btn-secondary sm:w-48" type="button" (click)="startEdit()">
+            Editar perfil
+          </button>
+        }
+      </article>
     } @else if (recruiter(); as r) {
       <article class="card p-6">
         <div class="flex items-center gap-2">
