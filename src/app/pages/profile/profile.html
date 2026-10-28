@@ -1,0 +1,40 @@
+<app-navbar />
+
+<section class="min-h-[calc(100vh-4rem)] bg-surface p-3 sm:p-4">
+  <div class="mx-auto flex max-w-3xl flex-col gap-4">
+    @if (loading()) {
+      <div class="card p-6 text-sm text-ink-muted">Cargando tu perfil...</div>
+    } @else if (sessionInvalid()) {
+      <div class="card p-6 text-sm">
+        <p class="font-semibold">Tu sesión no es válida o expiró.</p>
+        <a class="mt-2 inline-block font-semibold text-primary hover:underline" routerLink="/login">
+          Ir a iniciar sesión
+        </a>
+      </div>
+    } @else if (error()) {
+      <div class="card p-6 text-sm text-danger">{{ error() }}</div>
+    } @else if (postulant(); as p) {
+      <article class="card p-6">
+        <div class="flex items-center gap-4">
+          <div
+            class="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-primary-soft text-2xl font-bold text-primary"
+          >
+            {{ avatarInitials() }}
+          </div>
+          <div class="min-w-0">
+            <h1 class="truncate text-xl font-extrabold">{{ fullName() }}</h1>
+            @if (p.headline) {
+              <p class="text-sm text-ink-muted">{{ p.headline }}</p>
+            }
+            <p class="mt-1 text-sm">
+              {{ p.career || 'Carrera por definir' }}
+              @if (p.currentCycle) {
+                · Ciclo {{ p.currentCycle }}
+              }
+            </p>
+          </div>
+        </div>
+      </article>
+    }
+  </div>
+</section>
