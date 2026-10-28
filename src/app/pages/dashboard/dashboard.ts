@@ -133,7 +133,7 @@ export class Dashboard implements OnInit {
             career: data.industry || 'Sector Corporativo',
             currentCycle: 0,
             headline: data.industry ? `${data.industry} · Cuenta Reclutador` : 'Empresa Reclutadora',
-            isInstitutionVerified: Boolean(data.isValidated || data.isVerified),
+            isInstitutionVerified: Boolean(data.isValidated),
             institutionProfile: 'Cuenta Corporativa',
             skills: []
           });
@@ -152,7 +152,7 @@ export class Dashboard implements OnInit {
             career: 'Educación Superior',
             currentCycle: 0,
             headline: data.domain ? `Dominio oficial: ${data.domain}` : 'Institución Educativa',
-            isInstitutionVerified: Boolean(data.isVerified),
+            isInstitutionVerified: false,
             institutionProfile: 'Institución Oficial',
             skills: []
           });
