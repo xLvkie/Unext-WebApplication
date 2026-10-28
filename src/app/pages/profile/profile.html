@@ -58,6 +58,29 @@
           <p class="mt-2 text-sm text-ink-muted">Aún no agregaste habilidades.</p>
         }
       </article>
+
+      <article class="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-base font-bold">Curriculum</h2>
+          @if (!p.cvUrl) {
+            <p class="mt-1 text-sm text-ink-muted">Aún no agregaste tu CV</p>
+          }
+        </div>
+        @if (p.cvUrl) {
+          <a class="btn-primary sm:w-40" [href]="p.cvUrl" target="_blank" rel="noopener noreferrer">
+            Ver CV
+          </a>
+        }
+      </article>
+
+      <article class="card p-6">
+        <h2 class="text-base font-bold">Verificación institucional</h2>
+        @if (p.isInstitutionVerified === true) {
+          <p class="mt-1 text-sm font-semibold text-success">Verificado por tu institución</p>
+        } @else {
+          <p class="mt-1 text-sm text-ink-muted">Sin verificar por tu institución</p>
+        }
+      </article>
     }
   </div>
 </section>
