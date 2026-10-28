@@ -29,6 +29,7 @@ export class Notifications {
   readonly actionError = signal('');
   private readonly marking = new Set<string>();
 
+  readonly unreadCount = computed(() => this.items().filter((item) => !item.isRead).length);
   readonly visibleItems = computed(() => this.items().slice(0, this.visibleCount()));
   readonly remaining = computed(() => Math.max(0, this.items().length - this.visibleCount()));
   readonly nextBatch = computed(() => Math.min(PAGE_SIZE, this.remaining()));
