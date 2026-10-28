@@ -12,14 +12,14 @@ export class ProfileService {
   private readonly API_URL = `${environment.apiUrl}`;
 
   getMyPostulantProfile(): Observable<PostulantProfileResponse> {
-    return this.http.get<PostulantProfileResponse>(`${this.API_URL}/profiles/postulants/me`);
+    return this.http.get<PostulantProfileResponse>(`${this.API_URL}/profiles/postulant/me`);
   }
 
   getMyRecruiterProfile(): Observable<any> {
-    return this.http.get<any>(`${this.API_URL}/recruiter/me`);
+    return this.http.get<any>(`${this.API_URL}/profiles/recruiter/me`);
   }
 
   getMyInstitutionProfile(): Observable<any> {
-    return this.http.get<any>(`${this.API_URL}/institution/me`);
+    return this.http.get<any>(`${this.API_URL}/profiles/institution/me`);
   }
 }
