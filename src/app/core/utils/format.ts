@@ -93,6 +93,33 @@ export function formatDayLabel(value: unknown): string {
   return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
 }
 
+export function formatRelative(value: unknown): string {
+  const date = toDate(value);
+  if (!date) {
+    return 'Fecha no disponible';
+  }
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) {
+    return 'Hace un momento';
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `Hace ${minutes} min`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `Hace ${hours} h`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days === 1) {
+    return 'Ayer';
+  }
+  if (days < 30) {
+    return `Hace ${days} días`;
+  }
+  return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
   const letters = parts.map((part) => part.charAt(0).toUpperCase()).join('');
