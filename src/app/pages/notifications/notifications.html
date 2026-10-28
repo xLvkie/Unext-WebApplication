@@ -27,10 +27,28 @@
       } @else {
         <ul class="divide-y divide-line">
           @for (item of visibleItems(); track item.id) {
-            <li class="px-4 py-3">
-              <p class="text-sm font-semibold">{{ item.title }}</p>
-              <p class="mt-0.5 text-sm text-ink-muted">{{ item.content }}</p>
-              <p class="mt-1 text-xs text-ink-muted">{{ formatRelative(item.createdAt) }}</p>
+            <li
+              class="flex items-start gap-3 px-4 py-3"
+              [class.bg-primary-soft]="!item.isRead"
+              [class.border-l-4]="!item.isRead"
+              [class.border-primary]="!item.isRead"
+            >
+              <span
+                class="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                [class.bg-primary]="!item.isRead"
+                [class.bg-transparent]="item.isRead"
+              ></span>
+              <div class="min-w-0">
+                <p
+                  class="text-sm"
+                  [class.font-bold]="!item.isRead"
+                  [class.font-semibold]="item.isRead"
+                >
+                  {{ item.title }}
+                </p>
+                <p class="mt-0.5 text-sm text-ink-muted">{{ item.content }}</p>
+                <p class="mt-1 text-xs text-ink-muted">{{ formatRelative(item.createdAt) }}</p>
+              </div>
             </li>
           } @empty {
             <li class="px-4 py-10 text-center text-sm text-ink-muted">
