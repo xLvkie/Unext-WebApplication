@@ -81,6 +81,57 @@
           <p class="mt-1 text-sm text-ink-muted">Sin verificar por tu institución</p>
         }
       </article>
+    } @else if (recruiter(); as r) {
+      <article class="card p-6">
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl font-extrabold">{{ r.companyName }}</h1>
+          @if (r.isValidated) {
+            <span
+              class="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success"
+            >
+              Empresa validada
+            </span>
+          } @else {
+            <span
+              class="rounded-full bg-surface px-2.5 py-0.5 text-xs font-semibold text-ink-muted"
+            >
+              Sin validar
+            </span>
+          }
+        </div>
+        <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt class="text-xs text-ink-muted">RUC</dt>
+            <dd class="font-semibold">{{ r.ruc }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-ink-muted">Rubro</dt>
+            <dd class="font-semibold">{{ r.industry || 'Sin rubro' }}</dd>
+          </div>
+        </dl>
+        <p class="mt-4 whitespace-pre-line text-sm">
+          {{ r.description || 'Aún no agregaste una descripción.' }}
+        </p>
+      </article>
+    } @else if (institution(); as i) {
+      <article class="card p-6">
+        <div class="flex items-center gap-4">
+          @if (i.logoUrl) {
+            <img
+              class="h-20 w-20 shrink-0 rounded-xl border border-line object-cover"
+              [src]="i.logoUrl"
+              [alt]="'Logo de ' + i.name"
+            />
+          }
+          <div class="min-w-0">
+            <h1 class="truncate text-xl font-extrabold">{{ i.name }}</h1>
+            <p class="text-sm text-ink-muted">{{ i.domain }}</p>
+          </div>
+        </div>
+        <p class="mt-4 whitespace-pre-line text-sm">
+          {{ i.description || 'Aún no agregaste una descripción.' }}
+        </p>
+      </article>
     }
   </div>
 </section>

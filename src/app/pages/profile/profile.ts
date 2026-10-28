@@ -2,7 +2,11 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 
-import { PostulantProfileResponse } from '../../core/models/profile.model';
+import {
+  InstitutionProfileResponse,
+  PostulantProfileResponse,
+  RecruiterProfileResponse,
+} from '../../core/models/profile.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { readApiError } from '../../core/utils/api-error';
@@ -24,6 +28,8 @@ export class Profile implements OnInit {
   error = signal<string | null>(null);
   sessionInvalid = signal(false);
   postulant = signal<PostulantProfileResponse | null>(null);
+  recruiter = signal<RecruiterProfileResponse | null>(null);
+  institution = signal<InstitutionProfileResponse | null>(null);
 
   fullName = computed(() => {
     const profile = this.postulant();
@@ -37,7 +43,16 @@ export class Profile implements OnInit {
       this.loading.set(false);
       return;
     }
-    this.loadPostulant();
+    switch (this.role()) {
+      case 'RECRUITER':
+        this.loadRecruiter();
+        break;
+      case 'INSTITUTION':
+        this.loadInstitution();
+        break;
+      default:
+        this.loadPostulant();
+    }
   }
 
   private loadPostulant(): void {
@@ -47,6 +62,26 @@ export class Profile implements OnInit {
         this.loading.set(false);
       },
       error: (err: unknown) => this.fail(err, 'No se pudo cargar tu perfil.'),
+    });
+  }
+
+  private loadRecruiter(): void {
+    this.profileService.getMyRecruiterProfile().subscribe({
+      next: (profile) => {
+        this.recruiter.set(profile);
+        this.loading.set(false);
+      },
+      error: (err: unknown) => this.fail(err, 'No se pudo cargar el perfil de tu empresa.'),
+    });
+  }
+
+  private loadInstitution(): void {
+    this.profileService.getMyInstitutionProfile().subscribe({
+      next: (profile) => {
+        this.institution.set(profile);
+        this.loading.set(false);
+      },
+      error: (err: unknown) => this.fail(err, 'No se pudo cargar el perfil de tu institución.'),
     });
   }
 
