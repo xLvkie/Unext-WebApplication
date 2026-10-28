@@ -26,7 +26,7 @@
         </div>
       } @else {
         <ul class="divide-y divide-line">
-          @for (item of items(); track item.id) {
+          @for (item of visibleItems(); track item.id) {
             <li class="px-4 py-3">
               <p class="text-sm font-semibold">{{ item.title }}</p>
               <p class="mt-0.5 text-sm text-ink-muted">{{ item.content }}</p>
@@ -38,6 +38,13 @@
             </li>
           }
         </ul>
+        @if (remaining() > 0) {
+          <div class="border-t border-line px-4 py-3 text-center">
+            <button class="btn-secondary" type="button" (click)="showMore()">
+              Ver {{ nextBatch() }} más
+            </button>
+          </div>
+        }
       }
     </div>
   </div>

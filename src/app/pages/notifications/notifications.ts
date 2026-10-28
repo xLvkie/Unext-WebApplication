@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 
@@ -8,6 +8,8 @@ import { NotificationService } from '../../core/services/notification.service';
 import { readApiError } from '../../core/utils/api-error';
 import { formatRelative } from '../../core/utils/format';
 import { Navbar } from '../../shared/components/navbar/navbar';
+
+const PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-notifications',
@@ -23,6 +25,11 @@ export class Notifications {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly sessionExpired = signal(false);
+  readonly visibleCount = signal(PAGE_SIZE);
+
+  readonly visibleItems = computed(() => this.items().slice(0, this.visibleCount()));
+  readonly remaining = computed(() => Math.max(0, this.items().length - this.visibleCount()));
+  readonly nextBatch = computed(() => Math.min(PAGE_SIZE, this.remaining()));
 
   readonly formatRelative = formatRelative;
 
@@ -39,6 +46,7 @@ export class Notifications {
     this.api.list().subscribe({
       next: (data) => {
         this.items.set(data);
+        this.visibleCount.set(PAGE_SIZE);
         this.loading.set(false);
       },
       error: (err) => {
@@ -50,5 +58,9 @@ export class Notifications {
         this.error.set(readApiError(err, 'No se pudieron cargar tus notificaciones.'));
       },
     });
+  }
+
+  showMore(): void {
+    this.visibleCount.update((count) => count + PAGE_SIZE);
   }
 }
