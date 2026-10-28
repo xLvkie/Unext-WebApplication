@@ -51,11 +51,40 @@
               <li class="rounded-full bg-primary-soft px-3 py-1 text-sm">
                 <span class="font-semibold">{{ skill.name }}</span>
                 <span class="ml-1 text-xs text-ink-muted">{{ skill.masteryLevel }}</span>
+                <button
+                  class="ml-2 text-xs font-bold text-danger"
+                  type="button"
+                  [attr.aria-label]="'Eliminar ' + skill.name"
+                  [disabled]="skillBusy()"
+                  (click)="removeSkill(skill.id)"
+                >
+                  ✕
+                </button>
               </li>
             }
           </ul>
         } @else {
           <p class="mt-2 text-sm text-ink-muted">Aún no agregaste habilidades.</p>
+        }
+        <form class="mt-4 flex flex-col gap-2 sm:flex-row" (ngSubmit)="addSkill()">
+          <input
+            class="field"
+            name="skillName"
+            placeholder="Habilidad (ej. Java)"
+            [(ngModel)]="skillName"
+          />
+          <input
+            class="field"
+            name="skillLevel"
+            placeholder="Nivel (ej. Avanzado)"
+            [(ngModel)]="skillLevel"
+          />
+          <button class="btn-secondary sm:w-40" type="submit" [disabled]="skillBusy()">
+            Agregar
+          </button>
+        </form>
+        @if (skillError()) {
+          <p class="mt-2 text-sm text-danger">{{ skillError() }}</p>
         }
       </article>
 

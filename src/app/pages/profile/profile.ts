@@ -32,6 +32,11 @@ export class Profile implements OnInit {
   recruiter = signal<RecruiterProfileResponse | null>(null);
   institution = signal<InstitutionProfileResponse | null>(null);
 
+  skillName = '';
+  skillLevel = '';
+  skillBusy = signal(false);
+  skillError = signal<string | null>(null);
+
   editing = signal(false);
   saving = signal(false);
   formError = signal<string | null>(null);
@@ -112,6 +117,52 @@ export class Profile implements OnInit {
           }
         },
       });
+  }
+
+  addSkill(): void {
+    const profile = this.postulant();
+    const name = this.skillName.trim();
+    const masteryLevel = this.skillLevel.trim();
+    if (!profile || !name || !masteryLevel) {
+      this.skillError.set('Escribe el nombre y el nivel de dominio.');
+      return;
+    }
+    this.skillBusy.set(true);
+    this.skillError.set(null);
+    this.profileService.addSkill({ name, masteryLevel }).subscribe({
+      next: (skill) => {
+        this.postulant.set({ ...profile, skills: [...profile.skills, skill] });
+        this.skillName = '';
+        this.skillLevel = '';
+        this.skillBusy.set(false);
+      },
+      error: (err: unknown) => this.failSkill(err, 'No se pudo agregar la habilidad.'),
+    });
+  }
+
+  removeSkill(skillId: string): void {
+    const profile = this.postulant();
+    if (!profile) {
+      return;
+    }
+    this.skillBusy.set(true);
+    this.skillError.set(null);
+    this.profileService.deleteSkill(skillId).subscribe({
+      next: () => {
+        this.postulant.set({ ...profile, skills: profile.skills.filter((s) => s.id !== skillId) });
+        this.skillBusy.set(false);
+      },
+      error: (err: unknown) => this.failSkill(err, 'No se pudo eliminar la habilidad.'),
+    });
+  }
+
+  private failSkill(err: unknown, fallback: string): void {
+    this.skillBusy.set(false);
+    if (err instanceof HttpErrorResponse && err.status === 401) {
+      this.sessionInvalid.set(true);
+    } else {
+      this.skillError.set(readApiError(err, fallback));
+    }
   }
 
   private loadPostulant(): void {
