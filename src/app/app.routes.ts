@@ -5,6 +5,7 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { Profile } from './pages/profile/postulant/profile';
 import { JobSearch } from './pages/jobs/job-search';
 import { Messages } from './pages/messages/messages';
+import { Notifications } from './pages/notifications/notifications';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -19,9 +20,10 @@ export const routes: Routes = [
   { path: 'feed', component: Dashboard },
   { path: 'dashboard', redirectTo: 'feed', pathMatch: 'full' },
 
-  // Vacantes y Mensajería
+  // Vacantes, Mensajería y Notificaciones
   { path: 'jobs', component: JobSearch },
   { path: 'messages', component: Messages },
+  { path: 'notifications', component: Notifications },
 
   { path: '**', redirectTo: 'login' }
 ];
