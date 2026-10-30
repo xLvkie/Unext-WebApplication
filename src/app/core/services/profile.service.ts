@@ -79,4 +79,21 @@ export class ProfileService {
       { responseType: 'text' }
     );
   }
+
+  /* ==============================
+     PUBLIC PROFILE VIEW (POR ID)
+  ============================== */
+  getPostulantPublicProfile(postulantId: string): Observable<PostulantProfileResponse> {
+    return this.http.get<PostulantProfileResponse>(
+      `${this.API_URL}/postulants/directory/${postulantId}`
+    );
+  }
+
+  getRecruiterPublicProfile(recruiterId: string): Observable<any> {
+    return this.http.get<any>(`${this.API_URL}/recruiters/directory/${recruiterId}`);
+  }
+
+  getInstitutionPublicProfile(institutionId: string): Observable<any> {
+    return this.http.get<any>(`${this.API_URL}/institutions/directory/${institutionId}`);
+  }
 }

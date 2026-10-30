@@ -13,6 +13,14 @@ import { JobApplication, JobRecommendationResponse } from '../../core/models/job
 import { PostulantProfileResponse } from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
 import { applicationLabel } from '../../core/utils/labels';
+import { toDate } from '../../core/utils/format';
+import { processFeedMediaFile } from '../../core/utils/file-media';
+
+export interface MediaAttachmentPreview {
+  dataUrl: string;
+  type: 'image' | 'video' | 'gif';
+  name: string;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -28,41 +36,45 @@ export class Dashboard implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  // Estados Reactivos conectados al Backend
   posts = signal<FeedPostResponse[]>([]);
   recommendations = signal<JobRecommendationResponse[]>([]);
   myApplications = signal<JobApplication[]>([]);
   isLoadingFeed = signal(false);
   isProfileIncomplete = signal(false);
 
-  // Estado inicial limpio (sin datos falsos)
   profile = signal<PostulantProfileResponse>({
     id: '',
     userId: '',
     firstName: '',
     lastName: '',
-    studentCode: null,
-    career: null,
-    currentCycle: null,
-    avatarUrl: null,
-    bannerUrl: null,
-    headline: null,
-    bio: null,
-    hasUniversityBase: false,
-    isInstitutionVerified: false,
-    institutionProfile: null,
-    institutionName: null,
-    institutionLogoUrl: null,
     skills: []
   });
+
+  currentUserId = computed(
+    () => this.profile().userId || this.authService.session()?.userId || ''
+  );
+
+  currentRole = computed(() => this.authService.getStoredRole() || 'POSTULANT');
+
+  // Límite de publicaciones importantes según el rol
+  maxImportantPosts = computed(() => {
+    const role = this.currentRole();
+    if (role === 'INSTITUTION') return 6;
+    if (role === 'RECRUITER') return 5;
+    return 3;
+  });
+
+  myImportantPostsCount = computed(
+    () =>
+      this.posts().filter(
+        (p) => p.authorUserId === this.currentUserId() && p.isImportant
+      ).length
+  );
 
   fullName = computed(() => {
     const first = this.profile().firstName?.trim();
     const last = this.profile().lastName?.trim();
-    if (first || last) {
-      return `${first} ${last}`.trim();
-    }
-    return 'Mi Cuenta';
+    return first || last ? `${first} ${last}`.trim() : 'Mi Cuenta';
   });
 
   userInitials = computed(() => {
@@ -71,16 +83,10 @@ export class Dashboard implements OnInit {
     return (first + last).toUpperCase() || 'U';
   });
 
-  // Separación clara entre habilidades validadas por institución y habilidades generales
   validatedSkills = computed(() =>
     (this.profile().skills || []).filter((s) => Boolean(s.isValidatedByInstitution))
   );
 
-  unvalidatedSkills = computed(() =>
-    (this.profile().skills || []).filter((s) => !s.isValidatedByInstitution)
-  );
-
-  // Estado real del trámite académico / convenio
   academicProcedureStatus = computed(() => {
     const p = this.profile();
     if (p.isInstitutionVerified && p.hasUniversityBase) {
@@ -107,18 +113,16 @@ export class Dashboard implements OnInit {
     return null;
   });
 
-  // Formulario de Crear Post
+  // Creación de Post con archivos reales (Imágenes, Videos y GIFs)
   newPostContent = '';
-  newPostMediaUrl = '';
-  showMediaInput = signal(false);
+  newPostImportant = false;
+  selectedMedia = signal<MediaAttachmentPreview[]>([]);
   isPosting = signal(false);
 
-  // Comentarios y Notificaciones Toast
   openComments = signal<Record<string, boolean>>({});
   commentDrafts: Record<string, string> = {};
   toast = signal<ToastData | null>(null);
 
-  // Modales
   selectedJobForAi = signal<JobRecommendationResponse | null>(null);
   isAnalyzingAi = signal(false);
   showValidationModal = signal(false);
@@ -134,7 +138,6 @@ export class Dashboard implements OnInit {
   loadInitialData(): void {
     this.isLoadingFeed.set(true);
 
-    // 1. Cargar Feed Global
     this.feedService.getGlobalFeed().subscribe({
       next: (data) => {
         this.posts.set(data);
@@ -146,26 +149,21 @@ export class Dashboard implements OnInit {
       }
     });
 
-    // 2. Cargar Perfil según el Rol del usuario autenticado
-    const role = this.authService.getStoredRole();
+    const role = this.currentRole();
     if (role === 'POSTULANT') {
       this.profileService.getMyPostulantProfile().subscribe({
         next: (data) => {
           this.profile.set(data);
           this.isProfileIncomplete.set(false);
         },
-        error: () => {
-          this.isProfileIncomplete.set(true);
-        }
+        error: () => this.isProfileIncomplete.set(true)
       });
 
-      // 3. Cargar Recomendaciones Laborales
       this.jobService.getRecommendations().subscribe({
         next: (data) => this.recommendations.set(data),
         error: () => this.recommendations.set([])
       });
 
-      // 4. Cargar Estado de mis Postulaciones a Vacantes (para la Card de Notificaciones Rápidas)
       this.jobService.myApplications().subscribe({
         next: (apps) => this.myApplications.set(apps.slice(0, 3)),
         error: () => this.myApplications.set([])
@@ -178,7 +176,7 @@ export class Dashboard implements OnInit {
             userId: data.userId || '',
             firstName: data.companyName || 'Empresa',
             lastName: '',
-            avatarUrl: data.logoUrl || null,
+            avatarUrl: data.companyLogoUrl || data.logoUrl || null,
             headline: data.industry ? `${data.industry} · Cuenta Reclutador` : 'Empresa Reclutadora',
             isInstitutionVerified: Boolean(data.isValidated || data.isVerified),
             institutionName: 'Cuenta Corporativa',
@@ -207,6 +205,48 @@ export class Dashboard implements OnInit {
     }
   }
 
+  // Selección directa de archivos de imagen, GIF o video desde la computadora
+  async onMediaFilesSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    const current = this.selectedMedia();
+    if (current.length + files.length > 4) {
+      this.showToast('Puedes adjuntar un máximo de 4 archivos multimedia por publicación.', 'warning');
+      input.value = '';
+      return;
+    }
+
+    for (const file of Array.from(files)) {
+      try {
+        const dataUrl = await processFeedMediaFile(file);
+        const type: 'image' | 'video' | 'gif' = file.type.startsWith('video/')
+          ? 'video'
+          : file.type === 'image/gif'
+          ? 'gif'
+          : 'image';
+
+        this.selectedMedia.update((list) => [
+          ...list,
+          { dataUrl, type, name: file.name }
+        ]);
+      } catch (err: any) {
+        this.showToast(err?.message || 'Archivo multimedia no válido.', 'error');
+      }
+    }
+
+    input.value = '';
+  }
+
+  removeSelectedMedia(index: number): void {
+    this.selectedMedia.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  isVideoMedia(url: string): boolean {
+    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+  }
+
   handleCreatePost(): void {
     const content = this.newPostContent.trim();
     if (!content) {
@@ -214,36 +254,92 @@ export class Dashboard implements OnInit {
       return;
     }
 
-    this.isPosting.set(true);
-    const media = this.newPostMediaUrl.trim() ? [this.newPostMediaUrl.trim()] : undefined;
+    if (this.newPostImportant && this.myImportantPostsCount() >= this.maxImportantPosts()) {
+      this.showToast(
+        `Ya alcanzaste tu límite de ${this.maxImportantPosts()} publicaciones importantes.`,
+        'warning'
+      );
+      return;
+    }
 
-    this.feedService.createPost({ content, mediaUrls: media }).subscribe({
-      next: (created) => {
-        // Si el backend no adjuntó el avatar en la respuesta inmediata, usamos el de nuestro perfil cargado
-        const enrichedPost: FeedPostResponse = {
-          ...created,
-          authorAvatarUrl: created.authorAvatarUrl || this.profile().avatarUrl || undefined,
-          authorHeadline: created.authorHeadline || this.profile().headline || ''
-        };
-        this.posts.update((prev) => [enrichedPost, ...prev]);
-        this.newPostContent = '';
-        this.newPostMediaUrl = '';
-        this.showMediaInput.set(false);
-        this.isPosting.set(false);
-        this.showToast('¡Publicación compartida en el feed!', 'success');
+    this.isPosting.set(true);
+    const mediaUrls = this.selectedMedia().map((m) => m.dataUrl);
+
+    this.feedService
+      .createPost({
+        content,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        isImportant: this.newPostImportant
+      })
+      .subscribe({
+        next: (created) => {
+          const enrichedPost: FeedPostResponse = {
+            ...created,
+            authorAvatarUrl: created.authorAvatarUrl || this.profile().avatarUrl || undefined,
+            authorHeadline: created.authorHeadline || this.profile().headline || ''
+          };
+          this.posts.update((prev) => [enrichedPost, ...prev]);
+          this.newPostContent = '';
+          this.newPostImportant = false;
+          this.selectedMedia.set([]);
+          this.isPosting.set(false);
+          this.showToast(
+            created.isImportant
+              ? '¡Publicación importante fijada en tu perfil y en el feed!'
+              : '¡Publicación compartida en el feed (activa por 7 días)!',
+            'success'
+          );
+        },
+        error: (err) => {
+          this.isPosting.set(false);
+          this.showToast(
+            readApiError(err, 'No se pudo publicar en el feed.'),
+            'error'
+          );
+        }
+      });
+  }
+
+  handleToggleImportant(post: FeedPostResponse): void {
+    this.feedService.toggleImportant(post.id).subscribe({
+      next: (updated) => {
+        this.posts.update((items) =>
+          items.map((p) =>
+            p.id === post.id
+              ? { ...p, isImportant: updated.isImportant, expiresAt: updated.expiresAt }
+              : p
+          )
+        );
+        this.showToast(
+          updated.isImportant
+            ? '📌 Publicación marcada como importante (no caducará y se mostrará en tu perfil).'
+            : 'Publicación removida de importantes (caducará en 7 días).',
+          'info'
+        );
       },
       error: (err) => {
-        this.isPosting.set(false);
         this.showToast(
-          readApiError(err, 'Completa tu perfil antes de publicar en el feed.'),
-          'error'
+          readApiError(err, `Solo puedes fijar hasta ${this.maxImportantPosts()} publicaciones importantes.`),
+          'warning'
         );
       }
     });
   }
 
-  toggleMediaInput(): void {
-    this.showMediaInput.update((v) => !v);
+  // Redirección al perfil del autor (sea POSTULANT, RECRUITER o INSTITUTION)
+  navigateToAuthorProfile(
+    authorUserId: string,
+    authorProfileId: string | undefined,
+    authorRole: string | undefined
+  ): void {
+    if (authorUserId === this.currentUserId()) {
+      this.router.navigate(['/profile/me']);
+      return;
+    }
+
+    const roleSlug = (authorRole || 'POSTULANT').toLowerCase();
+    const targetId = authorProfileId || authorUserId;
+    this.router.navigate(['/profile/view', roleSlug, targetId]);
   }
 
   handleToggleLike(post: FeedPostResponse): void {
@@ -345,7 +441,6 @@ export class Dashboard implements OnInit {
         this.recommendations.update((items) =>
           items.map((j) => (j.id === job.id ? { ...j, isApplied: true } : j))
         );
-        // Actualizamos también la lista de postulaciones rápidas en la Card 3
         this.jobService.myApplications().subscribe({
           next: (apps) => this.myApplications.set(apps.slice(0, 3))
         });
@@ -405,10 +500,9 @@ export class Dashboard implements OnInit {
     }, 4000);
   }
 
-  formatDate(date: string | Date | undefined): string {
-    if (!date) return 'Reciente';
-    const d = new Date(date);
-    if (Number.isNaN(d.getTime())) return 'Reciente';
+  formatDate(value: unknown): string {
+    const d = toDate(value);
+    if (!d) return 'Reciente';
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - d.getTime()) / (1000 * 60));
 
@@ -418,5 +512,16 @@ export class Dashboard implements OnInit {
     if (diffHours < 24) return `Hace ${diffHours} h`;
     const diffDays = Math.floor(diffHours / 24);
     return `Hace ${diffDays} d`;
+  }
+
+  formatExpirationRemaining(expiresAt: unknown): string {
+    const exp = toDate(expiresAt);
+    if (!exp) return '7 días';
+    const diffMs = exp.getTime() - Date.now();
+    if (diffMs <= 0) return 'Por expirar';
+    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+    if (diffHours < 24) return `${diffHours} h restantes`;
+    const diffDays = Math.ceil(diffHours / 24);
+    return `${diffDays} d restantes`;
   }
 }

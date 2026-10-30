@@ -1,15 +1,72 @@
 <div class="space-y-4">
-  <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-4">
-    <div>
-      <h3 class="text-[15px] font-bold text-gray-900">Idioma del perfil</h3>
-      <p class="text-[13px] text-[#6B7280] mt-0.5">Español</p>
+
+  <!-- CARD 1: PUBLICACIONES IMPORTANTES DEL USUARIO -->
+  <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-3.5">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-1.5">
+        <span class="text-sm">📌</span>
+        <h3 class="text-[15px] font-bold text-gray-900">Publicaciones importantes</h3>
+      </div>
+      <span class="px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] text-[11px] font-extrabold">
+        {{ importantPosts().length }} / {{ maxImportantPosts() }}
+      </span>
     </div>
-    <div class="border-t border-gray-100 pt-4">
-      <h3 class="text-[15px] font-bold text-gray-900">URL y perfil público</h3>
-      <p class="text-[12px] text-[#6B7280] mt-0.5 truncate">{{ publicProfileUrl() }}</p>
+
+    <p class="text-[11px] text-[#6B7280] leading-snug">
+      Publicaciones permanentes que no se borran automáticamente del muro.
+    </p>
+
+    <div class="space-y-3">
+      @for (post of importantPosts(); track post.id) {
+        <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200/80 space-y-2 relative group">
+          <div class="flex items-center justify-between text-[10px] text-[#6B7280]">
+            <span class="font-semibold text-[#274DEA]">{{ formatShortDate(post.createdAt) }}</span>
+            @if (isOwnProfile()) {
+              <button
+                type="button"
+                (click)="unpinPost.emit(post.id)"
+                class="text-[#B45309] hover:text-[#EF4444] font-bold"
+                title="Quitar de importantes"
+              >
+                Desfijar ✕
+              </button>
+            }
+          </div>
+
+          <p class="text-[12px] text-gray-800 line-clamp-3 leading-snug">
+            {{ post.content }}
+          </p>
+
+          @if (post.mediaUrls && post.mediaUrls.length > 0) {
+            <div class="rounded-lg overflow-hidden h-24 bg-slate-900">
+              @if (isVideo(post.mediaUrls[0])) {
+                <video [src]="post.mediaUrls[0]" class="w-full h-full object-cover"></video>
+              } @else {
+                <img [src]="post.mediaUrls[0]" alt="Adjunto" class="w-full h-full object-cover" />
+              }
+            </div>
+          }
+
+          <div class="flex items-center justify-between text-[10px] text-[#6B7280] pt-1 border-t border-gray-100">
+            <span>👍 {{ post.likesCount }}</span>
+            <span>💬 {{ post.commentsCount }}</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="p-4 rounded-xl bg-[#F8FAFC] border border-dashed border-gray-200 text-center">
+          <p class="text-[12px] font-semibold text-gray-700">Sin publicaciones fijadas</p>
+          <p class="text-[11px] text-[#6B7280] mt-0.5">
+            Marca el ícono 📌 en tus publicaciones del Feed para fijar hasta {{ maxImportantPosts() }} aquí.
+          </p>
+          <a routerLink="/feed" class="inline-block mt-2 text-[11px] font-bold text-[#274DEA] hover:underline">
+            Ir al Feed →
+          </a>
+        </div>
+      }
     </div>
   </div>
 
+  <!-- CARD 2: PERSONAS EN LA RED -->
   <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
     <h3 class="text-[15px] font-bold text-gray-900">Personas en la red</h3>
     <p class="text-[12px] text-[#6B7280]">Conecta con otros perfiles en Unext</p>
@@ -34,4 +91,5 @@
       }
     </div>
   </div>
+
 </div>

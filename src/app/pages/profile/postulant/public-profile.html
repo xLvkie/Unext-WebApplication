@@ -1,0 +1,382 @@
+<!-- NAVBAR SUPERIOR AUTOMÁTICO -->
+<app-navbar />
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    @if (isLoading()) {
+      <div class="bg-white rounded-2xl border border-gray-200 p-10 text-center space-y-3">
+        <div class="w-20 h-20 rounded-full bg-slate-200 animate-pulse mx-auto"></div>
+        <div class="h-5 w-48 bg-slate-200 animate-pulse mx-auto rounded"></div>
+        <div class="h-3 w-72 bg-slate-100 animate-pulse mx-auto rounded"></div>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- ================================================================= -->
+        <!-- COLUMNA PRINCIPAL IZQUIERDA (lg:col-span-9) - SOLO LECTURA        -->
+        <!-- ================================================================= -->
+        <div class="lg:col-span-9 space-y-4">
+
+          <!-- CARD 1: CABECERA PÚBLICA DEL PERFIL -->
+          <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden relative">
+            
+            <!-- Banner Superior (Sin botón de cambiar portada) -->
+            <div class="h-44 sm:h-52 relative overflow-hidden bg-gradient-to-r from-[#0A192F] via-[#112240] to-[#1E3BB8]">
+              @if (profile().bannerUrl) {
+                <img [src]="profile().bannerUrl" alt="Banner" class="w-full h-full object-cover" />
+                <div class="absolute inset-0 bg-black/15"></div>
+              } @else {
+                <div class="w-full h-full flex flex-col justify-center px-6 sm:pl-48 sm:pr-16">
+                  <p class="text-white text-lg sm:text-2xl md:text-3xl font-bold tracking-tight truncate max-w-full">
+                    {{ safeBannerTitle() }}
+                  </p>
+                  <p class="text-[#8EB9FC] font-mono text-xs sm:text-sm mt-1 truncate max-w-full">
+                    {{ safeBannerSubtitle() }}
+                  </p>
+                </div>
+              }
+            </div>
+
+            <div class="px-6 pb-6 relative">
+              <!-- Avatar + Insignias Académicas -->
+              <div class="flex flex-wrap justify-between items-end -mt-16 sm:-mt-20 mb-4 relative z-10 gap-3">
+                <div class="flex items-end gap-3 sm:gap-4 flex-wrap">
+                  <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white p-1.5 shadow-md">
+                    <div class="w-full h-full rounded-full bg-gradient-to-br from-[#274DEA] to-[#1E3BB8] text-white font-extrabold text-4xl flex items-center justify-center relative overflow-hidden border-4 border-[#059669]">
+                      @if (profile().avatarUrl) {
+                        <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover" />
+                      } @else {
+                        <span>{{ initials() }}</span>
+                      }
+                    </div>
+                  </div>
+
+                  @if (profile().isInstitutionVerified) {
+                    <div class="flex items-center gap-2 pb-2">
+                      <div
+                        class="w-11 h-11 rounded-full bg-white border-2 border-[#059669] shadow-sm flex items-center justify-center overflow-hidden"
+                        [title]="'Verificado académicamente por ' + (profile().institutionName || 'Institución')"
+                      >
+                        @if (profile().institutionLogoUrl) {
+                          <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                        } @else {
+                          <span class="text-[11px] font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
+                        }
+                      </div>
+
+                      <div class="px-3 py-1.5 rounded-full bg-[#ECFDF5] border border-[#059669]/30 flex items-center gap-1.5 shadow-2xs">
+                        <span class="text-[11px] font-bold text-[#059669]">
+                          ✓ {{ profile().hasUniversityBase ? 'Estudiante Verificado' : 'Perfil Acreditado' }}
+                        </span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+
+              <!-- Información Principal del Usuario -->
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                <div class="md:col-span-8">
+                  <div class="flex items-center gap-2.5 flex-wrap">
+                    <h1 class="text-2xl font-bold text-gray-900">{{ fullName() }}</h1>
+
+                    @if (profile().isInstitutionVerified && profile().institutionName) {
+                      <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold border border-[#059669] text-[#059669] bg-[#ECFDF5]">
+                        ✓ Acreditado por {{ profile().institutionName }}
+                      </span>
+                    }
+                  </div>
+
+                  <p class="text-[15px] text-gray-800 mt-1.5 leading-snug break-words">
+                    {{ profile().headline || 'Miembro de la red profesional Unext' }}
+                  </p>
+
+                  <!-- Datos Universitarios Públicos (Solo si es Estudiante Activo Verificado) -->
+                  @if (profile().isInstitutionVerified && profile().hasUniversityBase) {
+                    <div class="mt-3 p-3 rounded-xl bg-[#ECFDF5]/70 border border-[#059669]/25 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
+                      <span class="font-bold text-[#059669]">Carrera: {{ profile().career }}</span>
+                      <span class="text-gray-700 font-semibold">· Ciclo actual: {{ profile().currentCycle }}° Ciclo</span>
+                    </div>
+                  }
+
+                  <p class="text-[13px] text-[#6B7280] mt-2">Perú · Perfil público en Unext</p>
+                </div>
+
+                @if (profile().isInstitutionVerified && profile().institutionName) {
+                  <div class="md:col-span-4 flex items-center gap-2.5 md:justify-end">
+                    <div class="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                      @if (profile().institutionLogoUrl) {
+                        <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                      } @else {
+                        <span class="text-xs font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
+                      }
+                    </div>
+                    <div class="text-left">
+                      <p class="text-[13px] font-bold text-gray-900 leading-tight">{{ profile().institutionName }}</p>
+                      <p class="text-[11px] text-[#059669] font-semibold">
+                        {{ profile().hasUniversityBase ? (profile().career + ' · Ciclo ' + profile().currentCycle) : 'Verificación Oficial' }}
+                      </p>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- ============================================================= -->
+              <!-- BOTONES DE INTERACCIÓN PARA VISITANTES (+ CONECTAR / MENSAJE) -->
+              <!-- ============================================================= -->
+              <div class="mt-5 flex flex-wrap items-center gap-2.5">
+                @switch (connectionState().status) {
+                  @case ('NONE') {
+                    <button
+                      type="button"
+                      [disabled]="isActionLoading()"
+                      (click)="handleConnectClick()"
+                      class="px-5 py-2 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-bold text-[14px] shadow-xs flex items-center gap-2 transition disabled:opacity-60"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                      </svg>
+                      <span>Conectar</span>
+                    </button>
+                  }
+                  @case ('PENDING_SENT') {
+                    <button
+                      type="button"
+                      [disabled]="isActionLoading()"
+                      (click)="handleCancelOrRemoveConnection()"
+                      class="px-5 py-2 rounded-full bg-[#FEF3C7] border border-[#F59E0B]/40 text-[#B45309] hover:bg-[#FDE68A] font-bold text-[14px] flex items-center gap-1.5 transition"
+                      title="Haz clic para cancelar la solicitud enviada"
+                    >
+                      <span>⏳ Solicitud enviada (Cancelar)</span>
+                    </button>
+                  }
+                  @case ('PENDING_RECEIVED') {
+                    <button
+                      type="button"
+                      [disabled]="isActionLoading()"
+                      (click)="handleAcceptRequest()"
+                      class="px-5 py-2 rounded-full bg-[#059669] hover:bg-[#047857] text-white font-bold text-[14px] flex items-center gap-1.5 shadow-xs transition"
+                    >
+                      <span>✓ Aceptar solicitud de conexión</span>
+                    </button>
+                  }
+                  @case ('CONNECTED') {
+                    <div class="inline-flex items-center gap-2">
+                      <span class="px-4 py-2 rounded-full bg-[#ECFDF5] border border-[#059669]/30 text-[#059669] font-bold text-[14px] flex items-center gap-1.5">
+                        ✓ En tu red de contactos
+                      </span>
+                      <button
+                        type="button"
+                        (click)="handleCancelOrRemoveConnection()"
+                        class="text-xs text-gray-400 hover:text-[#EF4444] px-2 py-1"
+                        title="Eliminar de mis conexiones"
+                      >
+                        Eliminar conexión
+                      </button>
+                    </div>
+                  }
+                }
+
+                <!-- Botón Enviar Mensaje -->
+                <a
+                  routerLink="/messages"
+                  class="px-5 py-2 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 font-bold text-[14px] flex items-center gap-2 transition"
+                >
+                  <span>💬 Enviar mensaje</span>
+                </a>
+
+                @if (profile().cvUrl) {
+                  <button
+                    type="button"
+                    (click)="downloadCv()"
+                    class="px-4 py-2 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 font-semibold text-[14px] transition"
+                  >
+                    ⬇ Descargar CV
+                  </button>
+                }
+              </div>
+            </div>
+          </section>
+
+          <!-- CARD 2: ACERCA DE + PRINCIPALES APTITUDES (SOLO LECTURA) -->
+          <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-5">
+            <h2 class="text-[18px] font-bold text-gray-900">Acerca de</h2>
+
+            <p class="text-[14px] text-gray-700 leading-relaxed whitespace-pre-line">
+              {{ profile().bio || 'Este usuario aún no ha añadido una descripción detallada en su perfil.' }}
+            </p>
+
+            @if (topSkills().length > 0) {
+              <div class="p-4 rounded-xl border border-gray-200 bg-[#F8FAFC]/60 flex items-start gap-3">
+                <div class="w-9 h-9 rounded-lg bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center shrink-0 mt-0.5">
+                  💎
+                </div>
+                <div>
+                  <h3 class="text-[14px] font-bold text-gray-900">Principales aptitudes</h3>
+                  <p class="text-[13px] text-gray-800 font-medium mt-0.5">
+                    @for (sk of topSkills(); track sk.id; let last = $last) {
+                      <span>{{ sk.name }}</span>@if (!last) {<span> • </span>}
+                    }
+                  </p>
+                </div>
+              </div>
+            }
+          </section>
+
+          <!-- CARD 3: HABILIDADES Y CERTIFICACIONES (SOLO LECTURA) -->
+          @if (viewedRole() === 'POSTULANT') {
+            <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-4">
+              <div>
+                <h2 class="text-[18px] font-bold text-gray-900">
+                  Conocimientos y Habilidades
+                </h2>
+                <p class="text-[12px] text-[#6B7280]">
+                  Competencias registradas y certificaciones académicas verificadas en la plataforma.
+                </p>
+              </div>
+
+              @if (profile().skills && profile().skills.length > 0) {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  @for (skill of profile().skills; track skill.id) {
+                    <div
+                      [ngClass]="skill.isValidatedByInstitution
+                        ? 'border-[#059669]/40 bg-[#ECFDF5]/40'
+                        : 'border-gray-200 bg-[#F8FAFC]'"
+                      class="p-3.5 rounded-xl border flex flex-col justify-between gap-2"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                          <span class="text-[14px] font-bold text-gray-900">{{ skill.name }}</span>
+                          <span class="text-[10px] font-bold text-[#274DEA] bg-[#274DEA]/10 px-2 py-0.5 rounded-full">
+                            {{ skill.masteryLevel }}
+                          </span>
+                        </div>
+                        @if (skill.isTopSkill) {
+                          <span class="text-xs text-[#F59E0B]" title="Aptitud principal">★</span>
+                        }
+                      </div>
+
+                      @if (skill.isValidatedByInstitution) {
+                        <div class="mt-1 inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white border border-[#059669]/30 shadow-2xs w-fit">
+                          <div class="w-5 h-5 rounded-full bg-[#059669]/15 text-[#059669] font-extrabold text-[9px] flex items-center justify-center overflow-hidden shrink-0">
+                            @if (skill.validatedInstitutionLogoUrl || profile().institutionLogoUrl) {
+                              <img
+                                [src]="skill.validatedInstitutionLogoUrl || profile().institutionLogoUrl"
+                                alt="Logo institución"
+                                class="w-full h-full object-cover"
+                              />
+                            } @else {
+                              <span>{{ institutionInitials() }}</span>
+                            }
+                          </div>
+                          <span class="text-[11px] font-bold text-[#059669]">
+                            Validado por {{ skill.validatedInstitutionName || profile().institutionName || 'Institución Oficial' }}
+                          </span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="text-[13px] text-[#6B7280]">
+                  Este postulante aún no ha listado habilidades públicas.
+                </p>
+              }
+            </section>
+          }
+
+          <!-- CARD 4: CURRÍCULUM VITAE PÚBLICO (SOLO PARA VER / DESCARGAR, SIN ELIMINAR NI CAMBIAR) -->
+          @if (profile().cvUrl) {
+            <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h2 class="text-[18px] font-bold text-gray-900">Currículum Vitae / Portafolio</h2>
+                  <p class="text-[12px] text-[#6B7280]">Documento adjunto por {{ fullName() }}</p>
+                </div>
+
+                <button
+                  type="button"
+                  (click)="downloadCv()"
+                  class="px-4 py-1.5 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold transition"
+                >
+                  ⬇ Descargar CV
+                </button>
+              </div>
+
+              <div class="max-w-md rounded-2xl border border-gray-200 overflow-hidden bg-[#F8FAFC] shadow-xs">
+                <div
+                  (click)="downloadCv()"
+                  class="h-44 w-full bg-slate-200 relative overflow-hidden cursor-pointer group border-b border-gray-200"
+                >
+                  @if (cvSafePreviewUrl()) {
+                    <iframe
+                      [src]="cvSafePreviewUrl()"
+                      class="w-full h-64 pointer-events-none scale-[1.03] origin-top bg-white"
+                      title="Vista previa de CV"
+                    ></iframe>
+                  } @else {
+                    <div class="w-full h-full bg-white p-5 flex flex-col justify-between">
+                      <div class="space-y-2">
+                        <div class="w-1/2 h-3 bg-slate-200 rounded"></div>
+                        <div class="w-3/4 h-2 bg-slate-100 rounded"></div>
+                      </div>
+                      <span class="text-[11px] font-bold text-[#274DEA] uppercase tracking-wider">
+                        Documento Word · Vista Previa
+                      </span>
+                    </div>
+                  }
+                </div>
+
+                <div class="p-3.5 bg-white flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-[#EF4444]/10 text-[#EF4444] font-extrabold text-xs flex items-center justify-center shrink-0">
+                      {{ isPdfCv() ? 'PDF' : 'DOC' }}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="text-[13px] font-bold text-gray-900 truncate">
+                        {{ profile().cvFileName || ('CV_' + fullName() + '.pdf') }}
+                      </p>
+                      <p class="text-[11px] text-[#6B7280]">
+                        {{ profile().cvFileSize || 'Documento disponible para descarga' }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          }
+
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- COLUMNA LATERAL DERECHA: PUBLICACIONES IMPORTANTES (SOLO LECTURA) -->
+        <!-- ================================================================= -->
+        <aside class="lg:col-span-3">
+          <app-profile-sidebar
+            [importantPosts]="importantPosts()"
+            [maxImportantPosts]="maxImportantForViewedRole()"
+            [isOwnProfile]="false"
+            [suggestedPeers]="suggestedPeers()"
+          />
+        </aside>
+
+      </div>
+    }
+
+  </div>
+</main>
+
+<!-- MODAL DE AVISO CUANDO NO CUMPLE REQUISITOS PARA CONECTAR CON EMPRESA O INSTITUCIÓN -->
+<app-alert-modal
+  [isOpen]="isRestrictionModalOpen()"
+  title="Requisito para conectar con este perfil"
+  [message]="restrictionModalMessage()"
+  variant="warning"
+  confirmText="Explorar vacantes"
+  cancelText="Entendido"
+  (close)="isRestrictionModalOpen.set(false)"
+  (confirm)="isRestrictionModalOpen.set(false); router.navigate(['/jobs'])"
+/>
+
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

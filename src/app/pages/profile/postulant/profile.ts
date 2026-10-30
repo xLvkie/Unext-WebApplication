@@ -25,6 +25,8 @@ import {
 } from '../../../core/models/validation.model';
 import { readApiError } from '../../../core/utils/api-error';
 import { readFileAsDataUrl, resizeImageFile } from '../../../core/utils/file-media';
+import { FeedService } from '../../../core/services/feed.service';
+import { FeedPostResponse } from '../../../core/models/feed.model';
 
 @Component({
   selector: 'app-profile',
@@ -48,6 +50,7 @@ export class Profile implements OnInit {
   private authService = inject(AuthService);
   readonly directoryService = inject(DirectoryService);
   private router = inject(Router);
+  private feedService = inject(FeedService);
 
   readonly MAX_HEADLINE = 120;
   readonly MAX_BANNER_TEXT = 35;
@@ -57,6 +60,9 @@ export class Profile implements OnInit {
   isLoading = signal(true);
   isSaving = signal(false);
   isFirstTimeOnboarding = signal(false);
+
+  // Señal
+  importantPosts = signal<FeedPostResponse[]>([]);
 
   // Modales
   isEditModalOpen = signal(false);
@@ -228,6 +234,13 @@ export class Profile implements OnInit {
         } else {
           this.isFirstTimeOnboarding.set(false);
           this.authService.markProfileAsCompleted();
+        }
+
+        if (data.userId) {
+          this.feedService.getImportantPostsByUser(data.userId).subscribe({
+            next: (posts) => this.importantPosts.set(posts),
+            error: () => this.importantPosts.set([])
+          });
         }
       },
       error: () => {
@@ -629,6 +642,15 @@ export class Profile implements OnInit {
       }
     });
   }
+
+  handleUnpinImportantPost(postId: string): void {
+  this.feedService.toggleImportant(postId).subscribe({
+    next: () => {
+      this.importantPosts.update((list) => list.filter((p) => p.id !== postId));
+      this.showToast('Publicación removida de importantes.', 'info');
+    }
+  });
+}
 
   showToast(message: string, type: ToastType = 'info'): void {
     this.toast.set({ message, type });

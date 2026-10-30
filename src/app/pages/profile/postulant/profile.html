@@ -236,7 +236,7 @@
           (deleteSkillClick)="handleDeleteSkill($event)"
         />
 
-        <!-- CARD 4 (COMPONENTE LOCAL): CURRÍCULUM VITAE CON PREVIEW -->
+        <!-- CARD 4: CURRÍCULUM VITAE CON PREVIEW -->
         <app-profile-cv-card
           [cvUrl]="profile().cvUrl"
           [cvFileName]="profile().cvFileName"
@@ -249,11 +249,14 @@
 
       </div>
 
-      <!-- COLUMNA LATERAL DERECHA (COMPONENTE LOCAL) -->
+      <!-- COLUMNA LATERAL DERECHA -->
       <aside class="lg:col-span-3">
         <app-profile-sidebar
-          [publicProfileUrl]="publicProfileUrl()"
+          [importantPosts]="importantPosts()"
+          [maxImportantPosts]="3"
+          [isOwnProfile]="true"
           [suggestedPeers]="suggestedPeers()"
+          (unpinPost)="handleUnpinImportantPost($event)"
         />
       </aside>
 

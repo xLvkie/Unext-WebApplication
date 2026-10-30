@@ -290,17 +290,29 @@
       <!-- ========================================================================= -->
       <section class="lg:col-span-6 space-y-5">
 
+        <!-- Input oculto para subir Imágenes, GIFs y Videos reales desde el dispositivo -->
+        <input
+          #postMediaInput
+          type="file"
+          multiple
+          accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm"
+          class="hidden"
+          (change)="onMediaFilesSelected($event)"
+        />
+
         <!-- 1. CAJA PARA CREAR PUBLICACIÓN -->
         <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 transition-all">
           <div class="flex items-start gap-3.5">
-            <!-- Avatar sincronizado del usuario actual -->
-            <div class="w-10 h-10 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0 border border-[#274DEA]/30 overflow-hidden">
+            <a
+              routerLink="/profile/me"
+              class="w-10 h-10 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0 border border-[#274DEA]/30 overflow-hidden"
+            >
               @if (profile().avatarUrl) {
                 <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover" />
               } @else {
                 <span>{{ userInitials() }}</span>
               }
-            </div>
+            </a>
 
             <div class="flex-1">
               <textarea
@@ -313,56 +325,66 @@
             </div>
           </div>
 
-          @if (showMediaInput()) {
-            <div class="mt-3 p-3 rounded-xl bg-[#F8FAFC] border border-gray-200 animate-fade-in space-y-2">
-              <label class="block text-[11px] font-semibold text-gray-700">
-                URL de imagen o demostración:
-              </label>
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  [(ngModel)]="newPostMediaUrl"
-                  placeholder="https://ejemplo.com/captura-proyecto.png"
-                  class="flex-1 px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[#274DEA]"
-                />
-                <button
-                  type="button"
-                  (click)="newPostMediaUrl = ''"
-                  class="text-xs text-[#EF4444] px-2 hover:underline"
-                >
-                  Limpiar
-                </button>
-              </div>
+          <!-- Galería de Vista Previa de Imágenes, GIFs y Videos seleccionados -->
+          @if (selectedMedia().length > 0) {
+            <div class="mt-3 grid grid-cols-2 gap-2.5 animate-fade-in">
+              @for (item of selectedMedia(); track $index) {
+                <div class="relative rounded-xl overflow-hidden border border-gray-200 bg-slate-900 h-44 group">
+                  @if (item.type === 'video') {
+                    <video [src]="item.dataUrl" controls class="w-full h-full object-cover"></video>
+                  } @else {
+                    <img [src]="item.dataUrl" [alt]="item.name" class="w-full h-full object-cover" />
+                  }
+
+                  <span class="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-gray-900/75 text-white text-[10px] font-bold uppercase">
+                    {{ item.type }}
+                  </span>
+
+                  <button
+                    type="button"
+                    (click)="removeSelectedMedia($index)"
+                    class="absolute top-2 right-2 p-1.5 rounded-full bg-gray-900/75 hover:bg-[#EF4444] text-white transition-colors"
+                    title="Quitar archivo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              }
             </div>
           }
 
-          @if (newPostMediaUrl.trim()) {
-            <div class="mt-3 relative rounded-xl overflow-hidden border border-gray-200 max-h-48 group">
-              <img [src]="newPostMediaUrl" alt="Vista previa adjunto" class="w-full h-48 object-cover" />
+          <!-- Barra de Acciones: Adjuntar Foto/Video/GIF + Marcar como Importante + Publicar -->
+          <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Botón que abre el selector de archivos real -->
               <button
                 type="button"
-                (click)="newPostMediaUrl = ''"
-                class="absolute top-2 right-2 p-1.5 rounded-full bg-gray-900/70 hover:bg-[#EF4444] text-white transition-colors"
-                title="Quitar imagen"
+                (click)="postMediaInput.click()"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#274DEA] hover:bg-[#274DEA]/10 transition-colors"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                <svg class="w-4 h-4 text-[#274DEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
+                <span>Foto / Video / GIF</span>
               </button>
-            </div>
-          }
 
-          <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-            <button
-              type="button"
-              (click)="toggleMediaInput()"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold text-[#274DEA] hover:bg-[#274DEA]/10 transition-colors"
-            >
-              <svg class="w-4 h-4 text-[#274DEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-              </svg>
-              <span>Foto / Media</span>
-            </button>
+              <!-- Toggle para fijar como Publicación Importante (No caduca y va al Perfil) -->
+              <label
+                [ngClass]="newPostImportant
+                  ? 'bg-[#FEF3C7] border-[#F59E0B]/50 text-[#B45309]'
+                  : 'bg-[#F8FAFC] border-gray-200 text-[#6B7280] hover:text-gray-900'"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer select-none transition"
+                title="Las publicaciones normales duran 7 días. Las importantes no se borran y se muestran en tu perfil."
+              >
+                <input
+                  type="checkbox"
+                  name="newPostImportant"
+                  [(ngModel)]="newPostImportant"
+                  class="sr-only"
+                />
+                <span>📌 Destacar como Importante ({{ myImportantPostsCount() }}/{{ maxImportantPosts() }})</span>
+              </label>
+            </div>
 
             <button
               type="button"
@@ -373,9 +395,6 @@
               @if (isPosting()) {
                 <span>Publicando...</span>
               } @else {
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-                </svg>
                 <span>Publicar</span>
               }
             </button>
@@ -385,30 +404,46 @@
         <!-- 2. LISTADO DE PUBLICACIONES DEL FEED -->
         <div class="space-y-4">
           @for (post of posts(); track post.id) {
-            <article class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 transition-all hover:border-gray-300/80">
-              
+            <article
+              [ngClass]="post.isImportant ? 'border-[#F59E0B]/50 ring-1 ring-[#F59E0B]/20' : 'border-gray-200/80'"
+              class="bg-white rounded-2xl border shadow-xs p-5 transition-all hover:border-gray-300/80"
+            >
+              <!-- Cabecera del Post con Enlace al Perfil del Autor + Estado de Expiración/Importante -->
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                  @if (post.authorAvatarUrl || (post.authorUserId === profile().userId && profile().avatarUrl)) {
-                    <img
-                      [src]="post.authorAvatarUrl || profile().avatarUrl"
-                      [alt]="post.authorName"
-                      class="w-11 h-11 rounded-full object-cover border border-gray-200 shrink-0"
-                    />
-                  } @else {
-                    <div class="w-11 h-11 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0">
-                      {{ post.authorName.charAt(0) }}
-                    </div>
-                  }
+                  <!-- Clic en Avatar -> Lleva al perfil del autor -->
+                  <button
+                    type="button"
+                    (click)="navigateToAuthorProfile(post.authorUserId, post.authorProfileId, post.authorRole)"
+                    class="shrink-0 focus:outline-none group"
+                    title="Ver perfil de {{ post.authorName }}"
+                  >
+                    @if (post.authorAvatarUrl || (post.authorUserId === currentUserId() && profile().avatarUrl)) {
+                      <img
+                        [src]="post.authorAvatarUrl || profile().avatarUrl"
+                        [alt]="post.authorName"
+                        class="w-11 h-11 rounded-full object-cover border border-gray-200 group-hover:ring-2 group-hover:ring-[#274DEA] transition"
+                      />
+                    } @else {
+                      <div class="w-11 h-11 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center group-hover:ring-2 group-hover:ring-[#274DEA] transition">
+                        {{ post.authorName.charAt(0) }}
+                      </div>
+                    }
+                  </button>
 
                   <div>
                     <div class="flex items-center gap-1.5 flex-wrap">
-                      <h3 class="text-[14px] font-bold text-gray-900 leading-snug">
+                      <!-- Clic en Nombre -> Lleva al perfil del autor -->
+                      <button
+                        type="button"
+                        (click)="navigateToAuthorProfile(post.authorUserId, post.authorProfileId, post.authorRole)"
+                        class="text-[14px] font-bold text-gray-900 hover:text-[#274DEA] hover:underline leading-snug text-left"
+                      >
                         {{ post.authorName }}
-                      </h3>
+                      </button>
 
                       @if (post.isAuthorVerified) {
-                        <span class="inline-flex items-center text-[#059669]" title="Perfil formalmente verificado">
+                        <span class="inline-flex items-center text-[#059669]" title="Perfil verificado">
                           <svg class="w-4 h-4 fill-[#059669]" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                           </svg>
@@ -425,32 +460,89 @@
                       >
                         {{ post.authorRole === 'RECRUITER' ? 'Empresa' : post.authorRole === 'INSTITUTION' ? 'Institución' : 'Postulante' }}
                       </span>
+
+                      @if (post.isImportant) {
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#B45309]">
+                          📌 Destacada
+                        </span>
+                      }
                     </div>
 
                     <p class="text-[12px] text-[#6B7280] leading-tight mt-0.5">
                       {{ post.authorHeadline }}
                     </p>
-                    <p class="text-[11px] text-[#6B7280]/80 mt-0.5 flex items-center gap-1">
+                    <p class="text-[11px] text-[#6B7280]/80 mt-0.5 flex items-center gap-1.5 flex-wrap">
                       <span>{{ formatDate(post.createdAt) }}</span>
+                      <span>·</span>
+                      @if (post.isImportant) {
+                        <span class="text-[#B45309] font-semibold">Permanente en perfil</span>
+                      } @else {
+                        <span title="Tiempo de vida antes de eliminarse automáticamente">
+                          ⏳ {{ formatExpirationRemaining(post.expiresAt) }}
+                        </span>
+                      }
                     </p>
                   </div>
                 </div>
+
+                <!-- Controles del Autor del Post (Fijar como Importante o Eliminar) -->
+                @if (post.authorUserId === currentUserId()) {
+                  <div class="flex items-center gap-1">
+                    <button
+                      type="button"
+                      (click)="handleToggleImportant(post)"
+                      [ngClass]="post.isImportant
+                        ? 'text-[#B45309] bg-[#FEF3C7]'
+                        : 'text-gray-400 hover:text-[#B45309] hover:bg-gray-100'"
+                      class="p-1.5 rounded-lg text-xs font-bold transition"
+                      [title]="post.isImportant ? 'Quitar de publicaciones importantes' : 'Marcar como publicación importante (no caduca)'"
+                    >
+                      📌
+                    </button>
+                    <button
+                      type="button"
+                      (click)="handleDeletePost(post.id)"
+                      class="p-1.5 rounded-lg text-gray-400 hover:text-[#EF4444] hover:bg-[#EF4444]/10 text-xs transition"
+                      title="Eliminar publicación"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                }
               </div>
 
+              <!-- Contenido de Texto -->
               <div class="mt-3.5 text-[14px] text-gray-800 leading-relaxed whitespace-pre-line">
                 {{ post.content }}
               </div>
 
+              <!-- Galería Multimedia (Soporta Imágenes, GIFs y Videos) -->
               @if (post.mediaUrls && post.mediaUrls.length > 0) {
-                <div class="mt-3.5 rounded-xl overflow-hidden border border-gray-200">
-                  <img
-                    [src]="post.mediaUrls[0]"
-                    [alt]="post.authorName"
-                    class="w-full max-h-96 object-cover hover:scale-[1.01] transition-transform duration-300"
-                  />
+                <div
+                  [ngClass]="post.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'"
+                  class="mt-3.5 grid gap-2 rounded-xl overflow-hidden"
+                >
+                  @for (mediaUrl of post.mediaUrls; track $index) {
+                    <div class="rounded-xl overflow-hidden border border-gray-200 bg-slate-950/5">
+                      @if (isVideoMedia(mediaUrl)) {
+                        <video
+                          [src]="mediaUrl"
+                          controls
+                          class="w-full max-h-96 object-contain bg-black"
+                        ></video>
+                      } @else {
+                        <img
+                          [src]="mediaUrl"
+                          [alt]="post.authorName"
+                          class="w-full max-h-96 object-cover hover:scale-[1.01] transition-transform duration-300"
+                        />
+                      }
+                    </div>
+                  }
                 </div>
               }
 
+              <!-- Contador de Interacciones -->
               <div class="mt-3 pt-3 flex items-center justify-between text-[12px] text-[#6B7280] border-t border-gray-100">
                 <div class="flex items-center gap-1.5">
                   <span class="w-5 h-5 rounded-full bg-[#274DEA] text-white flex items-center justify-center text-[10px]">
@@ -469,6 +561,7 @@
                 </div>
               </div>
 
+              <!-- Barra de Acciones -->
               <div class="mt-2 pt-2 border-t border-gray-100 grid grid-cols-3 gap-1">
                 <button
                   type="button"
@@ -476,10 +569,7 @@
                   [ngClass]="post.likedByMe ? 'text-[#274DEA] bg-[#274DEA]/10 font-bold' : 'text-[#6B7280] hover:bg-gray-100 font-semibold'"
                   class="py-2 px-3 rounded-xl text-[13px] flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <svg class="w-4 h-4" [ngClass]="post.likedByMe ? 'fill-[#274DEA]' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/>
-                  </svg>
-                  <span>{{ post.likedByMe ? 'Te gusta' : 'Me gusta' }}</span>
+                  <span>{{ post.likedByMe ? '👍 Te gusta' : '👍 Me gusta' }}</span>
                 </button>
 
                 <button
@@ -487,10 +577,7 @@
                   (click)="toggleCommentsSection(post.id)"
                   class="py-2 px-3 rounded-xl text-[13px] font-semibold text-[#6B7280] hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                  </svg>
-                  <span>Comentar</span>
+                  <span>💬 Comentar</span>
                 </button>
 
                 <button
@@ -498,14 +585,11 @@
                   (click)="showToast('Enlace de la publicación copiado al portapapeles.', 'info')"
                   class="py-2 px-3 rounded-xl text-[13px] font-semibold text-[#6B7280] hover:text-gray-900 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-all"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                  </svg>
-                  <span>Compartir</span>
+                  <span>↗ Compartir</span>
                 </button>
               </div>
 
-              <!-- SECCIÓN DESPLEGABLE DE COMENTARIOS -->
+              <!-- SECCIÓN DESPLEGABLE DE COMENTARIOS (CON REDIRECCIÓN AL PERFIL EN CADA COMENTARIO) -->
               @if (isCommentsOpen(post.id)) {
                 <div class="mt-4 pt-4 border-t border-gray-100 space-y-3 animate-fade-in">
                   <div class="flex items-start gap-2.5">
@@ -539,17 +623,29 @@
                     <div class="space-y-2.5 pt-2">
                       @for (com of post.comments; track com.id) {
                         <div class="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#F8FAFC]">
-                          @if (com.authorAvatarUrl) {
-                            <img [src]="com.authorAvatarUrl" [alt]="com.authorName" class="w-7 h-7 rounded-full object-cover shrink-0" />
-                          } @else {
-                            <div class="w-7 h-7 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center shrink-0">
-                              {{ com.authorName.charAt(0) }}
-                            </div>
-                          }
+                          <button
+                            type="button"
+                            (click)="navigateToAuthorProfile(com.authorUserId, com.authorProfileId, com.authorRole)"
+                            class="shrink-0"
+                          >
+                            @if (com.authorAvatarUrl) {
+                              <img [src]="com.authorAvatarUrl" [alt]="com.authorName" class="w-7 h-7 rounded-full object-cover" />
+                            } @else {
+                              <div class="w-7 h-7 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center">
+                                {{ com.authorName.charAt(0) }}
+                              </div>
+                            }
+                          </button>
 
                           <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between">
-                              <p class="text-[12px] font-bold text-gray-900 leading-none">{{ com.authorName }}</p>
+                              <button
+                                type="button"
+                                (click)="navigateToAuthorProfile(com.authorUserId, com.authorProfileId, com.authorRole)"
+                                class="text-[12px] font-bold text-gray-900 hover:text-[#274DEA] hover:underline leading-none text-left"
+                              >
+                                {{ com.authorName }}
+                              </button>
                               <span class="text-[10px] text-[#6B7280]">{{ formatDate(com.createdAt) }}</span>
                             </div>
                             <p class="text-[10px] text-[#6B7280] mt-0.5">{{ com.authorHeadline }}</p>

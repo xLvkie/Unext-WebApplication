@@ -6,10 +6,12 @@ import { Profile } from './pages/profile/postulant/profile';
 import { JobSearch } from './pages/jobs/job-search';
 import { Messages } from './pages/messages/messages';
 import { Notifications } from './pages/notifications/notifications';
+import { PublicProfile } from './pages/profile/postulant/public-profile';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: Login },
+  { path: 'profile/view/:role/:id', component: PublicProfile },
   { path: 'register', component: Register },
 
   // Perfil y Onboarding 
