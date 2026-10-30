@@ -7,6 +7,7 @@ import { JobSearch } from './pages/jobs/job-search';
 import { Messages } from './pages/messages/messages';
 import { Notifications } from './pages/notifications/notifications';
 import { PublicProfile } from './pages/profile/postulant/public-profile';
+import { Network } from './pages/network/network';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -21,6 +22,11 @@ export const routes: Routes = [
   // Feed / Dashboard Principal
   { path: 'feed', component: Dashboard },
   { path: 'dashboard', redirectTo: 'feed', pathMatch: 'full' },
+
+  // Mi Red (Directorio y Conexiones)
+  { path: 'directory', component: Network },
+  { path: 'network', redirectTo: 'directory', pathMatch: 'full' },
+  { path: 'red', redirectTo: 'directory', pathMatch: 'full' },
 
   // Vacantes, Mensajería y Notificaciones
   { path: 'jobs', component: JobSearch },

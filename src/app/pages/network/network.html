@@ -1,0 +1,586 @@
+<!-- NAVBAR SUPERIOR AUTOMÁTICO -->
+<app-navbar (searchChange)="searchQuery.set($event)" />
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- ================================================================= -->
+      <!-- COLUMNA IZQUIERDA (lg:col-span-3): RESUMEN DE MI RED              -->
+      <!-- ================================================================= -->
+      <aside class="lg:col-span-3 space-y-4">
+
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden">
+          <div class="p-4 border-b border-gray-100">
+            <h1 class="text-[16px] font-bold text-gray-900">Gestionar mi red</h1>
+            <p class="text-[11px] text-[#6B7280] mt-0.5">
+              Resumen de tus conexiones, invitaciones y seguimientos.
+            </p>
+          </div>
+
+          <nav class="divide-y divide-gray-100 text-[13px]">
+            <!-- Contactos -->
+            <button
+              type="button"
+              (click)="selectSummarySection('CONNECTIONS')"
+              [ngClass]="activeManagementTab() === 'CONNECTIONS' && isInvitationsCardOpen() ? 'bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+              class="w-full px-4 py-3 flex items-center justify-between transition"
+            >
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-[#274DEA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>Contactos</span>
+              </span>
+              <span class="text-xs font-extrabold">{{ overview().connectionsCount }}</span>
+            </button>
+
+            <!-- Invitaciones Recibidas -->
+            <button
+              type="button"
+              (click)="selectSummarySection('RECEIVED')"
+              [ngClass]="activeManagementTab() === 'RECEIVED' && isInvitationsCardOpen() ? 'bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+              class="w-full px-4 py-3 flex items-center justify-between transition"
+            >
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-[#059669]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                <span>Invitaciones recibidas</span>
+              </span>
+              <span
+                [ngClass]="overview().receivedInvitationsCount > 0 ? 'bg-[#EF4444] text-white px-2 py-0.5 rounded-full' : ''"
+                class="text-xs font-extrabold"
+              >
+                {{ overview().receivedInvitationsCount }}
+              </span>
+            </button>
+
+            <!-- Invitaciones Enviadas -->
+            <button
+              type="button"
+              (click)="selectSummarySection('SENT')"
+              [ngClass]="activeManagementTab() === 'SENT' && isInvitationsCardOpen() ? 'bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+              class="w-full px-4 py-3 flex items-center justify-between transition"
+            >
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-[#F59E0B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                </svg>
+                <span>Invitaciones enviadas</span>
+              </span>
+              <span class="text-xs font-extrabold">{{ overview().sentInvitationsCount }}</span>
+            </button>
+
+            <!-- Personas y Empresas Seguidas -->
+            <button
+              type="button"
+              (click)="selectSummarySection('FOLLOWING')"
+              [ngClass]="activeManagementTab() === 'FOLLOWING' && isInvitationsCardOpen() ? 'bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+              class="w-full px-4 py-3 flex items-center justify-between transition"
+            >
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-[#2E1065]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                </svg>
+                <span>Personas y empresas que sigo</span>
+              </span>
+              <span class="text-xs font-extrabold">{{ overview().followingCount }}</span>
+            </button>
+
+            <!-- Grupos y Comunidades -->
+            <button
+              type="button"
+              (click)="selectSummarySection('GROUPS')"
+              [ngClass]="activeManagementTab() === 'GROUPS' && isInvitationsCardOpen() ? 'bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'text-gray-700 hover:bg-gray-50 font-medium'"
+              class="w-full px-4 py-3 flex items-center justify-between transition"
+            >
+              <span class="flex items-center gap-2.5">
+                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                <span>Grupos universitarios</span>
+              </span>
+              <span class="text-[10px] font-bold text-[#274DEA] bg-[#274DEA]/10 px-2 py-0.5 rounded-full">
+                Próx.
+              </span>
+            </button>
+          </nav>
+        </div>
+
+        <!-- Buscador y Filtro de Segmento Lateral -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 space-y-3">
+          <h2 class="text-[13px] font-bold text-gray-900">Filtrar directorio y publicaciones</h2>
+          <input
+            type="text"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            placeholder="Buscar por nombre, carrera o empresa..."
+            class="w-full px-3 py-2 rounded-xl bg-[#F8FAFC] border border-gray-200 text-xs focus:outline-none focus:border-[#274DEA]"
+          />
+
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button
+              type="button"
+              (click)="selectedSegment.set('ALL')"
+              [ngClass]="selectedSegment() === 'ALL' ? 'bg-[#274DEA] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              (click)="selectedSegment.set('POSTULANT')"
+              [ngClass]="selectedSegment() === 'POSTULANT' ? 'bg-[#274DEA] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+            >
+              Postulantes
+            </button>
+            <button
+              type="button"
+              (click)="selectedSegment.set('RECRUITER')"
+              [ngClass]="selectedSegment() === 'RECRUITER' ? 'bg-[#274DEA] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+            >
+              Empresas
+            </button>
+            <button
+              type="button"
+              (click)="selectedSegment.set('INSTITUTION')"
+              [ngClass]="selectedSegment() === 'INSTITUTION' ? 'bg-[#059669] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+              class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+            >
+              Instituciones
+            </button>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- ================================================================= -->
+      <!-- CANVAS PRINCIPAL (lg:col-span-9): CARDS EXPANDIBLES / ESTIRABLES  -->
+      <!-- ================================================================= -->
+      <section class="lg:col-span-9 space-y-5">
+
+        <!-- =============================================================== -->
+        <!-- CARD 1: GESTIÓN DE INVITACIONES Y CONEXIONES (ESTIRABLE)        -->
+        <!-- =============================================================== -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden transition-all">
+          
+          <!-- Cabecera con pestañas + botón de abrir/cerrar la card -->
+          <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                (click)="activeManagementTab.set('RECEIVED'); isInvitationsCardOpen.set(true)"
+                [ngClass]="activeManagementTab() === 'RECEIVED' ? 'bg-[#274DEA] text-white font-bold' : 'text-gray-600 hover:bg-gray-100 font-semibold'"
+                class="px-3.5 py-1.5 rounded-full text-xs transition"
+              >
+                Invitaciones recibidas ({{ overview().receivedInvitationsCount }})
+              </button>
+              <button
+                type="button"
+                (click)="activeManagementTab.set('SENT'); isInvitationsCardOpen.set(true)"
+                [ngClass]="activeManagementTab() === 'SENT' ? 'bg-[#274DEA] text-white font-bold' : 'text-gray-600 hover:bg-gray-100 font-semibold'"
+                class="px-3.5 py-1.5 rounded-full text-xs transition"
+              >
+                Enviadas ({{ overview().sentInvitationsCount }})
+              </button>
+              <button
+                type="button"
+                (click)="activeManagementTab.set('CONNECTIONS'); isInvitationsCardOpen.set(true)"
+                [ngClass]="activeManagementTab() === 'CONNECTIONS' ? 'bg-[#274DEA] text-white font-bold' : 'text-gray-600 hover:bg-gray-100 font-semibold'"
+                class="px-3.5 py-1.5 rounded-full text-xs transition"
+              >
+                Mis contactos ({{ overview().connectionsCount }})
+              </button>
+              <button
+                type="button"
+                (click)="activeManagementTab.set('FOLLOWING'); isInvitationsCardOpen.set(true)"
+                [ngClass]="activeManagementTab() === 'FOLLOWING' ? 'bg-[#274DEA] text-white font-bold' : 'text-gray-600 hover:bg-gray-100 font-semibold'"
+                class="px-3.5 py-1.5 rounded-full text-xs transition"
+              >
+                Siguiendo ({{ overview().followingCount }})
+              </button>
+            </div>
+
+            <button
+              type="button"
+              (click)="isInvitationsCardOpen.set(!isInvitationsCardOpen())"
+              class="px-3 py-1 rounded-lg text-xs font-bold text-[#274DEA] hover:bg-[#274DEA]/5 transition"
+            >
+              {{ isInvitationsCardOpen() ? '▲ Ocultar panel' : '▼ Desplegar panel' }}
+            </button>
+          </div>
+
+          <!-- Cuerpo desplegable de la Card 1 -->
+          @if (isInvitationsCardOpen()) {
+            <div class="divide-y divide-gray-100 animate-fade-in">
+              @if (activeManagementTab() === 'GROUPS') {
+                <div class="p-8 text-center">
+                  <p class="text-[14px] font-bold text-gray-900">Comunidades y Grupos Universitarios</p>
+                  <p class="text-[12px] text-[#6B7280] mt-1">
+                    Próximamente podrás unirte a capítulos estudiantiles, semilleros de investigación y grupos por carrera.
+                  </p>
+                </div>
+              } @else {
+                @for (item of visibleManagementItems(); track item.userId) {
+                  <div class="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/70 transition">
+                    <div
+                      (click)="openPublicProfile(item)"
+                      class="flex items-center gap-3.5 cursor-pointer min-w-0 flex-1"
+                    >
+                      <div class="w-12 h-12 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden border border-[#274DEA]/20">
+                        @if (item.avatarUrl) {
+                          <img [src]="item.avatarUrl" [alt]="item.name" class="w-full h-full object-cover" />
+                        } @else {
+                          <span>{{ initialsFor(item.name) }}</span>
+                        }
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <p class="text-[14px] font-bold text-gray-900 hover:text-[#274DEA] hover:underline truncate">
+                            {{ item.name }}
+                          </p>
+                          @if (item.isVerified) {
+                            <span class="text-[#059669] text-xs font-bold" title="Verificado">✓</span>
+                          }
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700">
+                            {{ roleBadgeLabel(item.role) }}
+                          </span>
+                        </div>
+                        <p class="text-[12px] text-gray-700 truncate">{{ item.headline }}</p>
+                        <p class="text-[11px] text-[#6B7280] truncate">{{ item.subtitle }}</p>
+                      </div>
+                    </div>
+
+                    <!-- Botones de acción según la pestaña activa -->
+                    <div class="flex items-center gap-2 shrink-0">
+                      @switch (activeManagementTab()) {
+                        @case ('RECEIVED') {
+                          <button
+                            type="button"
+                            (click)="handleRemoveOrIgnore(item, 'Invitación ignorada.', $event)"
+                            class="px-3.5 py-1.5 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 text-xs font-semibold transition"
+                          >
+                            Ignorar
+                          </button>
+                          <button
+                            type="button"
+                            (click)="handleAccept(item, $event)"
+                            class="px-4 py-1.5 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-2xs transition"
+                          >
+                            Aceptar
+                          </button>
+                        }
+                        @case ('SENT') {
+                          <button
+                            type="button"
+                            (click)="handleRemoveOrIgnore(item, 'Solicitud enviada cancelada.', $event)"
+                            class="px-3.5 py-1.5 rounded-full border border-[#F59E0B] text-[#B45309] hover:bg-[#FEF3C7] text-xs font-bold transition"
+                          >
+                            Cancelar solicitud
+                          </button>
+                        }
+                        @case ('CONNECTIONS') {
+                          <a
+                            routerLink="/messages"
+                            class="px-3.5 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
+                          >
+                            💬 Mensaje
+                          </a>
+                          <button
+                            type="button"
+                            (click)="handleRemoveOrIgnore(item, 'Contacto eliminado de tu red.', $event)"
+                            class="p-1.5 rounded-lg text-gray-400 hover:text-[#EF4444] text-xs"
+                            title="Eliminar conexión"
+                          >
+                            ✕
+                          </button>
+                        }
+                        @case ('FOLLOWING') {
+                          <button
+                            type="button"
+                            (click)="handleToggleFollow(item, $event)"
+                            class="px-3.5 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 text-xs font-semibold transition"
+                          >
+                            Dejar de seguir
+                          </button>
+                        }
+                      }
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="p-8 text-center">
+                    <p class="text-[13px] font-semibold text-gray-700">
+                      No hay registros pendientes en esta pestaña
+                    </p>
+                    <p class="text-[12px] text-[#6B7280] mt-0.5">
+                      Explora las recomendaciones de abajo para conectar con más profesionales, empresas o instituciones.
+                    </p>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- Barra inferior para ESTIRAR o CONTRAER la Card 1 -->
+            @if (hasMoreManagementItems() || invitationsLimit() > INITIAL_INVITATIONS_LIMIT) {
+              <div class="px-5 py-3 bg-[#F8FAFC] border-t border-gray-100 flex items-center justify-center gap-4">
+                @if (hasMoreManagementItems()) {
+                  <button
+                    type="button"
+                    (click)="expandInvitationsList()"
+                    class="text-xs font-bold text-[#274DEA] hover:underline flex items-center gap-1"
+                  >
+                    <span>⬇ Estirar y cargar más ({{ activeManagementList().length - visibleManagementItems().length }} restantes)</span>
+                  </button>
+                }
+                @if (invitationsLimit() > INITIAL_INVITATIONS_LIMIT) {
+                  <button
+                    type="button"
+                    (click)="collapseInvitationsList()"
+                    class="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                  >
+                    ▲ Contraer lista
+                  </button>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- CARD 2: RECOMENDACIONES PARA CONECTAR O SEGUIR (ESTIRABLE)      -->
+        <!-- =============================================================== -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden transition-all">
+          
+          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-[16px] font-bold text-gray-900">
+                Personas y organizaciones que quizas conozcas
+              </h2>
+              <p class="text-[12px] text-[#6B7280]">
+                Conecta con compañeros o sigue a empresas e instituciones para ver sus novedades.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              (click)="isRecommendationsCardOpen.set(!isRecommendationsCardOpen())"
+              class="px-3 py-1 rounded-lg text-xs font-bold text-[#274DEA] hover:bg-[#274DEA]/5 transition shrink-0"
+            >
+              {{ isRecommendationsCardOpen() ? '▲ Cerrar card' : '▼ Abrir recomendaciones' }}
+            </button>
+          </div>
+
+          @if (isRecommendationsCardOpen()) {
+            <div class="p-5 animate-fade-in">
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                @for (person of visibleRecommendations(); track person.userId) {
+                  <!-- Tarjeta individual estilo LinkedIn con Banner, Foto, Nombre, Headline y Botones -->
+                  <article class="rounded-2xl border border-gray-200/90 overflow-hidden bg-white hover:shadow-md hover:border-[#274DEA]/40 transition flex flex-col justify-between group">
+                    
+                    <div>
+                      <!-- Banner Superior de la Tarjeta -->
+                      <div
+                        (click)="openPublicProfile(person)"
+                        class="h-20 bg-gradient-to-r from-[#0A192F] via-[#112240] to-[#1E3BB8] relative cursor-pointer overflow-hidden flex items-center justify-end px-3"
+                      >
+                        @if (person.bannerUrl) {
+                          <img [src]="person.bannerUrl" [alt]="person.name" class="absolute inset-0 w-full h-full object-cover" />
+                          <div class="absolute inset-0 bg-black/20"></div>
+                        } @else {
+                          <span class="text-[11px] font-bold text-white/90 truncate max-w-[65%] z-10">
+                            {{ person.bannerText || roleBadgeLabel(person.role) }}
+                          </span>
+                        }
+
+                        <span
+                          [ngClass]="{
+                            'bg-white/90 text-[#1E3BB8]': person.role === 'POSTULANT',
+                            'bg-[#C3A7FF] text-[#2E1065]': person.role === 'RECRUITER',
+                            'bg-[#ECFDF5] text-[#059669]': person.role === 'INSTITUTION'
+                          }"
+                          class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase z-10"
+                        >
+                          {{ roleBadgeLabel(person.role) }}
+                        </span>
+                      </div>
+
+                      <!-- Avatar superpuesto + Botón Seguir en esquina derecha -->
+                      <div class="px-4 pb-4">
+                        <div class="flex items-end justify-between -mt-9 mb-2.5 relative z-10">
+                          <div
+                            (click)="openPublicProfile(person)"
+                            class="w-16 h-16 rounded-full bg-white p-1 shadow-sm cursor-pointer"
+                          >
+                            <div class="w-full h-full rounded-full bg-gradient-to-br from-[#274DEA] to-[#1E3BB8] text-white font-extrabold text-lg flex items-center justify-center overflow-hidden">
+                              @if (person.avatarUrl) {
+                                <img [src]="person.avatarUrl" [alt]="person.name" class="w-full h-full object-cover" />
+                              } @else {
+                                <span>{{ initialsFor(person.name) }}</span>
+                              }
+                            </div>
+                          </div>
+
+                          <!-- Botón secundario Seguir / Siguiendo -->
+                          <button
+                            type="button"
+                            (click)="handleToggleFollow(person, $event)"
+                            [ngClass]="person.isFollowing
+                              ? 'bg-[#274DEA]/10 text-[#274DEA] border-[#274DEA]/30'
+                              : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'"
+                            class="px-2.5 py-1 rounded-full border text-[11px] font-bold transition"
+                          >
+                            {{ person.isFollowing ? '✓ Siguiendo' : '+ Seguir' }}
+                          </button>
+                        </div>
+
+                        <!-- Nombre y Sello -->
+                        <div
+                          (click)="openPublicProfile(person)"
+                          class="cursor-pointer"
+                        >
+                          <div class="flex items-center gap-1">
+                            <h3 class="text-[14px] font-bold text-gray-900 group-hover:text-[#274DEA] group-hover:underline truncate">
+                              {{ person.name }}
+                            </h3>
+                            @if (person.isVerified) {
+                              <span class="text-[#059669] text-xs font-bold shrink-0" title="Perfil verificado">✓</span>
+                            }
+                          </div>
+
+                          <!-- Headline -->
+                          <p class="text-[12px] text-[#6B7280] line-clamp-2 min-h-[34px] mt-0.5 leading-snug">
+                            {{ person.headline }}
+                          </p>
+
+                          <p class="text-[11px] text-[#274DEA] font-semibold truncate mt-1.5">
+                            {{ person.subtitle }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Botón Principal Inferior: Conectar -->
+                    <div class="px-4 pb-4 pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        (click)="handleConnect(person, $event)"
+                        [ngClass]="person.canConnect
+                          ? 'border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA] hover:text-white'
+                          : 'border-gray-300 text-gray-500 hover:bg-gray-100'"
+                        class="w-full py-1.5 px-3 rounded-full border font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                        </svg>
+                        <span>Conectar</span>
+                      </button>
+                    </div>
+
+                  </article>
+                } @empty {
+                  <div class="col-span-full py-10 text-center">
+                    <p class="text-[14px] font-bold text-gray-800">No se encontraron más perfiles para mostrar</p>
+                    <p class="text-[12px] text-[#6B7280] mt-1">
+                      Prueba cambiando el filtro de segmento o limpiando la búsqueda.
+                    </p>
+                  </div>
+                }
+              </div>
+
+              <!-- Barra inferior para ESTIRAR o CONTRAER la Card 2 de Recomendaciones -->
+              @if (hasMoreRecommendations() || recommendationsLimit() > INITIAL_RECOMMENDATIONS_LIMIT) {
+                <div class="mt-5 pt-4 border-t border-gray-100 flex items-center justify-center gap-4">
+                  @if (hasMoreRecommendations()) {
+                    <button
+                      type="button"
+                      (click)="expandRecommendationsList()"
+                      class="px-5 py-2 rounded-full bg-[#274DEA]/10 text-[#274DEA] hover:bg-[#274DEA]/20 text-xs font-extrabold transition"
+                    >
+                      ⬇ Estirar card y cargar más perfiles ({{ filteredRecommendations().length - visibleRecommendations().length }} disponibles)
+                    </button>
+                  }
+                  @if (recommendationsLimit() > INITIAL_RECOMMENDATIONS_LIMIT) {
+                    <button
+                      type="button"
+                      (click)="collapseRecommendationsList()"
+                      class="text-xs font-semibold text-gray-500 hover:text-gray-800"
+                    >
+                      ▲ Contraer cuadrícula
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- CARD 3: PUBLICACIONES FILTRADAS POR TIPO DE PERFIL EN MI RED    -->
+        <!-- =============================================================== -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h2 class="text-[15px] font-bold text-gray-900">
+                Publicaciones por segmento en tu red
+              </h2>
+              <p class="text-[11px] text-[#6B7280]">
+                Filtra las publicaciones según el tipo de perfil ({{ selectedSegment() === 'ALL' ? 'Todos los segmentos' : roleBadgeLabel(selectedSegment()) }}).
+              </p>
+            </div>
+            <button
+              type="button"
+              (click)="isNetworkFeedCardOpen.set(!isNetworkFeedCardOpen())"
+              class="px-3 py-1 rounded-lg text-xs font-bold text-[#274DEA] hover:bg-[#274DEA]/5 transition"
+            >
+              {{ isNetworkFeedCardOpen() ? '▲ Ocultar publicaciones' : '▼ Ver publicaciones (' + filteredNetworkPosts().length + ')' }}
+            </button>
+          </div>
+
+          @if (isNetworkFeedCardOpen()) {
+            <div class="p-5 space-y-3 animate-fade-in">
+              @for (post of filteredNetworkPosts().slice(0, 6); track post.id) {
+                <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200/80 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                      <span class="font-bold text-[13px] text-gray-900">{{ post.authorName }}</span>
+                      <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#274DEA]/10 text-[#274DEA]">
+                        {{ roleBadgeLabel(post.authorRole) }}
+                      </span>
+                    </div>
+                    <span class="text-[11px] text-[#6B7280]">👍 {{ post.likesCount }} · 💬 {{ post.commentsCount }}</span>
+                  </div>
+                  <p class="text-[13px] text-gray-700 line-clamp-3">{{ post.content }}</p>
+                </div>
+              } @empty {
+                <p class="text-center text-xs text-[#6B7280] py-4">
+                  No hay publicaciones para el segmento seleccionado.
+                </p>
+              }
+            </div>
+          }
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<!-- MODAL DE AVISO CUANDO NO CUMPLE REQUISITOS PARA CONECTAR -->
+<app-alert-modal
+  [isOpen]="isRestrictionModalOpen()"
+  title="Requisito para conectar con este perfil"
+  [message]="restrictionMessage()"
+  variant="warning"
+  confirmText="Ir a vacantes"
+  cancelText="Entendido"
+  (close)="isRestrictionModalOpen.set(false)"
+  (confirm)="isRestrictionModalOpen.set(false); router.navigate(['/jobs'])"
+/>
+
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />
