@@ -1,21 +1,58 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { Navbar } from '../../shared/components/navbar/navbar';
+import { Toast, ToastData, ToastType } from '../../shared/components/toast/toast';
 import { FeedService } from '../../core/services/feed.service';
 import { JobService } from '../../core/services/job.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FeedPostResponse } from '../../core/models/feed.model';
-import { JobRecommendationResponse } from '../../core/models/job.model';
-import { PostulantProfileResponse } from '../../core/models/profile.model';
+import {
+  JobApplication,
+  JobOffer,
+  JobRecommendationResponse
+} from '../../core/models/job.model';
+import {
+  PostulantProfileResponse,
+  RecruiterProfileResponse
+} from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
+import { applicationLabel } from '../../core/utils/labels';
+import { toDate } from '../../core/utils/format';
+import { processFeedMediaFile } from '../../core/utils/file-media';
+
+export interface MediaAttachmentPreview {
+  dataUrl: string;
+  type: 'image' | 'video' | 'gif';
+  name: string;
+}
+
+export interface RecruiterCandidateSummary {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  career?: string | null;
+  isInstitutionVerified?: boolean;
+}
+
+export interface AiJobBlueprint {
+  roleTitle: string;
+  suggestedModality: string;
+  suggestedLevel: string;
+  salaryRange: string;
+  recommendedSkills: string[];
+  optimizedDescription: string;
+}
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Navbar],
+  imports: [CommonModule, FormsModule, RouterLink, Navbar, Toast],
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']
 })
@@ -24,38 +61,54 @@ export class Dashboard implements OnInit {
   private jobService = inject(JobService);
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
-  private router = inject(Router);
+  private http = inject(HttpClient);
+  readonly router = inject(Router);
 
-  // Estados Reactivos conectados al Backend
   posts = signal<FeedPostResponse[]>([]);
   recommendations = signal<JobRecommendationResponse[]>([]);
+  myApplications = signal<JobApplication[]>([]);
+
+  // Estados exclusivos cuando el usuario logueado es RECRUITER
+  recruiterData = signal<RecruiterProfileResponse | null>(null);
+  recruiterJobs = signal<JobOffer[]>([]);
+  recruiterCandidatesCount = signal<number>(0);
+  verifiedTalentPool = signal<RecruiterCandidateSummary[]>([]);
+
   isLoadingFeed = signal(false);
   isProfileIncomplete = signal(false);
 
-  // Estado inicial vacío hasta que responda el backend
   profile = signal<PostulantProfileResponse>({
     id: '',
     userId: '',
     firstName: '',
     lastName: '',
-    studentCode: '—',
-    career: 'Sin registrar',
-    currentCycle: 0,
-    headline: 'Completa tu perfil para destacar en la red',
-    bio: '',
-    hasUniversityBase: false,
-    isInstitutionVerified: false,
-    institutionProfile: '',
     skills: []
   });
+
+  currentUserId = computed(
+    () => this.profile().userId || this.authService.session()?.userId || ''
+  );
+
+  currentRole = computed(() => this.authService.getStoredRole() || 'POSTULANT');
+
+  maxImportantPosts = computed(() => {
+    const role = this.currentRole();
+    if (role === 'INSTITUTION') return 6;
+    if (role === 'RECRUITER') return 5;
+    return 3;
+  });
+
+  myImportantPostsCount = computed(
+    () =>
+      this.posts().filter(
+        (p) => p.authorUserId === this.currentUserId() && p.isImportant
+      ).length
+  );
 
   fullName = computed(() => {
     const first = this.profile().firstName?.trim();
     const last = this.profile().lastName?.trim();
-    if (first || last) {
-      return `${first} ${last}`.trim();
-    }
-    return 'Mi Cuenta';
+    return first || last ? `${first} ${last}`.trim() : 'Mi Cuenta';
   });
 
   userInitials = computed(() => {
@@ -64,21 +117,68 @@ export class Dashboard implements OnInit {
     return (first + last).toUpperCase() || 'U';
   });
 
-  // Formulario de Crear Post
+  validatedSkills = computed(() =>
+    (this.profile().skills || []).filter((s) => Boolean(s.isValidatedByInstitution))
+  );
+
+  activeRecruiterJobs = computed(() =>
+    this.recruiterJobs().filter((j) => j.isActive !== false)
+  );
+
+  academicProcedureStatus = computed(() => {
+    const p = this.profile();
+    if (p.isInstitutionVerified && p.hasUniversityBase) {
+      return {
+        label: 'Convenio Universitario Activo',
+        sublabel: `Acreditado por ${p.institutionName || 'tu institución'}`,
+        badge: 'success' as const
+      };
+    }
+    if (p.isInstitutionVerified && !p.hasUniversityBase) {
+      return {
+        label: 'Egresado Acreditado',
+        sublabel: `Verificado por ${p.institutionName || 'tu institución'}`,
+        badge: 'success' as const
+      };
+    }
+    if (p.institutionProfile && !p.isInstitutionVerified) {
+      return {
+        label: 'Trámite de Acreditación',
+        sublabel: `En revisión por ${p.institutionName || 'la institución'}`,
+        badge: 'warning' as const
+      };
+    }
+    return null;
+  });
+
+  // Creación de Post
   newPostContent = '';
-  newPostMediaUrl = '';
-  showMediaInput = signal(false);
+  newPostImportant = false;
+  selectedMedia = signal<MediaAttachmentPreview[]>([]);
   isPosting = signal(false);
 
-  // Comentarios y Notificaciones Toast
   openComments = signal<Record<string, boolean>>({});
   commentDrafts: Record<string, string> = {};
-  toast = signal<{ message: string; type: 'success' | 'info' | 'warning' | 'error' } | null>(null);
+  toast = signal<ToastData | null>(null);
 
-  // Modales
+  // Modales Postulante vs Reclutador
   selectedJobForAi = signal<JobRecommendationResponse | null>(null);
   isAnalyzingAi = signal(false);
   showValidationModal = signal(false);
+
+  // Modales de Funciones Inteligentes IA para el Reclutador
+  showRecruiterOptimizerModal = signal(false);
+  showRecruiterRadarModal = signal(false);
+  aiRolePrompt = 'Desarrollador Full Stack Junior / Practicante';
+  generatedBlueprint = signal<AiJobBlueprint>({
+    roleTitle: 'Desarrollador Full Stack Junior (Angular + Spring Boot)',
+    suggestedModality: 'HYBRID',
+    suggestedLevel: 'JUNIOR',
+    salaryRange: 'S/. 1,800 - S/. 2,800 al mes',
+    recommendedSkills: ['Angular', 'TypeScript', 'Java', 'Spring Boot', 'PostgreSQL', 'Git'],
+    optimizedDescription:
+      'Buscamos talento universitario o recién egresado apasionado por el desarrollo de aplicaciones web escalables, con bases sólidas en arquitectura REST, componentes standalone en Angular y persistencia relacional.'
+  });
 
   ngOnInit(): void {
     if (!this.authService.getToken()) {
@@ -91,7 +191,6 @@ export class Dashboard implements OnInit {
   loadInitialData(): void {
     this.isLoadingFeed.set(true);
 
-    // 1. Cargar Feed Global
     this.feedService.getGlobalFeed().subscribe({
       next: (data) => {
         this.posts.set(data);
@@ -103,27 +202,29 @@ export class Dashboard implements OnInit {
       }
     });
 
-    // 2. Cargar Perfil según el Rol del usuario autenticado
-    const role = this.authService.getStoredRole();
+    const role = this.currentRole();
     if (role === 'POSTULANT') {
       this.profileService.getMyPostulantProfile().subscribe({
         next: (data) => {
           this.profile.set(data);
           this.isProfileIncomplete.set(false);
         },
-        error: () => {
-          this.isProfileIncomplete.set(true);
-        }
+        error: () => this.isProfileIncomplete.set(true)
       });
 
-      // 3. Cargar Recomendaciones Laborales (solo para Postulantes)
       this.jobService.getRecommendations().subscribe({
         next: (data) => this.recommendations.set(data),
         error: () => this.recommendations.set([])
       });
+
+      this.jobService.myApplications().subscribe({
+        next: (apps) => this.myApplications.set(apps.slice(0, 3)),
+        error: () => this.myApplications.set([])
+      });
     } else if (role === 'RECRUITER') {
       this.profileService.getMyRecruiterProfile().subscribe({
         next: (data) => {
+          this.recruiterData.set(data);
           this.profile.set({
             id: data.id || '',
             userId: data.userId || '',
@@ -131,15 +232,20 @@ export class Dashboard implements OnInit {
             lastName: '',
             studentCode: data.ruc || '—',
             career: data.industry || 'Sector Corporativo',
-            currentCycle: 0,
-            headline: data.industry ? `${data.industry} · Cuenta Reclutador` : 'Empresa Reclutadora',
-            isInstitutionVerified: Boolean(data.isValidated || data.isVerified),
-            institutionProfile: 'Cuenta Corporativa',
+            avatarUrl: data.companyLogoUrl || null,
+            headline:
+              data.headline ||
+              (data.industry ? `${data.industry} · RUC ${data.ruc}` : 'Cuenta Corporativa'),
+            isInstitutionVerified: Boolean(data.isVerified || data.isValidated),
+            institutionName: 'Organización Corporativa',
             skills: []
           });
         },
         error: () => this.isProfileIncomplete.set(true)
       });
+
+      // Cargar vacantes del reclutador y conteo de postulaciones recibidas
+      this.loadRecruiterDashboardWidgets();
     } else if (role === 'INSTITUTION') {
       this.profileService.getMyInstitutionProfile().subscribe({
         next: (data) => {
@@ -148,18 +254,151 @@ export class Dashboard implements OnInit {
             userId: data.userId || '',
             firstName: data.name || 'Institución',
             lastName: '',
-            studentCode: data.domain || '—',
-            career: 'Educación Superior',
-            currentCycle: 0,
+            avatarUrl: data.logoUrl || null,
             headline: data.domain ? `Dominio oficial: ${data.domain}` : 'Institución Educativa',
             isInstitutionVerified: Boolean(data.isVerified),
-            institutionProfile: 'Institución Oficial',
+            institutionName: 'Institución Oficial',
             skills: []
           });
         },
         error: () => this.isProfileIncomplete.set(true)
       });
     }
+  }
+
+  private loadRecruiterDashboardWidgets(): void {
+    // 1. Mis vacantes publicadas
+    this.http.get<JobOffer[]>(`${environment.apiUrl}/recruiter/jobs`).subscribe({
+      next: (jobs) => {
+        this.recruiterJobs.set(jobs);
+        // Contamos candidatos recibidos en las primeras vacantes activas
+        let totalCandidates = 0;
+        jobs.slice(0, 3).forEach((job) => {
+          this.http
+            .get<any[]>(`${environment.apiUrl}/recruiter/jobs/${job.id}/applications`)
+            .subscribe({
+              next: (apps) => {
+                totalCandidates += apps.length;
+                this.recruiterCandidatesCount.set(totalCandidates);
+              },
+              error: () => {}
+            });
+        });
+      },
+      error: () => this.recruiterJobs.set([])
+    });
+
+    // 2. Radar de talento verificado en la plataforma
+    this.http
+      .get<RecruiterCandidateSummary[]>(`${environment.apiUrl}/profiles/postulants/directory`)
+      .subscribe({
+        next: (list) => {
+          const prioritized = [...list].sort(
+            (a, b) => Number(Boolean(b.isInstitutionVerified)) - Number(Boolean(a.isInstitutionVerified))
+          );
+          this.verifiedTalentPool.set(prioritized.slice(0, 4));
+        },
+        error: () => this.verifiedTalentPool.set([])
+      });
+  }
+
+  // =========================================================================
+  // FUNCIONES INTELIGENTES IA PARA RECLUTADOR
+  // =========================================================================
+  handleHeaderIntelligentAction(): void {
+    if (this.currentRole() === 'RECRUITER') {
+      this.openRecruiterJobOptimizer();
+    } else {
+      this.openAiAnalysis(this.recommendations()[0]);
+    }
+  }
+
+  openRecruiterJobOptimizer(): void {
+    this.generateBlueprintFromPrompt();
+    this.showRecruiterOptimizerModal.set(true);
+  }
+
+  generateBlueprintFromPrompt(): void {
+    const prompt = this.aiRolePrompt.trim().toLowerCase();
+
+    if (prompt.includes('data') || prompt.includes('datos') || prompt.includes('ia')) {
+      this.generatedBlueprint.set({
+        roleTitle: 'Practicante / Analista de Datos & BI',
+        suggestedModality: 'HYBRID',
+        suggestedLevel: 'TRAINEE',
+        salaryRange: 'S/. 1,300 - S/. 2,000 al mes (Con Convenio Universitario)',
+        recommendedSkills: ['Python', 'SQL', 'Power BI', 'PostgreSQL', 'Estadística Aplicada'],
+        optimizedDescription:
+          'Únete a nuestro equipo de Analítica Avanzada para diseñar tableros de control ejecutivos, automatizar pipelines ETL y transformar datos de negocio en decisiones estratégicas.'
+      });
+    } else if (prompt.includes('ux') || prompt.includes('ui') || prompt.includes('diseño') || prompt.includes('frontend')) {
+      this.generatedBlueprint.set({
+        roleTitle: 'Desarrollador Frontend & UI/UX Specialist',
+        suggestedModality: 'REMOTE',
+        suggestedLevel: 'JUNIOR',
+        salaryRange: 'S/. 2,000 - S/. 3,200 al mes',
+        recommendedSkills: ['Angular', 'TypeScript', 'Tailwind CSS', 'Figma', 'Diseño de Interfaces'],
+        optimizedDescription:
+          'Buscamos talento creativo con dominio en Angular y sistemas de diseño en Figma/Tailwind CSS para construir experiencias digitales fluidas, accesibles y de alto impacto.'
+      });
+    } else {
+      this.generatedBlueprint.set({
+        roleTitle: this.aiRolePrompt.trim() || 'Ingeniero de Software Full Stack',
+        suggestedModality: 'HYBRID',
+        suggestedLevel: 'JUNIOR',
+        salaryRange: 'S/. 1,800 - S/. 2,800 al mes',
+        recommendedSkills: ['Java', 'Spring Boot', 'Angular', 'TypeScript', 'PostgreSQL', 'Git'],
+        optimizedDescription:
+          'Buscamos estudiantes de últimos ciclos o egresados verificados con bases sólidas en ingeniería de software, desarrollo de microservicios en Spring Boot y aplicaciones SPA modernas.'
+      });
+    }
+  }
+
+  copyBlueprintAndGoToJobs(): void {
+    this.showRecruiterOptimizerModal.set(false);
+    this.showToast('Plantilla IA lista. Redirigiendo al creador de vacantes...', 'success');
+    this.router.navigate(['/recruiter/jobs']);
+  }
+
+  // =========================================================================
+  // MULTIMEDIA Y PUBLICACIONES DEL FEED
+  // =========================================================================
+  async onMediaFilesSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    const current = this.selectedMedia();
+    if (current.length + files.length > 4) {
+      this.showToast('Puedes adjuntar un máximo de 4 archivos multimedia por publicación.', 'warning');
+      input.value = '';
+      return;
+    }
+
+    for (const file of Array.from(files)) {
+      try {
+        const dataUrl = await processFeedMediaFile(file);
+        const type: 'image' | 'video' | 'gif' = file.type.startsWith('video/')
+          ? 'video'
+          : file.type === 'image/gif'
+          ? 'gif'
+          : 'image';
+
+        this.selectedMedia.update((list) => [...list, { dataUrl, type, name: file.name }]);
+      } catch (err: any) {
+        this.showToast(err?.message || 'Archivo multimedia no válido.', 'error');
+      }
+    }
+
+    input.value = '';
+  }
+
+  removeSelectedMedia(index: number): void {
+    this.selectedMedia.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  isVideoMedia(url: string): boolean {
+    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
   }
 
   handleCreatePost(): void {
@@ -169,27 +408,91 @@ export class Dashboard implements OnInit {
       return;
     }
 
-    this.isPosting.set(true);
-    const media = this.newPostMediaUrl.trim() ? [this.newPostMediaUrl.trim()] : undefined;
+    if (this.newPostImportant && this.myImportantPostsCount() >= this.maxImportantPosts()) {
+      this.showToast(
+        `Ya alcanzaste tu límite de ${this.maxImportantPosts()} publicaciones importantes.`,
+        'warning'
+      );
+      return;
+    }
 
-    this.feedService.createPost({ content, mediaUrls: media }).subscribe({
-      next: (created) => {
-        this.posts.update((prev) => [created, ...prev]);
-        this.newPostContent = '';
-        this.newPostMediaUrl = '';
-        this.showMediaInput.set(false);
-        this.isPosting.set(false);
-        this.showToast('¡Publicación compartida en el feed!', 'success');
+    this.isPosting.set(true);
+    const mediaUrls = this.selectedMedia().map((m) => m.dataUrl);
+
+    this.feedService
+      .createPost({
+        content,
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        isImportant: this.newPostImportant
+      })
+      .subscribe({
+        next: (created) => {
+          const enrichedPost: FeedPostResponse = {
+            ...created,
+            authorAvatarUrl: created.authorAvatarUrl || this.profile().avatarUrl || undefined,
+            authorHeadline: created.authorHeadline || this.profile().headline || ''
+          };
+          this.posts.update((prev) => [enrichedPost, ...prev]);
+          this.newPostContent = '';
+          this.newPostImportant = false;
+          this.selectedMedia.set([]);
+          this.isPosting.set(false);
+          this.showToast(
+            created.isImportant
+              ? '¡Publicación importante fijada en tu perfil y en el feed!'
+              : '¡Publicación compartida en el feed (activa por 7 días)!',
+            'success'
+          );
+        },
+        error: (err) => {
+          this.isPosting.set(false);
+          this.showToast(readApiError(err, 'No se pudo publicar en el feed.'), 'error');
+        }
+      });
+  }
+
+  handleToggleImportant(post: FeedPostResponse): void {
+    this.feedService.toggleImportant(post.id).subscribe({
+      next: (updated) => {
+        this.posts.update((items) =>
+          items.map((p) =>
+            p.id === post.id
+              ? { ...p, isImportant: updated.isImportant, expiresAt: updated.expiresAt }
+              : p
+          )
+        );
+        this.showToast(
+          updated.isImportant
+            ? '📌 Publicación marcada como importante (no caducará y se mostrará en tu perfil).'
+            : 'Publicación removida de importantes (caducará en 7 días).',
+          'info'
+        );
       },
       error: (err) => {
-        this.isPosting.set(false);
-        this.showToast(readApiError(err, 'Completa y verifica tu perfil antes de publicar en el feed.'), 'error');
+        this.showToast(
+          readApiError(
+            err,
+            `Solo puedes fijar hasta ${this.maxImportantPosts()} publicaciones importantes.`
+          ),
+          'warning'
+        );
       }
     });
   }
 
-  toggleMediaInput(): void {
-    this.showMediaInput.update((v) => !v);
+  navigateToAuthorProfile(
+    authorUserId: string,
+    authorProfileId: string | undefined,
+    authorRole: string | undefined
+  ): void {
+    if (authorUserId === this.currentUserId()) {
+      this.router.navigate(['/profile/me']);
+      return;
+    }
+
+    const roleSlug = (authorRole || 'POSTULANT').toLowerCase();
+    const targetId = authorProfileId || authorUserId;
+    this.router.navigate(['/profile/view', roleSlug, targetId]);
   }
 
   handleToggleLike(post: FeedPostResponse): void {
@@ -216,12 +519,13 @@ export class Dashboard implements OnInit {
       [postId]: willOpen
     }));
 
-    // Cuando se abre la sección de comentarios, consultamos los comentarios reales del backend
     if (willOpen) {
       this.feedService.getCommentsByPost(postId).subscribe({
         next: (comments) => {
           this.posts.update((items) =>
-            items.map((p) => (p.id === postId ? { ...p, comments, commentsCount: comments.length } : p))
+            items.map((p) =>
+              p.id === postId ? { ...p, comments, commentsCount: comments.length } : p
+            )
           );
         }
       });
@@ -238,13 +542,18 @@ export class Dashboard implements OnInit {
 
     this.feedService.addComment(postId, text).subscribe({
       next: (comment) => {
+        const enrichedComment = {
+          ...comment,
+          authorAvatarUrl: comment.authorAvatarUrl || this.profile().avatarUrl || undefined,
+          authorHeadline: comment.authorHeadline || this.profile().headline || undefined
+        };
         this.posts.update((items) =>
           items.map((p) => {
             if (p.id === postId) {
               const currentComments = p.comments || [];
               return {
                 ...p,
-                comments: [...currentComments, comment],
+                comments: [...currentComments, enrichedComment],
                 commentsCount: currentComments.length + 1
               };
             }
@@ -268,7 +577,10 @@ export class Dashboard implements OnInit {
           this.showToast('Publicación eliminada correctamente.', 'info');
         },
         error: (err) => {
-          this.showToast(readApiError(err, 'No tienes permiso para eliminar esta publicación.'), 'error');
+          this.showToast(
+            readApiError(err, 'No tienes permiso para eliminar esta publicación.'),
+            'error'
+          );
         }
       });
     }
@@ -282,6 +594,9 @@ export class Dashboard implements OnInit {
         this.recommendations.update((items) =>
           items.map((j) => (j.id === job.id ? { ...j, isApplied: true } : j))
         );
+        this.jobService.myApplications().subscribe({
+          next: (apps) => this.myApplications.set(apps.slice(0, 3))
+        });
         this.showToast(`¡Postulación enviada a ${job.companyName}!`, 'success');
       },
       error: (err) => {
@@ -301,6 +616,10 @@ export class Dashboard implements OnInit {
         this.showToast(readApiError(err, 'No se pudo descartar la vacante.'), 'error');
       }
     });
+  }
+
+  applicationStatusLabel(status: string): string {
+    return applicationLabel(status);
   }
 
   openAiAnalysis(job: JobRecommendationResponse | undefined): void {
@@ -327,17 +646,16 @@ export class Dashboard implements OnInit {
     this.showValidationModal.set(false);
   }
 
-  showToast(message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info'): void {
+  showToast(message: string, type: ToastType = 'info'): void {
     this.toast.set({ message, type });
     setTimeout(() => {
       this.toast.set(null);
     }, 4000);
   }
 
-  formatDate(date: string | Date | undefined): string {
-    if (!date) return 'Reciente';
-    const d = new Date(date);
-    if (Number.isNaN(d.getTime())) return 'Reciente';
+  formatDate(value: unknown): string {
+    const d = toDate(value);
+    if (!d) return 'Reciente';
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - d.getTime()) / (1000 * 60));
 
@@ -347,5 +665,16 @@ export class Dashboard implements OnInit {
     if (diffHours < 24) return `Hace ${diffHours} h`;
     const diffDays = Math.floor(diffHours / 24);
     return `Hace ${diffDays} d`;
+  }
+
+  formatExpirationRemaining(expiresAt: unknown): string {
+    const exp = toDate(expiresAt);
+    if (!exp) return '7 días';
+    const diffMs = exp.getTime() - Date.now();
+    if (diffMs <= 0) return 'Por expirar';
+    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+    if (diffHours < 24) return `${diffHours} h restantes`;
+    const diffDays = Math.ceil(diffHours / 24);
+    return `${diffDays} d restantes`;
   }
 }

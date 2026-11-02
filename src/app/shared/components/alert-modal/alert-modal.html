@@ -1,0 +1,38 @@
+@if (isOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 animate-fade-in text-center space-y-4">
+      <div
+        [ngClass]="{
+          'bg-[#FEF3C7] text-[#F59E0B]': variant() === 'warning',
+          'bg-[#274DEA]/10 text-[#274DEA]': variant() === 'info',
+          'bg-[#EF4444]/10 text-[#EF4444]': variant() === 'danger'
+        }"
+        class="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+
+      <h3 class="text-[18px] font-bold text-gray-900">{{ title() }}</h3>
+      <p class="text-[13px] text-[#6B7280] leading-relaxed">{{ message() }}</p>
+
+      <div class="pt-2 flex items-center justify-center gap-2.5">
+        <button
+          type="button"
+          (click)="close.emit()"
+          class="px-4 py-2 rounded-full border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-100 transition"
+        >
+          {{ cancelText() }}
+        </button>
+        <button
+          type="button"
+          (click)="confirm.emit()"
+          class="px-5 py-2 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-sm transition"
+        >
+          {{ confirmText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

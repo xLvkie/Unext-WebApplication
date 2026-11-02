@@ -1,11 +1,15 @@
 export interface FeedCommentResponse {
   id: string;
+  postId?: string;
   authorUserId: string;
+  authorProfileId?: string;
+  authorRole?: 'POSTULANT' | 'RECRUITER' | 'INSTITUTION' | string;
   authorName: string;
   authorAvatarUrl?: string;
   authorHeadline?: string;
+  isAuthorVerified?: boolean;
   content: string;
-  createdAt: string | Date;
+  createdAt: string | number[] | Date;
 }
 
 export interface FeedPostResponse {
@@ -22,11 +26,14 @@ export interface FeedPostResponse {
   likesCount: number;
   commentsCount: number;
   likedByMe: boolean;
-  createdAt: string | Date;
+  isImportant: boolean;
+  expiresAt?: string | number[] | Date | null;
+  createdAt: string | number[] | Date;
   comments?: FeedCommentResponse[];
 }
 
 export interface FeedPostRequest {
   content: string;
   mediaUrls?: string[];
+  isImportant?: boolean;
 }

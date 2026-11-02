@@ -1,0 +1,910 @@
+<!-- NAVBAR SUPERIOR AUTOMÁTICO -->
+<app-navbar />
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-5">
+
+    <!-- =================================================================== -->
+    <!-- CABECERA SUPERIOR + CONMUTADOR DE LOS 2 MODOS + BOTÓN CREAR VACANTE -->
+    <!-- =================================================================== -->
+    <header class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-[#274DEA]/10 text-[#274DEA]">
+            Centro de Reclutamiento UNEXT
+          </span>
+          <span class="text-xs text-[#6B7280]">
+            · {{ activeJobsCount() }} activa{{ activeJobsCount() === 1 ? '' : 's' }} · {{ closedJobsCount() }} cerrada{{ closedJobsCount() === 1 ? '' : 's' }}
+          </span>
+        </div>
+        <h1 class="text-[24px] font-bold text-gray-900 mt-1">
+          Gestión de Vacantes y Selección de Talento
+        </h1>
+        <p class="text-[13px] text-[#6B7280]">
+          Publica ofertas, edita condiciones salariales, evalúa candidatos paso a paso o explora vacantes del mercado.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <!-- Selector entre "Mis Vacantes" y "Explorar Mercado" -->
+        <div class="p-1 rounded-full bg-[#F8FAFC] border border-gray-200 flex items-center">
+          <button
+            type="button"
+            (click)="switchToTab('MY_JOBS')"
+            [ngClass]="activeTab() === 'MY_JOBS'
+              ? 'bg-[#274DEA] text-white font-bold shadow-2xs'
+              : 'text-gray-600 hover:text-gray-900 font-semibold'"
+            class="px-4 py-1.5 rounded-full text-xs transition"
+          >
+            🏢 Mis Vacantes ({{ myJobs().length }})
+          </button>
+          <button
+            type="button"
+            (click)="switchToTab('MARKET_EXPLORER')"
+            [ngClass]="activeTab() === 'MARKET_EXPLORER'
+              ? 'bg-[#274DEA] text-white font-bold shadow-2xs'
+              : 'text-gray-600 hover:text-gray-900 font-semibold'"
+            class="px-4 py-1.5 rounded-full text-xs transition"
+          >
+            🌐 Explorar vacantes de otras empresas
+          </button>
+        </div>
+
+        <!-- Acción 1: Botón Principal para Crear Nueva Vacante -->
+        <button
+          type="button"
+          (click)="openCreateJobModal()"
+          class="px-5 py-2.5 rounded-full bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs shadow-sm flex items-center gap-1.5 transition"
+        >
+          <span>+ Publicar nueva vacante</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- =================================================================== -->
+    <!-- MODO 1: ADMINISTRAR MIS VACANTES, EDITARLAS Y GESTIONAR CANDIDATOS  -->
+    <!-- =================================================================== -->
+    @if (activeTab() === 'MY_JOBS') {
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- COLUMNA IZQUIERDA (lg:col-span-4): LISTA DE MIS VACANTES CREADAS -->
+        <aside class="lg:col-span-4 space-y-3">
+          <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-[15px] font-bold text-gray-900">Mis Convocatorias</h2>
+              <button
+                type="button"
+                (click)="loadMyJobs()"
+                class="text-xs font-bold text-[#274DEA] hover:underline"
+              >
+                ↻ Actualizar
+              </button>
+            </div>
+
+            @if (isLoadingJobs()) {
+              <div class="space-y-3">
+                @for (sk of [1, 2, 3]; track sk) {
+                  <div class="h-24 rounded-xl bg-slate-100 animate-pulse"></div>
+                }
+              </div>
+            } @else {
+              <div class="space-y-2.5 max-h-[68vh] overflow-y-auto pr-1">
+                @for (job of myJobs(); track job.id) {
+                  <article
+                    (click)="selectJob(job)"
+                    [ngClass]="selectedJob()?.id === job.id
+                      ? 'border-[#274DEA] bg-[#274DEA]/[0.04] ring-2 ring-[#274DEA]/15'
+                      : 'border-gray-200/90 bg-white hover:bg-gray-50'"
+                    class="p-4 rounded-xl border cursor-pointer transition space-y-2"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <h3 class="text-[14px] font-bold text-gray-900 leading-snug">
+                        {{ job.title }}
+                      </h3>
+                      <span
+                        [ngClass]="job.isActive !== false
+                          ? 'bg-[#ECFDF5] text-[#059669] border border-[#059669]/30'
+                          : 'bg-gray-100 text-gray-600'"
+                        class="px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0"
+                      >
+                        {{ job.isActive !== false ? 'Activa' : 'Cerrada' }}
+                      </span>
+                    </div>
+
+                    <p class="text-[11px] text-[#6B7280]">
+                      {{ job.location || 'Perú' }} · {{ modalityText(job.modality) }} · {{ experienceText(job.experienceLevel) }}
+                    </p>
+
+                    <p class="text-[12px] font-bold text-[#059669]">
+                      {{ salaryText(job.minSalary, job.maxSalary) }}
+                    </p>
+
+                    <!-- Botones rápidos de Acción 2: Editar vacante o Cerrarla -->
+                    <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
+                      <span class="text-[#6B7280]">{{ formatRelativeDate(job.createdAt) }}</span>
+                      <div class="flex items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="openEditJobModal(job, $event)"
+                          class="px-2.5 py-1 rounded-lg bg-[#274DEA]/10 text-[#274DEA] hover:bg-[#274DEA] hover:text-white font-bold transition"
+                        >
+                          ✎ Editar
+                        </button>
+                        @if (job.isActive !== false) {
+                          <button
+                            type="button"
+                            (click)="handleCloseJobOffer(job, $event)"
+                            class="px-2.5 py-1 rounded-lg bg-[#EF4444]/10 text-[#EF4444] hover:bg-[#EF4444] hover:text-white font-bold transition"
+                          >
+                            Cerrar
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  </article>
+                } @empty {
+                  <div class="p-8 text-center border border-dashed border-gray-200 rounded-xl">
+                    <p class="text-[13px] font-bold text-gray-800">Aún no tienes vacantes creadas</p>
+                    <p class="text-[11px] text-[#6B7280] mt-1">
+                      Haz clic en "+ Publicar nueva vacante" para lanzar tu primera convocatoria.
+                    </p>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </aside>
+
+        <!-- COLUMNA DERECHA (lg:col-span-8): DETALLE DE VACANTE + EMBUDO DE POSTULANTES -->
+        <section class="lg:col-span-8 space-y-4">
+          @if (selectedJob(); as currentJob) {
+
+            <!-- Resumen de la Vacante Seleccionada + Botón de Editar -->
+            <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-3">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h2 class="text-[19px] font-bold text-gray-900">{{ currentJob.title }}</h2>
+                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#274DEA]/10 text-[#274DEA]">
+                      {{ modalityText(currentJob.modality) }} · {{ experienceText(currentJob.experienceLevel) }}
+                    </span>
+                  </div>
+                  <p class="text-[12px] text-[#6B7280] mt-0.5">
+                    {{ currentJob.location || 'Lima, Perú' }} · Rango salarial:
+                    <strong class="text-[#059669]">{{ salaryText(currentJob.minSalary, currentJob.maxSalary) }}</strong>
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    (click)="openEditJobModal(currentJob)"
+                    class="px-4 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
+                  >
+                    ✎ Editar condiciones / salario
+                  </button>
+                  @if (currentJob.isActive !== false) {
+                    <button
+                      type="button"
+                      (click)="handleCloseJobOffer(currentJob)"
+                      class="px-3.5 py-1.5 rounded-full border border-[#EF4444] text-[#EF4444] hover:bg-[#EF4444]/5 text-xs font-bold transition"
+                    >
+                      Cerrar vacante
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-1.5 pt-1">
+                @for (sk of currentJob.requiredSkills; track sk) {
+                  <span class="px-2.5 py-0.5 rounded-lg bg-[#F8FAFC] border border-gray-200 text-gray-700 text-[11px] font-semibold">
+                    {{ sk }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- =========================================================== -->
+            <!-- ACCIÓN 3: ADMINISTRACIÓN DE CANDIDATOS (EMBUDO DE 4 ETAPAS) -->
+            <!-- =========================================================== -->
+            <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-4">
+              
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <div>
+                  <h3 class="text-[16px] font-bold text-gray-900">
+                    Postulantes a esta vacante ({{ countByStatus().ALL }})
+                  </h3>
+                  <p class="text-[12px] text-[#6B7280]">
+                    Sigue el flujo: 1. Revisar Perfil y CV → 2. Charla en Mensajería y Entrevista Presencial → 3. Contratar o Descartar.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Píldoras de Etapa del Proceso -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  (click)="statusFilter.set('ALL')"
+                  [ngClass]="statusFilter() === 'ALL' ? 'bg-gray-900 text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                  class="px-3.5 py-1.5 rounded-full text-xs transition"
+                >
+                  Todos ({{ countByStatus().ALL }})
+                </button>
+                <button
+                  type="button"
+                  (click)="statusFilter.set('RECEIVED')"
+                  [ngClass]="statusFilter() === 'RECEIVED' ? 'bg-[#274DEA] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                  class="px-3.5 py-1.5 rounded-full text-xs transition"
+                >
+                  1. Nuevos / Revisión CV ({{ countByStatus().RECEIVED }})
+                </button>
+                <button
+                  type="button"
+                  (click)="statusFilter.set('UNDER_REVIEW')"
+                  [ngClass]="statusFilter() === 'UNDER_REVIEW' ? 'bg-[#F59E0B] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                  class="px-3.5 py-1.5 rounded-full text-xs transition"
+                >
+                  2. En Charla / Entrevista ({{ countByStatus().UNDER_REVIEW }})
+                </button>
+                <button
+                  type="button"
+                  (click)="statusFilter.set('ACCEPTED')"
+                  [ngClass]="statusFilter() === 'ACCEPTED' ? 'bg-[#059669] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                  class="px-3.5 py-1.5 rounded-full text-xs transition"
+                >
+                  3. Contratados ({{ countByStatus().ACCEPTED }})
+                </button>
+                <button
+                  type="button"
+                  (click)="statusFilter.set('REJECTED')"
+                  [ngClass]="statusFilter() === 'REJECTED' ? 'bg-[#EF4444] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                  class="px-3.5 py-1.5 rounded-full text-xs transition"
+                >
+                  No seleccionados ({{ countByStatus().REJECTED }})
+                </button>
+              </div>
+
+              <!-- Barra de Filtros Académicos (Carrera, Ciclo mínimo, Habilidad) -->
+              <div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-200/80 grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                <input
+                  type="text"
+                  [(ngModel)]="applicantFilters.career"
+                  placeholder="Filtrar por carrera..."
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
+                />
+                <input
+                  type="text"
+                  [(ngModel)]="applicantFilters.skill"
+                  placeholder="Habilidad (ej. Angular)..."
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  [(ngModel)]="applicantFilters.minCycle"
+                  placeholder="Ciclo mín. (1-12)"
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
+                />
+                <div class="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    (click)="loadApplicantsForSelectedJob()"
+                    class="flex-1 py-1.5 px-3 rounded-lg bg-[#274DEA] text-white text-xs font-bold hover:bg-[#1E3BB8]"
+                  >
+                    Filtrar
+                  </button>
+                  <button
+                    type="button"
+                    (click)="clearApplicantFilters()"
+                    class="py-1.5 px-2.5 rounded-lg border border-gray-300 text-gray-600 text-xs hover:bg-gray-100"
+                    title="Limpiar filtros"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              <!-- Listado de Tarjetas de Postulantes con Stepper de Reclutamiento -->
+              @if (isLoadingApplicants()) {
+                <div class="space-y-3">
+                  @for (s of [1, 2]; track s) {
+                    <div class="h-36 rounded-xl bg-slate-100 animate-pulse"></div>
+                  }
+                </div>
+              } @else {
+                <div class="space-y-4">
+                  @for (cand of filteredApplicants(); track cand.id) {
+                    <article class="p-5 rounded-2xl border border-gray-200/90 bg-white hover:border-[#274DEA]/40 transition space-y-4 shadow-2xs">
+                      
+                      <!-- Cabecera del Candidato + Porcentaje de Compatibilidad IA -->
+                      <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="flex items-center gap-3.5">
+                          <a
+                            [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
+                            class="w-13 h-13 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-extrabold text-sm flex items-center justify-center overflow-hidden border border-[#274DEA]/30 shrink-0"
+                          >
+                            @if (cand.avatarUrl) {
+                              <img [src]="cand.avatarUrl" [alt]="cand.firstName" class="w-full h-full object-cover" />
+                            } @else {
+                              <span>{{ cand.firstName.charAt(0) }}{{ cand.lastName.charAt(0) }}</span>
+                            }
+                          </a>
+
+                          <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <a
+                                [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
+                                class="text-[15px] font-bold text-gray-900 hover:text-[#274DEA] hover:underline"
+                              >
+                                {{ cand.firstName }} {{ cand.lastName }}
+                              </a>
+
+                              @if (cand.isInstitutionVerified) {
+                                <span class="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] text-[10px] font-bold border border-[#059669]/30">
+                                  ✓ Acreditado por Universidad
+                                </span>
+                              }
+                            </div>
+
+                            <p class="text-[12px] text-gray-700 mt-0.5">
+                              {{ cand.headline || 'Candidato en Unext' }}
+                            </p>
+
+                            @if (cand.career) {
+                              <p class="text-[11px] text-[#274DEA] font-semibold mt-0.5">
+                                🎓 {{ cand.career }} {{ cand.currentCycle ? ('· Ciclo ' + cand.currentCycle) : '' }}
+                              </p>
+                            }
+                          </div>
+                        </div>
+
+                        <!-- Derecha: Match IA + Estado Actual -->
+                        <div class="flex flex-col items-end gap-1.5">
+                          @if (cand.compatibilityPercent != null) {
+                            <span class="px-3 py-1 rounded-full bg-[#C3A7FF]/30 text-[#2E1065] text-xs font-extrabold">
+                              ⚡ {{ cand.compatibilityPercent }}% Match IA
+                            </span>
+                          }
+                          <span
+                            [ngClass]="{
+                              'bg-[#274DEA]/10 text-[#274DEA]': cand.status === 'RECEIVED',
+                              'bg-[#FEF3C7] text-[#B45309]': cand.status === 'UNDER_REVIEW',
+                              'bg-[#ECFDF5] text-[#059669]': cand.status === 'ACCEPTED',
+                              'bg-[#EF4444]/10 text-[#EF4444]': cand.status === 'REJECTED'
+                            }"
+                            class="px-2.5 py-0.5 rounded-md text-[11px] font-bold"
+                          >
+                            {{ statusText(cand.status) }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Habilidades del Candidato -->
+                      @if (cand.skills && cand.skills.length > 0) {
+                        <div class="flex flex-wrap gap-1.5">
+                          @for (sk of cand.skills; track sk) {
+                            <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium">
+                              {{ sk }}
+                            </span>
+                          }
+                        </div>
+                      }
+
+                      <!-- ===================================================== -->
+                      <!-- STEPPER VISUAL DEL FLUJO DE CONTRATACIÓN (4 PASOS)    -->
+                      <!-- ===================================================== -->
+                      <div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-200/80 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[11px]">
+                          <!-- Paso 1 -->
+                          <div
+                            [ngClass]="cand.status === 'RECEIVED' ? 'border-[#274DEA] bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'border-gray-200 bg-white text-[#059669] font-semibold'"
+                            class="p-2 rounded-lg border flex items-center gap-1.5"
+                          >
+                            <span>1. Revisión de Perfil y CV</span>
+                          </div>
+
+                          <!-- Paso 2 -->
+                          <div
+                            [ngClass]="cand.status === 'UNDER_REVIEW' ? 'border-[#F59E0B] bg-[#FEF3C7]/60 text-[#B45309] font-bold' : (cand.status === 'ACCEPTED' ? 'border-gray-200 bg-white text-[#059669] font-semibold' : 'border-gray-200 bg-white text-gray-400')"
+                            class="p-2 rounded-lg border flex items-center gap-1.5"
+                          >
+                            <span>2. Charla por Mensajería</span>
+                          </div>
+
+                          <!-- Paso 3 -->
+                          <div
+                            [ngClass]="isInterviewCompleted(cand.id) || cand.status === 'ACCEPTED' ? 'border-[#059669] bg-[#ECFDF5] text-[#059669] font-bold' : 'border-gray-200 bg-white text-gray-500'"
+                            class="p-2 rounded-lg border flex items-center gap-1.5"
+                          >
+                            <span>3. Entrevista Presencial</span>
+                          </div>
+
+                          <!-- Paso 4 -->
+                          <div
+                            [ngClass]="cand.status === 'ACCEPTED' ? 'border-[#059669] bg-[#059669] text-white font-bold' : (cand.status === 'REJECTED' ? 'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444] font-bold' : 'border-gray-200 bg-white text-gray-400')"
+                            class="p-2 rounded-lg border flex items-center gap-1.5"
+                          >
+                            <span>4. {{ cand.status === 'REJECTED' ? 'Descartado' : 'Contratado' }}</span>
+                          </div>
+                        </div>
+
+                        <!-- BARRA DE BOTONES DE ACCIÓN SEGÚN LA ETAPA DEL POSTULANTE -->
+                        <div class="pt-2 border-t border-gray-200/70 flex flex-wrap items-center justify-between gap-2">
+                          
+                          <!-- Acciones permanentes de revisión: Ver Perfil y Descargar CV -->
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <a
+                              [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
+                              class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition"
+                            >
+                              👤 Ver perfil completo
+                            </a>
+
+                            <button
+                              type="button"
+                              (click)="downloadCandidateCv(cand)"
+                              class="px-3 py-1.5 rounded-lg border border-[#274DEA]/30 bg-white hover:bg-[#274DEA]/5 text-[#274DEA] text-xs font-bold transition"
+                            >
+                              📄 {{ cand.cvUrl ? 'Ver / Descargar CV' : 'Sin CV adjunto' }}
+                            </button>
+
+                            @if (cand.status === 'UNDER_REVIEW' || cand.status === 'ACCEPTED') {
+                              <a
+                                routerLink="/messages"
+                                class="px-3 py-1.5 rounded-lg bg-[#274DEA]/10 text-[#274DEA] hover:bg-[#274DEA] hover:text-white text-xs font-bold transition"
+                              >
+                                💬 Abrir charla en Mensajería
+                              </a>
+                            }
+                          </div>
+
+                          <!-- Botones de progresión de etapa -->
+                          <div class="flex items-center gap-2 flex-wrap">
+                            @if (cand.status === 'RECEIVED') {
+                              <button
+                                type="button"
+                                (click)="changeCandidateStatus(cand, 'REJECTED')"
+                                class="px-3 py-1.5 rounded-lg border border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition"
+                              >
+                                ✕ Descartar
+                              </button>
+                              <button
+                                type="button"
+                                (click)="changeCandidateStatus(cand, 'UNDER_REVIEW')"
+                                class="px-4 py-1.5 rounded-lg bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-2xs transition"
+                              >
+                                Pasar a Evaluación y Habilitar Chat →
+                              </button>
+                            }
+
+                            @if (cand.status === 'UNDER_REVIEW') {
+                              <!-- Checkbox para confirmar que ya tuvo la entrevista presencial -->
+                              <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-300 text-xs font-semibold text-gray-700 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  [checked]="isInterviewCompleted(cand.id)"
+                                  (change)="toggleInterviewStep(cand.id)"
+                                  class="rounded text-[#059669]"
+                                />
+                                <span>📅 Entrevista presencial realizada</span>
+                              </label>
+
+                              <button
+                                type="button"
+                                (click)="changeCandidateStatus(cand, 'REJECTED')"
+                                class="px-3 py-1.5 rounded-lg border border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition"
+                              >
+                                ✕ Desaprobar
+                              </button>
+
+                              <button
+                                type="button"
+                                (click)="changeCandidateStatus(cand, 'ACCEPTED')"
+                                class="px-4 py-1.5 rounded-lg bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold shadow-2xs transition"
+                              >
+                                ✓ Aprobar y Contratar
+                              </button>
+                            }
+
+                            @if (cand.status === 'ACCEPTED') {
+                              <span class="px-3 py-1.5 rounded-lg bg-[#ECFDF5] text-[#059669] text-xs font-extrabold">
+                                🎉 Candidato Contratado
+                              </span>
+                              @if (currentJob.experienceLevel === 'TRAINEE' && cand.isInstitutionVerified) {
+                                <a
+                                  routerLink="/agreements"
+                                  class="px-3.5 py-1.5 rounded-lg bg-[#059669] text-white text-xs font-bold hover:bg-[#047857]"
+                                >
+                                  📜 Generar Convenio de Prácticas
+                                </a>
+                              }
+                            }
+
+                            @if (cand.status === 'REJECTED') {
+                              <button
+                                type="button"
+                                (click)="changeCandidateStatus(cand, 'UNDER_REVIEW')"
+                                class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 text-xs font-semibold"
+                              >
+                                ↺ Reevaluar candidato
+                              </button>
+                            }
+                          </div>
+
+                        </div>
+                      </div>
+
+                    </article>
+                  } @empty {
+                    <div class="p-10 text-center border border-dashed border-gray-200 rounded-2xl">
+                      <p class="text-[14px] font-bold text-gray-800">
+                        No hay postulantes en esta etapa para "{{ currentJob.title }}"
+                      </p>
+                      <p class="text-[12px] text-[#6B7280] mt-1">
+                        Cuando los candidatos postulen a tu oferta o cambies el filtro de etapa, aparecerán aquí.
+                      </p>
+                    </div>
+                  }
+                </div>
+              }
+
+            </div>
+
+          } @else {
+            <div class="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+              <p class="text-[15px] font-bold text-gray-900">Selecciona o publica una vacante</p>
+              <p class="text-[13px] text-[#6B7280] mt-1">
+                Elige una convocatoria de la columna izquierda para administrar sus postulantes o publica una nueva oferta.
+              </p>
+            </div>
+          }
+        </section>
+
+      </div>
+    }
+
+    <!-- =================================================================== -->
+    <!-- MODO 2 (ACCIÓN 4): EXPLORAR VACANTES DE OTRAS EMPRESAS (SOLO LECTURA) -->
+    <!-- =================================================================== -->
+    @if (activeTab() === 'MARKET_EXPLORER') {
+      <section class="space-y-4">
+
+        <!-- Buscador idéntico al del Postulante -->
+        <form
+          (ngSubmit)="loadMarketJobs()"
+          class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+        >
+          <div class="md:col-span-5">
+            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Puesto o palabra clave</label>
+            <input
+              type="text"
+              name="marketKeyword"
+              [(ngModel)]="marketKeyword"
+              placeholder="Ej. Desarrollador Java, Practicante, Analista..."
+              class="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs"
+            />
+          </div>
+
+          <div class="md:col-span-3">
+            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Modalidad</label>
+            <select
+              name="marketModality"
+              [(ngModel)]="marketModality"
+              class="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs bg-white"
+            >
+              <option value="">Todas</option>
+              <option value="REMOTE">Remoto</option>
+              <option value="HYBRID">Híbrido</option>
+              <option value="ONSITE">Presencial</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block text-[11px] font-bold text-gray-600 uppercase mb-1">Nivel</label>
+            <select
+              name="marketExperience"
+              [(ngModel)]="marketExperience"
+              class="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs bg-white"
+            >
+              <option value="">Todos</option>
+              <option value="TRAINEE">Practicante</option>
+              <option value="JUNIOR">Junior</option>
+              <option value="SEMI_SENIOR">Semi Senior</option>
+              <option value="SENIOR">Senior</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2 flex gap-2">
+            <button type="submit" class="flex-1 py-2 px-4 rounded-xl bg-[#274DEA] text-white text-xs font-bold hover:bg-[#1E3BB8]">
+              Buscar
+            </button>
+            <button type="button" (click)="resetMarketFilters()" class="py-2 px-3 rounded-xl border border-gray-300 text-gray-600 text-xs">
+              ✕
+            </button>
+          </div>
+        </form>
+
+        <!-- Vista Maestro-Detalle de las Vacantes del Mercado (Sin botón de Postular) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div class="lg:col-span-5 space-y-2.5 max-h-[68vh] overflow-y-auto pr-1">
+            @for (offer of marketJobs(); track offer.id) {
+              <article
+                (click)="selectedMarketJob.set(offer)"
+                [ngClass]="selectedMarketJob()?.id === offer.id
+                  ? 'border-[#274DEA] bg-[#274DEA]/[0.04]'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'"
+                class="p-4 rounded-2xl border cursor-pointer transition space-y-1.5"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <h3 class="text-[14px] font-bold text-gray-900">{{ offer.title }}</h3>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#274DEA]/10 text-[#274DEA] shrink-0">
+                    {{ modalityText(offer.modality) }}
+                  </span>
+                </div>
+                <p class="text-xs font-semibold text-gray-700">{{ offer.companyName }}</p>
+                <p class="text-[11px] text-[#6B7280]">
+                  {{ offer.location || 'Perú' }} · {{ experienceText(offer.experienceLevel) }}
+                </p>
+                <p class="text-xs font-bold text-[#059669]">
+                  {{ salaryText(offer.minSalary, offer.maxSalary) }}
+                </p>
+              </article>
+            } @empty {
+              <div class="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <p class="text-xs text-[#6B7280]">No se encontraron vacantes activas con esos filtros.</p>
+              </div>
+            }
+          </div>
+
+          <div class="lg:col-span-7">
+            @if (selectedMarketJob(); as detail) {
+              <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-5">
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 pb-4">
+                  <div>
+                    <span class="text-xs font-bold text-[#274DEA] uppercase">{{ detail.companyName }}</span>
+                    <h2 class="text-[20px] font-bold text-gray-900 mt-0.5">{{ detail.title }}</h2>
+                    <p class="text-xs text-[#6B7280] mt-1">
+                      {{ detail.location || 'Perú' }} · {{ modalityText(detail.modality) }} · {{ experienceText(detail.experienceLevel) }}
+                    </p>
+                  </div>
+
+                  <!-- Aviso de modo referencia en lugar del botón Postular -->
+                  <span class="px-3.5 py-1.5 rounded-full bg-slate-100 border border-gray-300 text-gray-700 text-xs font-bold">
+                    👁 Vista de referencia corporativa (Solo lectura)
+                  </span>
+                </div>
+
+                <div class="p-3.5 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-between">
+                  <span class="text-xs font-semibold text-gray-700">Rango salarial ofrecido:</span>
+                  <span class="text-sm font-extrabold text-[#059669]">{{ salaryText(detail.minSalary, detail.maxSalary) }}</span>
+                </div>
+
+                <div>
+                  <h4 class="text-xs font-bold uppercase text-gray-500 mb-1.5">Descripción del puesto</h4>
+                  <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ detail.description }}</p>
+                </div>
+
+                <div>
+                  <h4 class="text-xs font-bold uppercase text-gray-500 mb-1.5">Requisitos</h4>
+                  <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ detail.requirements }}</p>
+                </div>
+
+                <div>
+                  <h4 class="text-xs font-bold uppercase text-gray-500 mb-2">Habilidades requeridas</h4>
+                  <div class="flex flex-wrap gap-1.5">
+                    @for (skill of detail.requiredSkills; track skill) {
+                      <span class="px-3 py-1 rounded-full bg-[#274DEA]/10 text-[#274DEA] text-xs font-bold">
+                        {{ skill }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+      </section>
+    }
+
+  </div>
+</main>
+
+<!-- ========================================================================= -->
+<!-- MODAL UNIFICADO PARA CREAR (ACCIÓN 1) Y EDITAR VACANTE (ACCIÓN 2)         -->
+<!-- ========================================================================= -->
+@if (isJobModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-gray-200 overflow-hidden my-8 animate-fade-in">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h2 class="text-[19px] font-bold text-gray-900">
+            {{ editingJobId() ? 'Editar condiciones de la vacante' : 'Publicar nueva vacante' }}
+          </h2>
+          <p class="text-[12px] text-[#6B7280]">
+            {{ editingJobId()
+              ? 'Al actualizar requisitos o salario, se notificará automáticamente a los candidatos en proceso.'
+              : 'El algoritmo de Matching IA notificará automáticamente a los postulantes con ≥80% de compatibilidad.' }}
+          </p>
+        </div>
+        <button type="button" (click)="isJobModalOpen.set(false)" class="p-2 rounded-full text-gray-500 hover:bg-gray-100">✕</button>
+      </div>
+
+      <form (ngSubmit)="saveJobOffer()" class="p-6 max-h-[78vh] overflow-y-auto space-y-4">
+        @if (jobFormError()) {
+          <div class="p-3 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+            {{ jobFormError() }}
+          </div>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-gray-700 mb-1">Título de la vacante *</label>
+            <input
+              type="text"
+              name="title"
+              [(ngModel)]="jobForm.title"
+              required
+              placeholder="Ej. Desarrollador Full Stack Junior (Angular / Spring Boot)"
+              class="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Ubicación</label>
+            <input
+              type="text"
+              name="location"
+              [(ngModel)]="jobForm.location"
+              placeholder="Lima, Perú"
+              class="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Modalidad *</label>
+            <select
+              name="modality"
+              [(ngModel)]="jobForm.modality"
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px] bg-white"
+            >
+              <option value="HYBRID">Híbrido</option>
+              <option value="REMOTE">Remoto</option>
+              <option value="ONSITE">Presencial</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Nivel de experiencia *</label>
+            <select
+              name="experienceLevel"
+              [(ngModel)]="jobForm.experienceLevel"
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px] bg-white"
+            >
+              <option value="TRAINEE">Practicante (Trainee)</option>
+              <option value="JUNIOR">Junior</option>
+              <option value="SEMI_SENIOR">Semi Senior</option>
+              <option value="SENIOR">Senior</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Salario mín. (S/.)</label>
+            <input
+              type="number"
+              name="minSalary"
+              [(ngModel)]="jobForm.minSalary"
+              placeholder="1200"
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Salario máx. (S/.)</label>
+            <input
+              type="number"
+              name="maxSalary"
+              [(ngModel)]="jobForm.maxSalary"
+              placeholder="2500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+        </div>
+
+        <!-- Habilidades Requeridas para el Matching IA -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">
+            Habilidades técnicas requeridas (Al menos 1 para el Matching IA) *
+          </label>
+          <div class="flex gap-2">
+            <input
+              type="text"
+              name="skillInput"
+              [(ngModel)]="skillInput"
+              (ngModelChange)="onSkillInputKey($event)"
+              (keydown.enter)="$event.preventDefault(); addRequiredSkill()"
+              placeholder="Escribe una habilidad (ej. Java, Spring Boot, Angular, SQL) y presiona Enter..."
+              class="flex-1 px-3.5 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+            <button
+              type="button"
+              (click)="addRequiredSkill()"
+              class="px-4 py-2 rounded-xl bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs hover:bg-[#274DEA] hover:text-white transition"
+            >
+              + Añadir
+            </button>
+          </div>
+
+          @if (skillSuggestions().length > 0) {
+            <div class="mt-1.5 flex flex-wrap gap-1.5">
+              @for (sug of skillSuggestions(); track sug) {
+                <button
+                  type="button"
+                  (click)="addRequiredSkill(sug)"
+                  class="px-2.5 py-0.5 rounded-full bg-gray-100 hover:bg-[#274DEA]/10 text-gray-700 hover:text-[#274DEA] text-[11px] font-semibold"
+                >
+                  + {{ sug }}
+                </button>
+              }
+            </div>
+          }
+
+          <div class="mt-2.5 flex flex-wrap gap-1.5">
+            @for (sk of jobForm.requiredSkills; track sk) {
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#274DEA] text-white text-xs font-bold">
+                <span>{{ sk }}</span>
+                <button type="button" (click)="removeRequiredSkill(sk)" class="hover:text-red-200">✕</button>
+              </span>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Descripción de funciones y beneficios *</label>
+          <textarea
+            name="description"
+            [(ngModel)]="jobForm.description"
+            rows="3"
+            required
+            placeholder="Describe las responsabilidades del puesto, el equipo de trabajo y los beneficios que ofrece la empresa..."
+            class="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-[13px] resize-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Requisitos académicos y técnicos *</label>
+          <textarea
+            name="requirements"
+            [(ngModel)]="jobForm.requirements"
+            rows="3"
+            required
+            placeholder="Ej. Estudiante de 7mo ciclo en adelante de Ingeniería de Sistemas o Software, conocimientos en APIs REST..."
+            class="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-[13px] resize-none"
+          ></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+          <button
+            type="button"
+            (click)="isJobModalOpen.set(false)"
+            class="px-5 py-2 rounded-full border border-gray-300 text-gray-700 font-semibold text-xs"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="isSavingJob()"
+            class="px-6 py-2 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-bold text-xs shadow-sm"
+          >
+            {{ isSavingJob() ? 'Guardando...' : (editingJobId() ? 'Guardar cambios y notificar' : 'Publicar vacante ahora') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

@@ -1,7 +1,7 @@
 <header class="sticky top-0 z-50 bg-white border-b border-gray-200/80 shadow-xs">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
     
-    <!-- IZQUIERDA: Logo UNEXT (Diseño de tu compañero) + Buscador estilo LinkedIn -->
+    <!-- IZQUIERDA: Logo UNEXT + Buscador estilo LinkedIn -->
     <div class="flex items-center gap-4 flex-1 max-w-md">
       <a routerLink="/feed" class="flex items-center gap-2.5 shrink-0 group">
         <div class="w-9 h-9 rounded-full bg-[#274DEA] group-hover:bg-[#1E3BB8] text-white font-bold text-sm flex items-center justify-center shadow-xs transition-colors">
@@ -12,7 +12,7 @@
         </span>
       </a>
 
-      <!-- Barra de búsqueda global estilo LinkedIn -->
+      <!-- Barra de búsqueda global -->
       <form (ngSubmit)="onSearchSubmit()" class="relative w-full hidden sm:block">
         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#6B7280] pointer-events-none">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,7 +29,7 @@
       </form>
     </div>
 
-    <!-- CENTRO / DERECHA: Ítems de Navegación Escalables (Estilo LinkedIn + Pill de tu compañero) -->
+    <!-- CENTRO: Ítems de Navegación Dinámicos por Rol (POSTULANT, RECRUITER, INSTITUTION) -->
     <nav class="hidden md:flex items-center gap-1 lg:gap-1.5">
       @for (item of visibleNavItems(); track item.id) {
         <a
@@ -77,10 +77,10 @@
               }
             }
 
-            <!-- Contador rojo de Notificaciones o Mensajes (como el "19" en LinkedIn) -->
-            @if (item.id === 'notifications' && unreadNotifications() > 0) {
+            <!-- Contador rojo automático de Notificaciones -->
+            @if (item.id === 'notifications' && displayUnreadNotifications() > 0) {
               <span class="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
-                {{ unreadNotifications() > 99 ? '99+' : unreadNotifications() }}
+                {{ displayUnreadNotifications() > 99 ? '99+' : displayUnreadNotifications() }}
               </span>
             }
             @if (item.id === 'messages' && unreadMessages() > 0) {
@@ -97,24 +97,22 @@
       }
     </nav>
 
-    <!-- DERECHA: Menú "Yo" (Perfil) o Botón "Ingresar" (como en la captura de tu compañero) -->
+    <!-- DERECHA: Menú "Yo" (Perfil con Avatar, Nombre y Headline automáticos) -->
     <div class="flex items-center gap-3">
       @if (isLoggedIn()) {
-        <!-- Separador vertical estilo LinkedIn -->
         <div class="hidden md:block h-8 w-px bg-gray-200 mx-1"></div>
 
-        <!-- Dropdown de Usuario ("Yo") -->
         <div class="relative">
           <button
             type="button"
             (click)="toggleProfileMenu()"
             class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-gray-100 transition-colors focus:outline-none"
           >
-            @if (userAvatarUrl()) {
-              <img [src]="userAvatarUrl()" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-gray-200" />
+            @if (displayAvatar()) {
+              <img [src]="displayAvatar()" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-gray-200" />
             } @else {
               <div class="w-8 h-8 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center border border-[#274DEA]/20">
-                {{ userName().charAt(0).toUpperCase() }}
+                {{ userInitials() }}
               </div>
             }
             <div class="hidden lg:flex flex-col items-start text-left">
@@ -131,12 +129,21 @@
           <!-- Menú Desplegable de Perfil -->
           @if (isProfileMenuOpen()) {
             <div class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-50">
-              <div class="px-4 py-3 border-b border-gray-100">
-                <p class="text-[14px] font-bold text-gray-900 truncate">{{ userName() }}</p>
-                <p class="text-[12px] text-[#6B7280] truncate">{{ userSubtitle() }}</p>
-                <span class="inline-block mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-[#274DEA]/10 text-[#274DEA]">
-                  Rol: {{ roleBadgeLabel() }}
-                </span>
+              <div class="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                @if (displayAvatar()) {
+                  <img [src]="displayAvatar()" alt="Avatar" class="w-11 h-11 rounded-full object-cover border border-gray-200 shrink-0" />
+                } @else {
+                  <div class="w-11 h-11 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-sm flex items-center justify-center shrink-0">
+                    {{ userInitials() }}
+                  </div>
+                }
+                <div class="min-w-0 flex-1">
+                  <p class="text-[14px] font-bold text-gray-900 truncate">{{ displayName() }}</p>
+                  <p class="text-[11px] text-[#6B7280] line-clamp-2 leading-tight mt-0.5">{{ displaySubtitle() }}</p>
+                  <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#274DEA]/10 text-[#274DEA]">
+                    Rol: {{ roleBadgeLabel() }}
+                  </span>
+                </div>
               </div>
 
               <div class="py-1">
@@ -179,7 +186,6 @@
           }
         </div>
       } @else {
-        <!-- Estado invitado (idéntico al botón "Ingresar" de la captura de tu compañero) -->
         <a
           routerLink="/login"
           class="px-4 py-2 rounded-xl bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-semibold text-[13px] shadow-xs transition-all"

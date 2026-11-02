@@ -93,6 +93,14 @@ export class AuthService {
     return (localStorage.getItem('unext_role') as UserRole) || null;
   }
 
+  markProfileAsCompleted(): void {
+    localStorage.setItem('unext_profile_completed', 'true');
+    const current = this.session();
+    if (current) {
+      this.session.set({ ...current, isProfileCompleted: true });
+    }
+  }
+
   logout(): void {
     localStorage.removeItem('unext_token');
     localStorage.removeItem('unext_role');

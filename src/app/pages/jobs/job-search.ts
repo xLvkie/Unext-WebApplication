@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-
+import { Router } from '@angular/router';
 import { readApiError } from '../../core/utils/api-error';
 import { AuthService } from '../../core/services/auth.service';
 import { formatPosted, formatSalaryRange, initials } from '../../core/utils/format';
@@ -12,6 +12,7 @@ import {
 import { JobApplication, JobOffer } from '../../core/models/job.model';
 import { JobService } from '../../core/services/job.service';
 import { Navbar } from '../../shared/components/navbar/navbar';
+import { PostulantProfileResponse } from '../../core/models/profile.model';
 
 @Component({ 
   selector: 'app-job-search',

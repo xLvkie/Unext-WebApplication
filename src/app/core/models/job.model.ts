@@ -1,5 +1,7 @@
 export type JobModality = 'REMOTE' | 'HYBRID' | 'ON_SITE' | 'ONSITE';
 export type ExperienceLevel = 'INTERNSHIP' | 'TRAINEE' | 'ENTRY_LEVEL' | 'JUNIOR' | 'SEMI_SENIOR' | 'MID' | 'SENIOR';
+export type ApplicationStatus = 'RECEIVED' | 'UNDER_REVIEW' | 'ACCEPTED' | 'REJECTED';
+export type CompatibilityLabel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
 
 // Usado por la página de Vacantes (/jobs)
 export interface JobOffer {
@@ -49,3 +51,49 @@ export interface JobRecommendationResponse {
   isApplied?: boolean;
   isSaved?: boolean;
 }
+
+// Manejo y administración de vacantes del reclutador <<
+export interface JobOfferRequest {
+  title: string;
+  description: string;
+  requirements: string;
+  requiredSkills: string[];
+  location?: string;
+  modality: JobModality;
+  experienceLevel: ExperienceLevel;
+  minSalary?: number | null;
+  maxSalary?: number | null;
+}
+
+export type JobOfferUpdate = Partial<JobOfferRequest>;
+
+export interface RecruiterApplicationItem {
+  id: string;
+  postulantProfileId: string;
+  postulantUserId?: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string | null;
+  cvUrl?: string | null;
+  cvFileName?: string | null;
+  career?: string | null;
+  currentCycle?: number | null;
+  headline?: string | null;
+  isInstitutionVerified?: boolean;
+  skills: string[];
+  status: ApplicationStatus;
+  appliedAt: string | number[] | Date;
+  compatibilityPercent?: number | null;
+  compatibilityLabel?: CompatibilityLabel;
+  matchingHint?: string | null;
+  averageStars?: number | null;
+  reviewCount?: number | null;
+}
+
+export interface RecruiterApplicantFilters {
+  career?: string;
+  minCycle?: number | null;
+  skill?: string;
+  minRating?: number | null;
+  minReviews?: number | null;
+} 

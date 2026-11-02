@@ -19,12 +19,20 @@ export class FeedService {
     return this.http.get<FeedPostResponse[]>(`${this.API_URL}/user/${userId}`);
   }
 
+  getImportantPostsByUser(userId: string): Observable<FeedPostResponse[]> {
+    return this.http.get<FeedPostResponse[]>(`${this.API_URL}/user/${userId}/important`);
+  }
+
   createPost(request: FeedPostRequest): Observable<FeedPostResponse> {
     return this.http.post<FeedPostResponse>(this.API_URL, request);
   }
 
   toggleLike(postId: string): Observable<FeedPostResponse> {
     return this.http.post<FeedPostResponse>(`${this.API_URL}/${postId}/like`, {});
+  }
+
+  toggleImportant(postId: string): Observable<FeedPostResponse> {
+    return this.http.patch<FeedPostResponse>(`${this.API_URL}/${postId}/important`, {});
   }
 
   getCommentsByPost(postId: string): Observable<FeedCommentResponse[]> {

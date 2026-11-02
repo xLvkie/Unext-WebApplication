@@ -1,0 +1,80 @@
+<section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h2 class="text-[18px] font-bold text-gray-900">Currículum Vitae / Portafolio Documental</h2>
+      <p class="text-[12px] text-[#6B7280]">
+        Formatos admitidos: PDF, DOC, DOCX (Máx. 5 MB).
+      </p>
+    </div>
+
+    <button
+      type="button"
+      (click)="uploadClick.emit()"
+      class="px-4 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
+    >
+      {{ cvUrl() ? 'Cambiar archivo' : '+ Subir CV' }}
+    </button>
+  </div>
+
+  @if (cvUrl()) {
+    <div class="max-w-md rounded-2xl border border-gray-200 overflow-hidden bg-[#F8FAFC] shadow-xs">
+      <div
+        (click)="downloadClick.emit()"
+        class="h-44 w-full bg-slate-200 relative overflow-hidden cursor-pointer group border-b border-gray-200"
+      >
+        @if (cvSafePreviewUrl()) {
+          <iframe
+            [src]="cvSafePreviewUrl()"
+            class="w-full h-64 pointer-events-none scale-[1.03] origin-top bg-white"
+            title="Vista previa de CV"
+          ></iframe>
+        } @else {
+          <div class="w-full h-full bg-white p-5 flex flex-col justify-between">
+            <div class="space-y-2">
+              <div class="w-1/2 h-3 bg-slate-200 rounded"></div>
+              <div class="w-3/4 h-2 bg-slate-100 rounded"></div>
+              <div class="w-full h-2 bg-slate-100 rounded"></div>
+            </div>
+            <span class="text-[11px] font-bold text-[#274DEA] uppercase tracking-wider">
+              Documento Word · Vista Previa
+            </span>
+          </div>
+        }
+      </div>
+
+      <div class="p-3.5 bg-white flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-[#EF4444]/10 text-[#EF4444] font-extrabold text-xs flex items-center justify-center shrink-0">
+            {{ isPdfCv() ? 'PDF' : 'DOC' }}
+          </div>
+          <div class="min-w-0">
+            <p class="text-[13px] font-bold text-gray-900 truncate">
+              {{ cvFileName() || ('CV_' + fullName() + '.pdf') }}
+            </p>
+            <p class="text-[11px] text-[#6B7280]">
+              {{ cvFileSize() || 'Documento verificado' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button type="button" (click)="downloadClick.emit()" class="p-2 rounded-lg text-[#274DEA] hover:bg-[#274DEA]/10">
+            ⬇
+          </button>
+          <button type="button" (click)="removeClick.emit()" class="p-2 rounded-lg text-gray-400 hover:text-[#EF4444]">
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div
+      (click)="uploadClick.emit()"
+      class="border-2 border-dashed border-gray-300 hover:border-[#274DEA] rounded-2xl p-6 text-center cursor-pointer transition bg-[#F8FAFC]/60"
+    >
+      <p class="text-[13px] font-bold text-gray-900">
+        Haz clic aquí para adjuntar tu CV en PDF o Word
+      </p>
+    </div>
+  }
+</section>

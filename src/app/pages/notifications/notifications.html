@@ -1,0 +1,265 @@
+<!-- NAVBAR SUPERIOR SINCRONIZADA -->
+<app-navbar/>
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- ================================================================= -->
+      <!-- COLUMNA IZQUIERDA (lg:col-span-3): GESTIÓN Y RESUMEN              -->
+      <!-- ================================================================= -->
+      <aside class="lg:col-span-3 space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
+          <h1 class="text-[17px] font-bold text-gray-900">
+            Gestiona tus notificaciones
+          </h1>
+          <p class="text-[12px] text-[#6B7280] mt-1 leading-relaxed">
+            Revisa el estado de tus postulaciones, validaciones académicas e interacciones en la comunidad.
+          </p>
+
+          <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+            <span class="text-[12px] font-semibold text-gray-700">Sin leer</span>
+            <span
+              [ngClass]="notificationService.unreadCount() > 0
+                ? 'bg-[#274DEA] text-white'
+                : 'bg-gray-100 text-gray-600'"
+              class="px-2.5 py-0.5 rounded-full text-xs font-extrabold"
+            >
+              {{ notificationService.unreadCount() }}
+            </span>
+          </div>
+
+          @if (notificationService.unreadCount() > 0) {
+            <button
+              type="button"
+              (click)="handleMarkAllAsRead()"
+              class="mt-4 w-full py-2 px-3 rounded-xl border border-[#274DEA]/30 text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
+            >
+              ✓ Marcar todas como leídas
+            </button>
+          }
+        </div>
+
+        <!-- Accesos rápidos del postulante -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-2.5">
+          <h2 class="text-[13px] font-bold text-gray-900">Accesos directos</h2>
+          <a
+            routerLink="/jobs"
+            class="flex items-center justify-between text-[12px] font-semibold text-gray-700 hover:text-[#274DEA] py-1.5"
+          >
+            <span>Mis postulaciones y empleos</span>
+            <span>→</span>
+          </a>
+          <a
+            routerLink="/profile/me"
+            class="flex items-center justify-between text-[12px] font-semibold text-gray-700 hover:text-[#274DEA] py-1.5 border-t border-gray-100"
+          >
+            <span>Acreditación y habilidades</span>
+            <span>→</span>
+          </a>
+        </div>
+      </aside>
+
+      <!-- ================================================================= -->
+      <!-- COLUMNA CENTRAL (lg:col-span-9): FILTROS Y LISTA DE ALERTAS       -->
+      <!-- ================================================================= -->
+      <section class="lg:col-span-9 space-y-4">
+
+        <!-- Barra de píldoras de filtro estilo LinkedIn -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-3.5 flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              (click)="selectCategory('ALL')"
+              [ngClass]="selectedCategory() === 'ALL'
+                ? 'bg-[#059669] text-white font-bold shadow-2xs'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-1.5 rounded-full text-xs transition"
+            >
+              Todas ({{ notificationService.notifications().length }})
+            </button>
+
+            <button
+              type="button"
+              (click)="selectCategory('UNREAD')"
+              [ngClass]="selectedCategory() === 'UNREAD'
+                ? 'bg-[#059669] text-white font-bold shadow-2xs'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-1.5 rounded-full text-xs transition"
+            >
+              No leídas ({{ notificationService.unreadCount() }})
+            </button>
+
+            <button
+              type="button"
+              (click)="selectCategory('JOBS')"
+              [ngClass]="selectedCategory() === 'JOBS'
+                ? 'bg-[#274DEA] text-white font-bold shadow-2xs'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-1.5 rounded-full text-xs transition"
+            >
+              Empleos y Postulaciones
+            </button>
+
+            <button
+              type="button"
+              (click)="selectCategory('ACADEMIC')"
+              [ngClass]="selectedCategory() === 'ACADEMIC'
+                ? 'bg-[#274DEA] text-white font-bold shadow-2xs'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-1.5 rounded-full text-xs transition"
+            >
+              Validación Académica
+            </button>
+
+            <button
+              type="button"
+              (click)="selectCategory('FEED')"
+              [ngClass]="selectedCategory() === 'FEED'
+                ? 'bg-[#274DEA] text-white font-bold shadow-2xs'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-1.5 rounded-full text-xs transition"
+            >
+              Publicaciones y Red
+            </button>
+          </div>
+
+          <button
+            type="button"
+            (click)="loadNotifications()"
+            class="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition"
+            title="Actualizar notificaciones"
+          >
+            ↻
+          </button>
+        </div>
+
+        <!-- Contenedor del listado -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden divide-y divide-gray-100">
+          @if (isLoading()) {
+            <div class="p-6 space-y-4">
+              @for (skeleton of [1, 2, 3, 4]; track skeleton) {
+                <div class="h-16 rounded-xl bg-slate-100 animate-pulse"></div>
+              }
+            </div>
+          } @else {
+            @for (item of filteredNotifications(); track item.id) {
+              <article
+                (click)="handleNotificationClick(item)"
+                [ngClass]="!item.isRead ? 'bg-[#274DEA]/[0.05] hover:bg-[#274DEA]/[0.08]' : 'bg-white hover:bg-gray-50'"
+                class="p-4 sm:p-5 flex items-start justify-between gap-4 cursor-pointer transition relative"
+              >
+                <div class="flex items-start gap-3.5 min-w-0 flex-1">
+                  <!-- Punto indicador de NO LEÍDA (Estilo LinkedIn) -->
+                  <div class="pt-3 shrink-0">
+                    <span
+                      [ngClass]="!item.isRead ? 'bg-[#274DEA]' : 'bg-transparent'"
+                      class="block w-2.5 h-2.5 rounded-full"
+                    ></span>
+                  </div>
+
+                  <!-- Ícono según Categoría -->
+                  @switch (resolveKind(item)) {
+                    @case ('JOBS') {
+                      <div class="w-11 h-11 rounded-2xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                      </div>
+                    }
+                    @case ('ACADEMIC') {
+                      <div class="w-11 h-11 rounded-2xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center shrink-0 border border-[#059669]/20">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                      </div>
+                    }
+                    @default {
+                      <div class="w-11 h-11 rounded-2xl bg-[#C3A7FF]/25 text-[#2E1065] flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                      </div>
+                    }
+                  }
+
+                  <!-- Contenido de la Notificación -->
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <h3
+                        [ngClass]="!item.isRead ? 'font-extrabold text-gray-900' : 'font-semibold text-gray-800'"
+                        class="text-[14px] leading-snug"
+                      >
+                        {{ item.title }}
+                      </h3>
+                    </div>
+
+                    <p
+                      [ngClass]="!item.isRead ? 'text-gray-800 font-medium' : 'text-[#6B7280]'"
+                      class="text-[13px] mt-0.5 leading-relaxed"
+                    >
+                      {{ item.content }}
+                    </p>
+
+                    <div class="mt-2 flex items-center gap-3">
+                      <span class="text-[11px] font-bold text-[#274DEA] hover:underline">
+                        Ver detalle →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Derecha: Fecha y Botones de Acción (Marcar leída / Eliminar) -->
+                <div class="flex flex-col items-end gap-2 shrink-0">
+                  <span class="text-[11px] text-[#6B7280] whitespace-nowrap">
+                    {{ formatRelativeTime(item.createdAt) }}
+                  </span>
+
+                  <div class="flex items-center gap-1">
+                    @if (!item.isRead) {
+                      <button
+                        type="button"
+                        (click)="handleMarkAsRead(item, $event)"
+                        class="p-1.5 rounded-lg text-[#274DEA] hover:bg-[#274DEA]/10 text-xs font-bold transition"
+                        title="Marcar como leída"
+                      >
+                        ✓
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="handleDelete(item, $event)"
+                      class="p-1.5 rounded-lg text-gray-400 hover:text-[#EF4444] hover:bg-[#EF4444]/10 text-xs transition"
+                      title="Eliminar notificación"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              </article>
+            } @empty {
+              <div class="p-12 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center mx-auto mb-3">
+                  <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                  </svg>
+                </div>
+                <h3 class="text-[16px] font-bold text-gray-900">
+                  No tienes notificaciones en esta bandeja
+                </h3>
+                <p class="text-[13px] text-[#6B7280] mt-1 max-w-md mx-auto">
+                  Cuando recibas actualizaciones sobre tus postulaciones, validaciones académicas o interacciones en tus publicaciones, aparecerán aquí.
+                </p>
+              </div>
+            }
+          }
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

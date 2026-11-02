@@ -11,6 +11,7 @@ import { contextLabel } from '../../core/utils/labels';
 import { ChatMessage, Conversation } from '../../core/models/chat.model';
 import { ChatService } from '../../core/services/chat.service';
 import { Navbar } from '../../shared/components/navbar/navbar';
+import { PostulantProfileResponse } from '../../core/models/profile.model';
 
 interface ChatRow {
   kind: 'day' | 'message';
