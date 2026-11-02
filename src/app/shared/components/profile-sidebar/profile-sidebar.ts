@@ -1,9 +1,9 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Contact } from '../../../../../core/models/chat.model';
-import { FeedPostResponse } from '../../../../../core/models/feed.model';
-import { toDate } from '../../../../../core/utils/format';
+import { Contact } from '../../../core/models/chat.model';
+import { FeedPostResponse } from '../../../core/models/feed.model';
+import { toDate } from '../../../core/utils/format';
 
 @Component({
   selector: 'app-profile-sidebar',

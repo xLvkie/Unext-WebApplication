@@ -46,22 +46,42 @@ export class Register {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
+    const cleanEmail = this.email.trim();
+    const chosenRole = this.selectedRole();
+
     this.authService
       .register({
-        email: this.email.trim(),
+        email: cleanEmail,
         password: this.password,
-        role: this.selectedRole()
+        role: chosenRole
       })
       .subscribe({
-        next: () => {
-          this.isLoading.set(false);
-          // Redirige al formulario de completado de perfil según el rol elegido (falta desarrollar)
-          this.router.navigate(['/onboarding/complete-profile']);
+        next: (res) => {
+          // Si /api/auth/register ya nos devolvió el token JWT y guardó la sesión:
+          if (res && res.token && this.authService.getToken()) {
+            this.isLoading.set(false);
+            this.router.navigate(['/onboarding/complete-profile']);
+          } else {
+            // Si /api/auth/register solo creó el usuario, iniciamos sesión automáticamente para obtener el JWT
+            // y llevarlo directo a completar su perfil sin pasar por la pantalla de Login:
+            this.authService.login({ email: cleanEmail, password: this.password }).subscribe({
+              next: () => {
+                this.isLoading.set(false);
+                this.router.navigate(['/onboarding/complete-profile']);
+              },
+              error: () => {
+                this.isLoading.set(false);
+                this.router.navigate(['/login']);
+              }
+            });
+          }
         },
         error: (err) => {
           this.isLoading.set(false);
           this.errorMessage.set(
-            err?.error?.error || err?.error?.message || 'No se pudo completar el registro. Verifica tus datos.'
+            err?.error?.error ||
+              err?.error?.message ||
+              'No se pudo completar el registro. Verifica tus datos.'
           );
         }
       });

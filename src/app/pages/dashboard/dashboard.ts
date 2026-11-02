@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { Router, RouterLink } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { Navbar } from '../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../shared/components/toast/toast';
 import { FeedService } from '../../core/services/feed.service';
@@ -9,8 +11,15 @@ import { JobService } from '../../core/services/job.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FeedPostResponse } from '../../core/models/feed.model';
-import { JobApplication, JobRecommendationResponse } from '../../core/models/job.model';
-import { PostulantProfileResponse } from '../../core/models/profile.model';
+import {
+  JobApplication,
+  JobOffer,
+  JobRecommendationResponse
+} from '../../core/models/job.model';
+import {
+  PostulantProfileResponse,
+  RecruiterProfileResponse
+} from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
 import { applicationLabel } from '../../core/utils/labels';
 import { toDate } from '../../core/utils/format';
@@ -20,6 +29,24 @@ export interface MediaAttachmentPreview {
   dataUrl: string;
   type: 'image' | 'video' | 'gif';
   name: string;
+}
+
+export interface RecruiterCandidateSummary {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  career?: string | null;
+  isInstitutionVerified?: boolean;
+}
+
+export interface AiJobBlueprint {
+  roleTitle: string;
+  suggestedModality: string;
+  suggestedLevel: string;
+  salaryRange: string;
+  recommendedSkills: string[];
+  optimizedDescription: string;
 }
 
 @Component({
@@ -34,11 +61,19 @@ export class Dashboard implements OnInit {
   private jobService = inject(JobService);
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
-  private router = inject(Router);
+  private http = inject(HttpClient);
+  readonly router = inject(Router);
 
   posts = signal<FeedPostResponse[]>([]);
   recommendations = signal<JobRecommendationResponse[]>([]);
   myApplications = signal<JobApplication[]>([]);
+
+  // Estados exclusivos cuando el usuario logueado es RECRUITER
+  recruiterData = signal<RecruiterProfileResponse | null>(null);
+  recruiterJobs = signal<JobOffer[]>([]);
+  recruiterCandidatesCount = signal<number>(0);
+  verifiedTalentPool = signal<RecruiterCandidateSummary[]>([]);
+
   isLoadingFeed = signal(false);
   isProfileIncomplete = signal(false);
 
@@ -56,7 +91,6 @@ export class Dashboard implements OnInit {
 
   currentRole = computed(() => this.authService.getStoredRole() || 'POSTULANT');
 
-  // Límite de publicaciones importantes según el rol
   maxImportantPosts = computed(() => {
     const role = this.currentRole();
     if (role === 'INSTITUTION') return 6;
@@ -87,6 +121,10 @@ export class Dashboard implements OnInit {
     (this.profile().skills || []).filter((s) => Boolean(s.isValidatedByInstitution))
   );
 
+  activeRecruiterJobs = computed(() =>
+    this.recruiterJobs().filter((j) => j.isActive !== false)
+  );
+
   academicProcedureStatus = computed(() => {
     const p = this.profile();
     if (p.isInstitutionVerified && p.hasUniversityBase) {
@@ -113,7 +151,7 @@ export class Dashboard implements OnInit {
     return null;
   });
 
-  // Creación de Post con archivos reales (Imágenes, Videos y GIFs)
+  // Creación de Post
   newPostContent = '';
   newPostImportant = false;
   selectedMedia = signal<MediaAttachmentPreview[]>([]);
@@ -123,9 +161,24 @@ export class Dashboard implements OnInit {
   commentDrafts: Record<string, string> = {};
   toast = signal<ToastData | null>(null);
 
+  // Modales Postulante vs Reclutador
   selectedJobForAi = signal<JobRecommendationResponse | null>(null);
   isAnalyzingAi = signal(false);
   showValidationModal = signal(false);
+
+  // Modales de Funciones Inteligentes IA para el Reclutador
+  showRecruiterOptimizerModal = signal(false);
+  showRecruiterRadarModal = signal(false);
+  aiRolePrompt = 'Desarrollador Full Stack Junior / Practicante';
+  generatedBlueprint = signal<AiJobBlueprint>({
+    roleTitle: 'Desarrollador Full Stack Junior (Angular + Spring Boot)',
+    suggestedModality: 'HYBRID',
+    suggestedLevel: 'JUNIOR',
+    salaryRange: 'S/. 1,800 - S/. 2,800 al mes',
+    recommendedSkills: ['Angular', 'TypeScript', 'Java', 'Spring Boot', 'PostgreSQL', 'Git'],
+    optimizedDescription:
+      'Buscamos talento universitario o recién egresado apasionado por el desarrollo de aplicaciones web escalables, con bases sólidas en arquitectura REST, componentes standalone en Angular y persistencia relacional.'
+  });
 
   ngOnInit(): void {
     if (!this.authService.getToken()) {
@@ -171,20 +224,28 @@ export class Dashboard implements OnInit {
     } else if (role === 'RECRUITER') {
       this.profileService.getMyRecruiterProfile().subscribe({
         next: (data) => {
+          this.recruiterData.set(data);
           this.profile.set({
             id: data.id || '',
             userId: data.userId || '',
             firstName: data.companyName || 'Empresa',
             lastName: '',
-            avatarUrl: data.companyLogoUrl || data.logoUrl || null,
-            headline: data.industry ? `${data.industry} · Cuenta Reclutador` : 'Empresa Reclutadora',
-            isInstitutionVerified: Boolean(data.isValidated || data.isVerified),
-            institutionName: 'Cuenta Corporativa',
+            studentCode: data.ruc || '—',
+            career: data.industry || 'Sector Corporativo',
+            avatarUrl: data.companyLogoUrl || null,
+            headline:
+              data.headline ||
+              (data.industry ? `${data.industry} · RUC ${data.ruc}` : 'Cuenta Corporativa'),
+            isInstitutionVerified: Boolean(data.isVerified || data.isValidated),
+            institutionName: 'Organización Corporativa',
             skills: []
           });
         },
         error: () => this.isProfileIncomplete.set(true)
       });
+
+      // Cargar vacantes del reclutador y conteo de postulaciones recibidas
+      this.loadRecruiterDashboardWidgets();
     } else if (role === 'INSTITUTION') {
       this.profileService.getMyInstitutionProfile().subscribe({
         next: (data) => {
@@ -205,7 +266,103 @@ export class Dashboard implements OnInit {
     }
   }
 
-  // Selección directa de archivos de imagen, GIF o video desde la computadora
+  private loadRecruiterDashboardWidgets(): void {
+    // 1. Mis vacantes publicadas
+    this.http.get<JobOffer[]>(`${environment.apiUrl}/recruiter/jobs`).subscribe({
+      next: (jobs) => {
+        this.recruiterJobs.set(jobs);
+        // Contamos candidatos recibidos en las primeras vacantes activas
+        let totalCandidates = 0;
+        jobs.slice(0, 3).forEach((job) => {
+          this.http
+            .get<any[]>(`${environment.apiUrl}/recruiter/jobs/${job.id}/applications`)
+            .subscribe({
+              next: (apps) => {
+                totalCandidates += apps.length;
+                this.recruiterCandidatesCount.set(totalCandidates);
+              },
+              error: () => {}
+            });
+        });
+      },
+      error: () => this.recruiterJobs.set([])
+    });
+
+    // 2. Radar de talento verificado en la plataforma
+    this.http
+      .get<RecruiterCandidateSummary[]>(`${environment.apiUrl}/profiles/postulants/directory`)
+      .subscribe({
+        next: (list) => {
+          const prioritized = [...list].sort(
+            (a, b) => Number(Boolean(b.isInstitutionVerified)) - Number(Boolean(a.isInstitutionVerified))
+          );
+          this.verifiedTalentPool.set(prioritized.slice(0, 4));
+        },
+        error: () => this.verifiedTalentPool.set([])
+      });
+  }
+
+  // =========================================================================
+  // FUNCIONES INTELIGENTES IA PARA RECLUTADOR
+  // =========================================================================
+  handleHeaderIntelligentAction(): void {
+    if (this.currentRole() === 'RECRUITER') {
+      this.openRecruiterJobOptimizer();
+    } else {
+      this.openAiAnalysis(this.recommendations()[0]);
+    }
+  }
+
+  openRecruiterJobOptimizer(): void {
+    this.generateBlueprintFromPrompt();
+    this.showRecruiterOptimizerModal.set(true);
+  }
+
+  generateBlueprintFromPrompt(): void {
+    const prompt = this.aiRolePrompt.trim().toLowerCase();
+
+    if (prompt.includes('data') || prompt.includes('datos') || prompt.includes('ia')) {
+      this.generatedBlueprint.set({
+        roleTitle: 'Practicante / Analista de Datos & BI',
+        suggestedModality: 'HYBRID',
+        suggestedLevel: 'TRAINEE',
+        salaryRange: 'S/. 1,300 - S/. 2,000 al mes (Con Convenio Universitario)',
+        recommendedSkills: ['Python', 'SQL', 'Power BI', 'PostgreSQL', 'Estadística Aplicada'],
+        optimizedDescription:
+          'Únete a nuestro equipo de Analítica Avanzada para diseñar tableros de control ejecutivos, automatizar pipelines ETL y transformar datos de negocio en decisiones estratégicas.'
+      });
+    } else if (prompt.includes('ux') || prompt.includes('ui') || prompt.includes('diseño') || prompt.includes('frontend')) {
+      this.generatedBlueprint.set({
+        roleTitle: 'Desarrollador Frontend & UI/UX Specialist',
+        suggestedModality: 'REMOTE',
+        suggestedLevel: 'JUNIOR',
+        salaryRange: 'S/. 2,000 - S/. 3,200 al mes',
+        recommendedSkills: ['Angular', 'TypeScript', 'Tailwind CSS', 'Figma', 'Diseño de Interfaces'],
+        optimizedDescription:
+          'Buscamos talento creativo con dominio en Angular y sistemas de diseño en Figma/Tailwind CSS para construir experiencias digitales fluidas, accesibles y de alto impacto.'
+      });
+    } else {
+      this.generatedBlueprint.set({
+        roleTitle: this.aiRolePrompt.trim() || 'Ingeniero de Software Full Stack',
+        suggestedModality: 'HYBRID',
+        suggestedLevel: 'JUNIOR',
+        salaryRange: 'S/. 1,800 - S/. 2,800 al mes',
+        recommendedSkills: ['Java', 'Spring Boot', 'Angular', 'TypeScript', 'PostgreSQL', 'Git'],
+        optimizedDescription:
+          'Buscamos estudiantes de últimos ciclos o egresados verificados con bases sólidas en ingeniería de software, desarrollo de microservicios en Spring Boot y aplicaciones SPA modernas.'
+      });
+    }
+  }
+
+  copyBlueprintAndGoToJobs(): void {
+    this.showRecruiterOptimizerModal.set(false);
+    this.showToast('Plantilla IA lista. Redirigiendo al creador de vacantes...', 'success');
+    this.router.navigate(['/recruiter/jobs']);
+  }
+
+  // =========================================================================
+  // MULTIMEDIA Y PUBLICACIONES DEL FEED
+  // =========================================================================
   async onMediaFilesSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     const files = input.files;
@@ -227,10 +384,7 @@ export class Dashboard implements OnInit {
           ? 'gif'
           : 'image';
 
-        this.selectedMedia.update((list) => [
-          ...list,
-          { dataUrl, type, name: file.name }
-        ]);
+        this.selectedMedia.update((list) => [...list, { dataUrl, type, name: file.name }]);
       } catch (err: any) {
         this.showToast(err?.message || 'Archivo multimedia no válido.', 'error');
       }
@@ -292,10 +446,7 @@ export class Dashboard implements OnInit {
         },
         error: (err) => {
           this.isPosting.set(false);
-          this.showToast(
-            readApiError(err, 'No se pudo publicar en el feed.'),
-            'error'
-          );
+          this.showToast(readApiError(err, 'No se pudo publicar en el feed.'), 'error');
         }
       });
   }
@@ -319,14 +470,16 @@ export class Dashboard implements OnInit {
       },
       error: (err) => {
         this.showToast(
-          readApiError(err, `Solo puedes fijar hasta ${this.maxImportantPosts()} publicaciones importantes.`),
+          readApiError(
+            err,
+            `Solo puedes fijar hasta ${this.maxImportantPosts()} publicaciones importantes.`
+          ),
           'warning'
         );
       }
     });
   }
 
-  // Redirección al perfil del autor (sea POSTULANT, RECRUITER o INSTITUTION)
   navigateToAuthorProfile(
     authorUserId: string,
     authorProfileId: string | undefined,

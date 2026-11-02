@@ -1,0 +1,575 @@
+<!-- NAVBAR SUPERIOR SINCRONIZADO EN TIEMPO REAL CON LOS DATOS DE LA EMPRESA -->
+<app-navbar
+  [userName]="profile().companyName || 'Mi Empresa'"
+  [userSubtitle]="profile().headline || profile().industry || 'Cuenta Corporativa'"
+  [userAvatarUrl]="profile().companyLogoUrl || null"
+/>
+
+<!-- Input oculto para cambiar el logo corporativo -->
+<input #logoInput type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onLogoSelected($event)" />
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    <!-- BANNER DE AVISO SI LA CUENTA AÚN ESTÁ PENDIENTE DE VERIFICACIÓN OTP -->
+    @if (!isFirstTimeOnboarding() && !profile().isVerified) {
+      <div class="mb-5 p-4 rounded-2xl bg-[#FEF3C7] border border-[#F59E0B]/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-start gap-3">
+          <span class="text-xl">🔐</span>
+          <div class="text-[13px] text-gray-800">
+            <p class="font-bold text-[#B45309]">
+              Tu cuenta corporativa aún está pendiente de verificación por código OTP
+            </p>
+            <p class="text-xs text-gray-700 mt-0.5">
+              Debes verificar tu RUC ({{ profile().ruc }}) para que tu perfil sea visible en el directorio y puedas publicar vacantes.
+              @if (profile().pendingVerificationCode) {
+                <span class="ml-1 px-2 py-0.5 rounded bg-white font-mono font-extrabold text-[#274DEA] border border-[#274DEA]/30">
+                  Código generado: {{ profile().pendingVerificationCode }}
+                </span>
+              }
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="openOtpModal()"
+          class="px-4 py-2 rounded-full bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold shrink-0 shadow-xs transition"
+        >
+          Verificar organización ahora
+        </button>
+      </div>
+    }
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- ================================================================= -->
+      <!-- COLUMNA PRINCIPAL IZQUIERDA (lg:col-span-9)                       -->
+      <!-- ================================================================= -->
+      <div class="lg:col-span-9 space-y-4">
+
+        <!-- CARD 1: CABECERA CORPORATIVA ESTILO LINKEDIN COMPANY PAGE -->
+        <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden relative">
+          
+          <!-- Banner Corporativo (1584x396 o autogenerado) -->
+          <div class="h-44 sm:h-52 relative overflow-hidden bg-gradient-to-r from-[#0A192F] via-[#1E3BB8] to-[#2E1065]">
+            @if (profile().bannerUrl) {
+              <img [src]="profile().bannerUrl" alt="Portada corporativa" class="w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-black/15"></div>
+            } @else {
+              <div class="w-full h-full flex flex-col justify-center px-6 sm:pl-48 sm:pr-16">
+                <p class="text-white text-lg sm:text-2xl md:text-3xl font-bold tracking-tight truncate max-w-full">
+                  {{ safeBannerTitle() }}
+                </p>
+                <p class="text-[#C3A7FF] font-mono text-xs sm:text-sm mt-1 truncate max-w-full">
+                  {{ safeBannerSubtitle() }}
+                </p>
+              </div>
+            }
+
+            <button
+              type="button"
+              (click)="isBannerModalOpen.set(true)"
+              class="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-gray-800 text-xs font-semibold flex items-center gap-1.5 shadow-md transition"
+            >
+              <span>Cambiar portada</span>
+            </button>
+          </div>
+
+          <div class="px-6 pb-6 relative">
+            <div class="flex flex-wrap justify-between items-end -mt-16 sm:-mt-20 mb-4 relative z-10 gap-3">
+              <div class="flex items-end gap-3 sm:gap-4 flex-wrap">
+                <!-- Logo de la Empresa (Squircle / Rounded-2xl estilo LinkedIn Empresas) -->
+                <div class="relative group">
+                  <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-white p-1.5 shadow-md">
+                    <div class="w-full h-full rounded-xl bg-gradient-to-br from-[#274DEA] to-[#1E3BB8] text-white font-extrabold text-4xl flex items-center justify-center relative overflow-hidden border-2 border-gray-100">
+                      @if (profile().companyLogoUrl) {
+                        <img [src]="profile().companyLogoUrl" [alt]="profile().companyName" class="w-full h-full object-cover" />
+                      } @else {
+                        <span>{{ companyInitials() }}</span>
+                      }
+
+                      <button
+                        type="button"
+                        (click)="logoInput.click()"
+                        class="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[11px] font-semibold"
+                      >
+                        <span>Cambiar logo</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Insignia de Verificación Corporativa -->
+                @if (profile().isVerified) {
+                  <div class="flex items-center gap-2 pb-2 animate-fade-in">
+                    <div class="px-3.5 py-1.5 rounded-full bg-[#ECFDF5] border border-[#059669]/30 flex items-center gap-1.5 shadow-2xs">
+                      <span class="text-[11px] font-bold text-[#059669]">
+                        ✓ Organización Verificada · RUC {{ profile().ruc }}
+                      </span>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <button
+                type="button"
+                (click)="openEditModal()"
+                class="p-2.5 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+                title="Editar presentación corporativa"
+              >
+                ✎
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+              <div class="md:col-span-8">
+                <div class="flex items-center gap-2.5 flex-wrap">
+                  <h1 class="text-2xl font-bold text-gray-900">
+                    {{ profile().companyName || 'Mi Empresa' }}
+                  </h1>
+
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#274DEA]/10 text-[#274DEA]">
+                    {{ profile().industry || 'Sector Corporativo' }}
+                  </span>
+                </div>
+
+                <p class="text-[15px] text-gray-800 mt-1.5 leading-snug break-words">
+                  {{ profile().headline || 'Añade un titular corporativo para presentar la propuesta de valor de tu empresa.' }}
+                </p>
+
+                <div class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[#6B7280]">
+                  <span>Perú · RUC: <strong class="text-gray-800 font-mono">{{ profile().ruc || 'Pendiente' }}</strong></span>
+                  @if (profile().websiteUrl) {
+                    <span>·</span>
+                    <a [href]="profile().websiteUrl!" target="_blank" rel="noopener" class="text-[#274DEA] font-semibold hover:underline">
+                      Sitio web oficial ↗
+                    </a>
+                  }
+                </div>
+              </div>
+
+              <!-- Resumen Rápido a la derecha -->
+              <div class="md:col-span-4 flex md:justify-end">
+                <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200/80 text-left w-full sm:w-auto">
+                  <p class="text-[11px] text-[#6B7280] font-medium">Vacantes activas</p>
+                  <p class="text-lg font-extrabold text-[#274DEA]">{{ activeJobsCount() }} ofertas</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Acción Corporativos -->
+            <div class="mt-5 flex flex-wrap items-center gap-2.5">
+              <a
+                routerLink="/recruiter/jobs"
+                class="px-4 py-1.5 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-semibold text-[14px] shadow-xs transition"
+              >
+                + Publicar o Administrar Vacantes
+              </a>
+              <a
+                routerLink="/agreements"
+                class="px-4 py-1.5 rounded-full border border-[#059669] text-[#059669] hover:bg-[#ECFDF5] font-semibold text-[14px] transition"
+              >
+                Gestionar Convenios Universitarios
+              </a>
+              @if (!profile().isVerified) {
+                <button
+                  type="button"
+                  (click)="openOtpModal()"
+                  class="px-4 py-1.5 rounded-full bg-[#FEF3C7] border border-[#F59E0B] text-[#B45309] font-bold text-[14px] transition"
+                >
+                  🔐 Verificar Código OTP
+                </button>
+              }
+              <button
+                type="button"
+                (click)="openEditModal()"
+                class="px-4 py-1.5 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 font-semibold text-[14px] transition"
+              >
+                Editar perfil de empresa
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- CARD 2: ACERCA DE LA ORGANIZACIÓN -->
+        <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-[18px] font-bold text-gray-900">Acerca de la organización</h2>
+            <button
+              type="button"
+              (click)="openEditModal()"
+              class="text-xs font-bold text-[#274DEA] hover:underline"
+            >
+              Editar descripción
+            </button>
+          </div>
+
+          <p class="text-[14px] text-gray-700 leading-relaxed whitespace-pre-line">
+            {{ profile().description || 'Describe la cultura de tu organización, el sector en el que operan, los beneficios para practicantes y profesionales, y el tipo de talento que buscan en Unext.' }}
+          </p>
+
+          <div class="pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-100">
+              <span class="text-[#6B7280] block">Razón Social / RUC</span>
+              <span class="font-bold text-gray-900 font-mono mt-0.5 block">{{ profile().ruc || '—' }}</span>
+            </div>
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-100">
+              <span class="text-[#6B7280] block">Sector / Industria</span>
+              <span class="font-bold text-gray-900 mt-0.5 block">{{ profile().industry || 'Sin especificar' }}</span>
+            </div>
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-100">
+              <span class="text-[#6B7280] block">Estado Corporativo</span>
+              <span [ngClass]="profile().isVerified ? 'text-[#059669]' : 'text-[#F59E0B]'" class="font-bold mt-0.5 block">
+                {{ profile().isVerified ? '✓ Verificada y Pública' : '⏳ Pendiente de OTP' }}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <!-- CARD 3: VACANTES Y OPORTUNIDADES DE LA EMPRESA (REEMPLAZA A HABILIDADES) -->
+        <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-[18px] font-bold text-gray-900">
+                Vacantes y Oportunidades Publicadas
+              </h2>
+              <p class="text-[12px] text-[#6B7280]">
+                Ofertas de prácticas y empleo gestionadas por {{ profile().companyName || 'tu organización' }}.
+              </p>
+            </div>
+
+            <a
+              routerLink="/recruiter/jobs"
+              class="px-4 py-1.5 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold transition"
+            >
+              Administrar o crear vacantes →
+            </a>
+          </div>
+
+          @if (companyJobs().length > 0) {
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              @for (job of companyJobs().slice(0, 4); track job.id) {
+                <div class="p-4 rounded-xl border border-gray-200 bg-[#F8FAFC] flex flex-col justify-between gap-2">
+                  <div>
+                    <div class="flex items-center justify-between gap-2">
+                      <h3 class="text-[14px] font-bold text-gray-900 truncate">{{ job.title }}</h3>
+                      <span
+                        [ngClass]="job.isActive !== false ? 'bg-[#ECFDF5] text-[#059669]' : 'bg-gray-200 text-gray-600'"
+                        class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0"
+                      >
+                        {{ job.isActive !== false ? 'Activa' : 'Cerrada' }}
+                      </span>
+                    </div>
+                    <p class="text-[12px] text-[#6B7280] mt-1">
+                      {{ job.location || 'Perú' }} · {{ job.modality }} · {{ job.experienceLevel }}
+                    </p>
+                  </div>
+
+                  <div class="pt-2 border-t border-gray-200/70 flex items-center justify-between text-[11px]">
+                    @if (job.minSalary && job.maxSalary) {
+                      <span class="font-bold text-[#059669]">S/. {{ job.minSalary }} - S/. {{ job.maxSalary }}</span>
+                    } @else {
+                      <span class="text-[#6B7280]">Salario a tratar</span>
+                    }
+                    <a routerLink="/recruiter/jobs" class="font-bold text-[#274DEA] hover:underline">
+                      Ver postulantes →
+                    </a>
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="p-6 rounded-2xl border border-dashed border-gray-300 bg-[#F8FAFC]/60 text-center space-y-2">
+              <p class="text-[14px] font-bold text-gray-900">Aún no has publicado vacantes</p>
+              <p class="text-[12px] text-[#6B7280] max-w-md mx-auto">
+                Publica tu primera convocatoria de prácticas o empleo para que el algoritmo de IA conecte tu oferta con los mejores candidatos verificados.
+              </p>
+              <a
+                routerLink="/recruiter/jobs"
+                class="inline-block mt-2 px-4 py-2 rounded-full bg-[#274DEA] text-white text-xs font-bold hover:bg-[#1E3BB8] transition"
+              >
+                + Crear primera vacante
+              </a>
+            </div>
+          }
+        </section>
+
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- COLUMNA LATERAL DERECHA: HASTA 5 PUBLICACIONES IMPORTANTES        -->
+      <!-- ================================================================= -->
+      <aside class="lg:col-span-3">
+        <app-profile-sidebar
+          [importantPosts]="importantPosts()"
+          [maxImportantPosts]="MAX_IMPORTANT_POSTS"
+          [isOwnProfile]="true"
+          [suggestedPeers]="suggestedPeers()"
+          (unpinPost)="handleUnpinImportantPost($event)"
+        />
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<!-- ========================================================================= -->
+<!-- MODAL PRINCIPAL: COMPLETAR / EDITAR PRESENTACIÓN DE LA EMPRESA            -->
+<!-- ========================================================================= -->
+@if (isEditModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-gray-200 overflow-hidden my-8 animate-fade-in">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h2 class="text-[20px] font-bold text-gray-900">
+            {{ isFirstTimeOnboarding() ? 'Completa el perfil de tu organización' : 'Editar perfil corporativo' }}
+          </h2>
+          @if (isFirstTimeOnboarding()) {
+            <p class="text-[12px] text-[#274DEA] font-semibold mt-0.5">
+              Paso obligatorio: Registra los datos oficiales de tu empresa para operar en Unext.
+            </p>
+          }
+        </div>
+        @if (!isFirstTimeOnboarding()) {
+          <button type="button" (click)="closeEditModal()" class="p-2 rounded-full text-gray-500 hover:bg-gray-100">✕</button>
+        }
+      </div>
+
+      <form (ngSubmit)="saveProfile()" class="p-6 max-h-[75vh] overflow-y-auto space-y-5">
+        @if (errorMessage()) {
+          <div class="p-3.5 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-[13px] font-semibold">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <!-- Selector rápido de Logo y Portada dentro del modal -->
+        <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-xl bg-[#274DEA]/10 text-[#274DEA] font-bold text-lg flex items-center justify-center overflow-hidden border border-[#274DEA]/30 shrink-0">
+              @if (form.companyLogoUrl) {
+                <img [src]="form.companyLogoUrl" alt="Logo" class="w-full h-full object-cover" />
+              } @else {
+                <span>{{ companyInitials() }}</span>
+              }
+            </div>
+            <div>
+              <p class="text-[13px] font-bold text-gray-900">Logo y Portada Corporativa</p>
+              <p class="text-[11px] text-[#6B7280]">Portada recomendada: 1584 × 396 px</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label class="px-3 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold cursor-pointer transition">
+              Subir logo
+              <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onLogoSelected($event)" />
+            </label>
+            <label class="px-3 py-1.5 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 text-xs font-bold cursor-pointer transition">
+              Subir banner
+              <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onBannerSelected($event)" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Razón Social y RUC -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Nombre de la empresa / Razón Social *</label>
+            <input
+              type="text"
+              name="companyName"
+              [(ngModel)]="form.companyName"
+              maxlength="120"
+              required
+              placeholder="Ej. NextWorks Perú S.A.C."
+              class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]"
+            />
+          </div>
+
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Número de RUC (11 dígitos) *</label>
+            <input
+              type="text"
+              name="ruc"
+              [(ngModel)]="form.ruc"
+              [disabled]="!isFirstTimeOnboarding()"
+              maxlength="11"
+              required
+              placeholder="Ej. 20601234567"
+              class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px] font-mono disabled:bg-gray-100 disabled:text-gray-500"
+            />
+          </div>
+        </div>
+
+        <!-- Sector e Industria + Sitio Web -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Sector o Industria *</label>
+            <input
+              type="text"
+              name="industry"
+              [(ngModel)]="form.industry"
+              maxlength="100"
+              required
+              placeholder="Ej. Desarrollo de Software, Banca y Finanzas..."
+              class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]"
+            />
+          </div>
+
+          <div>
+            <label class="block text-[13px] font-medium text-gray-700 mb-1">Sitio web corporativo (Opcional)</label>
+            <input
+              type="url"
+              name="websiteUrl"
+              [(ngModel)]="form.websiteUrl"
+              placeholder="https://www.tuempresa.com.pe"
+              class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]"
+            />
+          </div>
+        </div>
+
+        <!-- Eslogan / Titular Corporativo (Máx. 120 chars) -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[13px] font-medium text-gray-700">Titular o eslogan corporativo</label>
+            <span class="text-[11px] text-[#6B7280]">{{ (form.headline || '').length }} / {{ MAX_HEADLINE }}</span>
+          </div>
+          <input
+            type="text"
+            name="headline"
+            [(ngModel)]="form.headline"
+            [maxlength]="MAX_HEADLINE"
+            placeholder="Ej. Impulsando la transformación digital y el talento joven en Latinoamérica"
+            class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px]"
+          />
+        </div>
+
+        <!-- Acerca de la empresa / Descripción -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-[13px] font-medium text-gray-700">Acerca de la empresa</label>
+            <span class="text-[11px] text-[#6B7280]">{{ (form.description || '').length }} / {{ MAX_DESCRIPTION }}</span>
+          </div>
+          <textarea
+            name="description"
+            [(ngModel)]="form.description"
+            [maxlength]="MAX_DESCRIPTION"
+            rows="4"
+            placeholder="Describe la misión de la empresa, proyectos destacados y beneficios para tu equipo..."
+            class="w-full px-3.5 py-2 border border-gray-400 rounded-lg text-[14px] resize-none"
+          ></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+          @if (!isFirstTimeOnboarding()) {
+            <button type="button" (click)="closeEditModal()" class="px-5 py-2 rounded-full border border-gray-400 text-gray-700 font-semibold text-[14px]">
+              Cancelar
+            </button>
+          }
+          <button type="submit" [disabled]="isSaving()" class="px-6 py-2 rounded-full bg-[#274DEA] text-white font-bold text-[14px]">
+            {{ isSaving() ? 'Guardando...' : 'Guardar perfil corporativo' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ========================================================================= -->
+<!-- MODAL DE VERIFICACIÓN CORPORATIVA POR CÓDIGO OTP                          -->
+<!-- ========================================================================= -->
+@if (isOtpModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 space-y-4 animate-fade-in">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-gray-900">Verificación Corporativa (OTP)</h3>
+        <button type="button" (click)="isOtpModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
+      </div>
+
+      <p class="text-[13px] text-[#6B7280] leading-relaxed">
+        Ingresa el código de 6 dígitos generado para validar el RUC <strong class="text-gray-900">{{ profile().ruc }}</strong> y habilitar la publicación de vacantes.
+      </p>
+
+      @if (profile().pendingVerificationCode) {
+        <div class="p-3 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 text-xs text-gray-700 flex items-center justify-between">
+          <span>Código de prueba generado en backend:</span>
+          <span class="font-mono font-extrabold text-sm text-[#274DEA]">{{ profile().pendingVerificationCode }}</span>
+        </div>
+      }
+
+      @if (otpErrorMessage()) {
+        <div class="p-3 rounded-xl bg-[#EF4444]/10 text-[#EF4444] text-xs font-semibold">
+          {{ otpErrorMessage() }}
+        </div>
+      }
+
+      <div>
+        <label class="block text-[13px] font-medium text-gray-700 mb-1">Código de verificación (6 dígitos) *</label>
+        <input
+          type="text"
+          [(ngModel)]="otpCode"
+          maxlength="6"
+          placeholder="000000"
+          class="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-center font-mono text-lg font-extrabold tracking-widest focus:outline-none focus:border-[#059669]"
+        />
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+        <button type="button" (click)="isOtpModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold">
+          Más tarde
+        </button>
+        <button
+          type="button"
+          [disabled]="isVerifyingOtp()"
+          (click)="submitVerifyOrganization()"
+          class="px-5 py-2 rounded-full bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold shadow-xs"
+        >
+          {{ isVerifyingOtp() ? 'Verificando...' : '✓ Activar cuenta corporativa' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL DE PERSONALIZAR BANNER -->
+@if (isBannerModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-[18px] font-bold text-gray-900">Personalizar portada corporativa</h3>
+        <button type="button" (click)="isBannerModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
+      </div>
+
+      <div class="p-3.5 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 text-[12px] text-gray-700 space-y-1">
+        <p class="font-bold text-[#274DEA]">Dimensiones recomendadas: 1584 × 396 px (Relación 4:1)</p>
+        <p>Si subes una imagen con otras dimensiones, se redimensionará automáticamente.</p>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <label class="px-4 py-2 rounded-full bg-[#274DEA] text-white text-xs font-bold cursor-pointer">
+          Seleccionar imagen
+          <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="onBannerSelected($event)" />
+        </label>
+        @if (profile().bannerUrl || form.bannerUrl) {
+          <button type="button" (click)="removeCustomBanner()" class="px-4 py-2 rounded-full border border-[#EF4444] text-[#EF4444] text-xs font-bold">
+            Usar portada autogenerada
+          </button>
+        }
+      </div>
+
+      <div class="pt-3 border-t border-gray-100">
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-[13px] font-semibold text-gray-800">Título del banner autogenerado</label>
+          <span class="text-[11px] text-[#6B7280]">{{ (form.bannerText || '').length }} / {{ MAX_BANNER_TEXT }}</span>
+        </div>
+        <input type="text" [(ngModel)]="form.bannerText" [maxlength]="MAX_BANNER_TEXT" placeholder="Ej. Innovación y Tecnología" class="w-full px-3.5 py-2 border border-gray-300 rounded-lg text-[14px]" />
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
+        <button type="button" (click)="isBannerModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold">Cancelar</button>
+        <button type="button" (click)="saveBannerSettings()" class="px-5 py-2 rounded-full bg-[#274DEA] text-white text-xs font-bold">Guardar portada</button>
+      </div>
+    </div>
+  </div>
+}
+
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

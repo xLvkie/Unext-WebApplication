@@ -7,6 +7,9 @@ import {
   PostulantProfileRequest,
   PostulantProfileResponse,
   PostulantProfileUpdate,
+  RecruiterProfileResponse,
+  RecruiterProfileUpdate,
+  RecruiterProfileRequest,
   StudentSkillRequest,
   StudentSkillResponse,
   StudentSkillUpdate
@@ -18,10 +21,11 @@ import {
 export class ProfileService {
   private readonly http = inject(HttpClient);
   private readonly API_URL = `${environment.apiUrl}/profiles`;
+  private readonly recruiterApi = `${environment.apiUrl}/recruiter`;
 
   /* ==============================
      POSTULANT PROFILE
-  ============================== */
+     ============================== */
   getMyPostulantProfile(): Observable<PostulantProfileResponse> {
     return this.http.get<PostulantProfileResponse>(`${this.API_URL}/postulant/me`);
   }
@@ -56,12 +60,25 @@ export class ProfileService {
   }
 
   /* ==============================
-     RECRUITER & INSTITUTION PROFILE
-  ============================== */
-  getMyRecruiterProfile(): Observable<any> {
-    return this.http.get<any>(`${this.API_URL}/recruiter/me`);
+     RECRUITER PROFILE
+     ============================== */
+  getMyRecruiterProfile(): Observable<RecruiterProfileResponse> {
+    return this.http.get<RecruiterProfileResponse>(`${this.API_URL}/recruiter/me`);
   }
 
+  createRecruiterProfile(request: RecruiterProfileRequest): Observable<RecruiterProfileResponse> {
+    return this.http
+      .post(`${this.API_URL}/recruiter/me`, request, { responseType: 'text' })
+      .pipe(switchMap(() => this.getMyRecruiterProfile()));
+  }
+
+  updateRecruiterProfile(request: RecruiterProfileUpdate): Observable<RecruiterProfileResponse> {
+    return this.http.put<RecruiterProfileResponse>(`${this.API_URL}/recruiter/me`, request);
+  }
+
+  /* ==============================
+     INSTITUTION PROFILE
+     ============================== */
   getMyInstitutionProfile(): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/institution/me`);
   }
@@ -80,9 +97,9 @@ export class ProfileService {
     );
   }
 
-  /* ==============================
+  /* =============================
      PUBLIC PROFILE VIEW (POR ID)
-  ============================== */
+    ============================== */
   getPostulantPublicProfile(postulantId: string): Observable<PostulantProfileResponse> {
     return this.http.get<PostulantProfileResponse>(
       `${this.API_URL}/postulants/directory/${postulantId}`

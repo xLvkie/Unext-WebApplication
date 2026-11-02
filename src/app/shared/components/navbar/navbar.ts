@@ -173,9 +173,7 @@ export class Navbar implements OnInit {
         next: (r) => {
           if (r.companyName) this.fetchedName.set(r.companyName);
           this.fetchedSubtitle.set(r.industry || 'Cuenta Corporativa');
-          if (r.companyLogoUrl || r.logoUrl) {
-            this.fetchedAvatar.set(r.companyLogoUrl || r.logoUrl);
-          }
+          if (r.companyLogoUrl) this.fetchedAvatar.set(r.companyLogoUrl);
         },
         error: () => {}
       });

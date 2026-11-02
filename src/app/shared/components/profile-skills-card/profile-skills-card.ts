@@ -1,7 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { StudentSkillResponse } from '../../../../../core/models/profile.model';
-import { SkillValidationResponse } from '../../../../../core/models/validation.model';
+import { StudentSkillResponse } from '../../../core/models/profile.model';
+import { SkillValidationResponse } from '../../../core/models/validation.model';
 
 @Component({
   selector: 'app-profile-skills-card',

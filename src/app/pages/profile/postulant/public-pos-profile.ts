@@ -5,7 +5,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
 import { AlertModal } from '../../../shared/components/alert-modal/alert-modal';
-import { ProfileSidebar } from './components/profile-sidebar/profile-sidebar';
+import { ProfileSidebar } from '../../../shared/components/profile-sidebar/profile-sidebar';
 import { ProfileService } from '../../../core/services/profile.service';
 import { FeedService } from '../../../core/services/feed.service';
 import {
@@ -19,12 +19,12 @@ import { FeedPostResponse } from '../../../core/models/feed.model';
 import { readApiError } from '../../../core/utils/api-error';
 
 @Component({
-  selector: 'app-public-profile',
+  selector: 'app-public-pos-profile',
   standalone: true,
   imports: [CommonModule, RouterLink, Navbar, Toast, AlertModal, ProfileSidebar],
-  templateUrl: './public-profile.html'
+  templateUrl: './public-pos-profile.html'
 })
-export class PublicProfile implements OnInit {
+export class PublicPosProfile implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private profileService = inject(ProfileService);

@@ -1,23 +1,52 @@
 import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { AuthService } from './core/services/auth.service';
+
 import { Login } from './pages/auth/login/login';
 import { Register } from './pages/auth/register/register';
 import { Dashboard } from './pages/dashboard/dashboard';
-import { Profile } from './pages/profile/postulant/profile';
+
+// Perfil y Onboarding
+import { PostulantProfile } from './pages/profile/postulant/postulant-profile';
+import { PublicPosProfile } from './pages/profile/postulant/public-pos-profile';
+import { RecruiterProfile } from './pages/profile/recruiter/recruiter-profile';
+
+// Funcionalidades principales
+import { RecruiterJobs } from './pages/jobs/recruiter/recruiter-jobs';
 import { JobSearch } from './pages/jobs/job-search';
 import { Messages } from './pages/messages/messages';
 import { Notifications } from './pages/notifications/notifications';
-import { PublicProfile } from './pages/profile/postulant/public-profile';
 import { Network } from './pages/network/network';
 
 export const routes: Routes = [
+  // Autenticación
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: Login },
-  { path: 'profile/view/:role/:id', component: PublicProfile },
   { path: 'register', component: Register },
 
-  // Perfil y Onboarding 
-  { path: 'profile/me', component: Profile },
-  { path: 'onboarding/complete-profile', component: Profile },
+  // Perfil y Onboarding
+  {
+    path: 'profile/me',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
+    component: RecruiterProfile
+  },
+  {
+    path: 'profile/me',
+    component: PostulantProfile // Por defecto carga Postulante
+  },
+
+  {
+    path: 'onboarding/complete-profile',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
+    component: RecruiterProfile
+  },
+  {
+    path: 'onboarding/complete-profile',
+    component: PostulantProfile
+  },
+
+  // Vista pública de perfiles
+  { path: 'profile/view/:role/:id', component: PublicPosProfile },
 
   // Feed / Dashboard Principal
   { path: 'feed', component: Dashboard },
@@ -28,9 +57,20 @@ export const routes: Routes = [
   { path: 'network', redirectTo: 'directory', pathMatch: 'full' },
   { path: 'red', redirectTo: 'directory', pathMatch: 'full' },
 
-  // Vacantes, Mensajería y Notificaciones
+  // Vacantes
+  { path: 'recruiter/jobs', component: RecruiterJobs },
+
+  {
+    path: 'jobs',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
+    component: RecruiterJobs
+  },
   { path: 'jobs', component: JobSearch },
+
+  // Mensajeria
   { path: 'messages', component: Messages },
+
+  // Notificaciones
   { path: 'notifications', component: Notifications },
 
   { path: '**', redirectTo: 'login' }

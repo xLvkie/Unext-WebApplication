@@ -1,3 +1,7 @@
+/* =============================
+   POSTULANT PROFILE MODELS
+   ============================= */
+
 export interface StudentSkillResponse {
   id: string;
   name: string;
@@ -71,3 +75,38 @@ export interface PostulantProfileRequest {
 }
 
 export type PostulantProfileUpdate = Partial<PostulantProfileRequest>;
+
+/* =============================
+   RECRUITER PROFILE MODELS
+   ============================= */
+export interface RecruiterProfileResponse {
+  id: string;
+  userId: string;
+  companyName: string;
+  ruc: string;
+  industry?: string | null;
+  headline?: string | null;
+  websiteUrl?: string | null;
+  description?: string | null;
+  companyLogoUrl?: string | null;
+  bannerUrl?: string | null;
+  bannerText?: string | null;
+  isValidated?: boolean;
+  isVerified?: boolean;
+  validationsCount?: number;
+  pendingVerificationCode?: string | null;
+}
+
+export interface RecruiterProfileRequest {
+  companyName: string;
+  ruc: string;
+  industry?: string;
+  headline?: string;
+  websiteUrl?: string;
+  description?: string;
+  bannerText?: string;
+  companyLogoUrl?: string;
+  bannerUrl?: string;
+}
+
+export type RecruiterProfileUpdate = Partial<Omit<RecruiterProfileRequest, 'ruc'>>;

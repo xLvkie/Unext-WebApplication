@@ -5,9 +5,9 @@ import { Router, RouterLink } from '@angular/router';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
 import { AlertModal } from '../../../shared/components/alert-modal/alert-modal';
-import { ProfileSkillsCard } from './components/profile-skills-card/profile-skills-card';
-import { ProfileCvCard } from './components/profile-cv-card/profile-cv-card';
-import { ProfileSidebar } from './components/profile-sidebar/profile-sidebar';
+import { ProfileSkillsCard } from '../../../shared/components/profile-skills-card/profile-skills-card';
+import { ProfileCvCard } from '../../../shared/components/profile-cv-card/profile-cv-card';
+import { ProfileSidebar } from '../../../shared/components/profile-sidebar/profile-sidebar';
 import { ProfileService } from '../../../core/services/profile.service';
 import { ValidationService } from '../../../core/services/validation.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -29,7 +29,7 @@ import { FeedService } from '../../../core/services/feed.service';
 import { FeedPostResponse } from '../../../core/models/feed.model';
 
 @Component({
-  selector: 'app-profile',
+  selector: 'app-postulant-profile',
   standalone: true,
   imports: [
     CommonModule,
@@ -42,9 +42,9 @@ import { FeedPostResponse } from '../../../core/models/feed.model';
     ProfileCvCard,
     ProfileSidebar
   ],
-  templateUrl: './profile.html'
+  templateUrl: './postulant-profile.html'
 })
-export class Profile implements OnInit {
+export class PostulantProfile implements OnInit {
   private profileService = inject(ProfileService);
   private validationService = inject(ValidationService);
   private authService = inject(AuthService);
