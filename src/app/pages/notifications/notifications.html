@@ -1,5 +1,4 @@
-<!-- NAVBAR SUPERIOR SINCRONIZADA -->
-<app-navbar/>
+<app-navbar />
 
 <main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
@@ -7,7 +6,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
       <!-- ================================================================= -->
-      <!-- COLUMNA IZQUIERDA (lg:col-span-3): GESTIÓN Y RESUMEN              -->
+      <!-- COLUMNA IZQUIERDA (lg:col-span-3): GESTIÓN Y ACCESOS POR ROL      -->
       <!-- ================================================================= -->
       <aside class="lg:col-span-3 space-y-4">
         <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
@@ -15,7 +14,7 @@
             Gestiona tus notificaciones
           </h1>
           <p class="text-[12px] text-[#6B7280] mt-1 leading-relaxed">
-            Revisa el estado de tus postulaciones, validaciones académicas e interacciones en la comunidad.
+            {{ roleDescription() }}
           </p>
 
           <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
@@ -41,32 +40,27 @@
           }
         </div>
 
-        <!-- Accesos rápidos del postulante -->
-        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-2.5">
-          <h2 class="text-[13px] font-bold text-gray-900">Accesos directos</h2>
-          <a
-            routerLink="/jobs"
-            class="flex items-center justify-between text-[12px] font-semibold text-gray-700 hover:text-[#274DEA] py-1.5"
-          >
-            <span>Mis postulaciones y empleos</span>
-            <span>→</span>
-          </a>
-          <a
-            routerLink="/profile/me"
-            class="flex items-center justify-between text-[12px] font-semibold text-gray-700 hover:text-[#274DEA] py-1.5 border-t border-gray-100"
-          >
-            <span>Acreditación y habilidades</span>
-            <span>→</span>
-          </a>
+        <!-- Accesos directos dinámicos según POSTULANT, RECRUITER o INSTITUTION -->
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-2">
+          <h2 class="text-[13px] font-bold text-gray-900 mb-1">Accesos directos</h2>
+          @for (link of quickLinks(); track link.route; let first = $first) {
+            <a
+              [routerLink]="link.route"
+              [ngClass]="!first ? 'border-t border-gray-100 pt-2.5' : ''"
+              class="flex items-center justify-between text-[12px] font-semibold text-gray-700 hover:text-[#274DEA] py-1 transition"
+            >
+              <span>{{ link.label }}</span>
+              <span>→</span>
+            </a>
+          }
         </div>
       </aside>
 
       <!-- ================================================================= -->
-      <!-- COLUMNA CENTRAL (lg:col-span-9): FILTROS Y LISTA DE ALERTAS       -->
+      <!-- COLUMNA CENTRAL (lg:col-span-9): PÍLDORAS DINÁMICAS Y ALERTAS     -->
       <!-- ================================================================= -->
       <section class="lg:col-span-9 space-y-4">
 
-        <!-- Barra de píldoras de filtro estilo LinkedIn -->
         <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-3.5 flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2 flex-wrap">
             <button
@@ -99,7 +93,7 @@
                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
               class="px-4 py-1.5 rounded-full text-xs transition"
             >
-              Empleos y Postulaciones
+              {{ jobsFilterLabel() }}
             </button>
 
             <button
@@ -110,7 +104,7 @@
                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 font-semibold'"
               class="px-4 py-1.5 rounded-full text-xs transition"
             >
-              Validación Académica
+              {{ academicFilterLabel() }}
             </button>
 
             <button
@@ -135,7 +129,7 @@
           </button>
         </div>
 
-        <!-- Contenedor del listado -->
+        <!-- Listado de notificaciones -->
         <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden divide-y divide-gray-100">
           @if (isLoading()) {
             <div class="p-6 space-y-4">
@@ -151,7 +145,6 @@
                 class="p-4 sm:p-5 flex items-start justify-between gap-4 cursor-pointer transition relative"
               >
                 <div class="flex items-start gap-3.5 min-w-0 flex-1">
-                  <!-- Punto indicador de NO LEÍDA (Estilo LinkedIn) -->
                   <div class="pt-3 shrink-0">
                     <span
                       [ngClass]="!item.isRead ? 'bg-[#274DEA]' : 'bg-transparent'"
@@ -159,7 +152,6 @@
                     ></span>
                   </div>
 
-                  <!-- Ícono según Categoría -->
                   @switch (resolveKind(item)) {
                     @case ('JOBS') {
                       <div class="w-11 h-11 rounded-2xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center shrink-0">
@@ -184,16 +176,13 @@
                     }
                   }
 
-                  <!-- Contenido de la Notificación -->
                   <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <h3
-                        [ngClass]="!item.isRead ? 'font-extrabold text-gray-900' : 'font-semibold text-gray-800'"
-                        class="text-[14px] leading-snug"
-                      >
-                        {{ item.title }}
-                      </h3>
-                    </div>
+                    <h3
+                      [ngClass]="!item.isRead ? 'font-extrabold text-gray-900' : 'font-semibold text-gray-800'"
+                      class="text-[14px] leading-snug"
+                    >
+                      {{ item.title }}
+                    </h3>
 
                     <p
                       [ngClass]="!item.isRead ? 'text-gray-800 font-medium' : 'text-[#6B7280]'"
@@ -204,13 +193,12 @@
 
                     <div class="mt-2 flex items-center gap-3">
                       <span class="text-[11px] font-bold text-[#274DEA] hover:underline">
-                        Ver detalle →
+                        Ir a la sección →
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <!-- Derecha: Fecha y Botones de Acción (Marcar leída / Eliminar) -->
                 <div class="flex flex-col items-end gap-2 shrink-0">
                   <span class="text-[11px] text-[#6B7280] whitespace-nowrap">
                     {{ formatRelativeTime(item.createdAt) }}
@@ -240,16 +228,11 @@
               </article>
             } @empty {
               <div class="p-12 text-center">
-                <div class="w-14 h-14 rounded-2xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center mx-auto mb-3">
-                  <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                  </svg>
-                </div>
                 <h3 class="text-[16px] font-bold text-gray-900">
-                  No tienes notificaciones en esta bandeja
+                  No tienes notificaciones en esta categoría
                 </h3>
                 <p class="text-[13px] text-[#6B7280] mt-1 max-w-md mx-auto">
-                  Cuando recibas actualizaciones sobre tus postulaciones, validaciones académicas o interacciones en tus publicaciones, aparecerán aquí.
+                  {{ roleDescription() }}
                 </p>
               </div>
             }

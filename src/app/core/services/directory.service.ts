@@ -5,12 +5,19 @@ import { environment } from '../../../environments/environment';
 import { Contact } from '../models/chat.model';
 
 interface NamedUser {
+  id?: string;
   userId?: string;
   firstName?: string;
   lastName?: string;
   career?: string;
+  headline?: string;
+  avatarUrl?: string | null;
   companyName?: string;
+  industry?: string;
+  companyLogoUrl?: string | null;
   name?: string;
+  domain?: string;
+  logoUrl?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -19,6 +26,7 @@ export class DirectoryService {
 
   readonly contacts = signal<Contact[]>([]);
   readonly names = signal<Record<string, string>>({});
+  readonly avatars = signal<Record<string, string | null>>({});
 
   load(): Observable<Contact[]> {
     return forkJoin({
@@ -26,27 +34,57 @@ export class DirectoryService {
         .get<NamedUser[]>(`${environment.apiUrl}/profiles/postulants/directory`)
         .pipe(catchError(() => of([] as NamedUser[]))),
       recruiters: this.http
-        .get<NamedUser[]>(`${environment.apiUrl}/recruiter/directory`)
+        .get<NamedUser[]>(`${environment.apiUrl}/profiles/directory`)
         .pipe(catchError(() => of([] as NamedUser[]))),
       institutions: this.http
-        .get<NamedUser[]>(`${environment.apiUrl}/institution/directory`)
+        .get<NamedUser[]>(`${environment.apiUrl}/profiles/institution/directory`)
         .pipe(catchError(() => of([] as NamedUser[]))),
     }).pipe(
       map((data) => {
         const contacts = [
-          ...data.postulants.map((item) => this.contact(item, 'Postulante', item.career ?? 'Estudiante', this.person(item))),
-          ...data.recruiters.map((item) => this.contact(item, 'Empresa', 'Reclutador', item.companyName ?? 'Empresa')),
-          ...data.institutions.map((item) => this.contact(item, 'Institución', 'Institución', item.name ?? 'Institución')),
+          ...data.postulants.map((item) =>
+            this.contact(
+              item,
+              'Postulante',
+              item.career || item.headline || 'Estudiante',
+              this.person(item),
+              item.avatarUrl || null
+            )
+          ),
+          ...data.recruiters.map((item) =>
+            this.contact(
+              item,
+              'Empresa',
+              item.industry || 'Reclutador',
+              item.companyName ?? 'Empresa',
+              item.companyLogoUrl || null
+            )
+          ),
+          ...data.institutions.map((item) =>
+            this.contact(
+              item,
+              'Institución',
+              item.domain || 'Institución',
+              item.name ?? 'Institución',
+              item.logoUrl || null
+            )
+          ),
         ].filter((item) => item.userId);
+
         const names: Record<string, string> = {};
+        const avatars: Record<string, string | null> = {};
+
         for (const contact of contacts) {
           names[contact.userId] = contact.name;
+          avatars[contact.userId] = contact.avatarUrl ?? null;
         }
+
         this.contacts.set(contacts);
         this.names.set(names);
+        this.avatars.set(avatars);
         return contacts;
       }),
-      catchError(() => of([] as Contact[])),
+      catchError(() => of([] as Contact[]))
     );
   }
 
@@ -54,16 +92,36 @@ export class DirectoryService {
     return this.names()[userId] ?? 'Usuario';
   }
 
+  avatarOf(userId: string): string | null {
+    return this.avatars()[userId] ?? null;
+  }
+
+  registerContactInfo(userId: string, name: string, avatarUrl?: string | null): void {
+    if (!userId) return;
+    this.names.update((prev) => ({ ...prev, [userId]: name || prev[userId] || 'Usuario' }));
+    if (avatarUrl !== undefined) {
+      this.avatars.update((prev) => ({ ...prev, [userId]: avatarUrl }));
+    }
+  }
+
   private person(item: NamedUser): string {
     return [item.firstName, item.lastName].filter(Boolean).join(' ') || 'Postulante';
   }
 
-  private contact(item: NamedUser, kind: Contact['kind'], subtitle: string, name: string): Contact {
+  private contact(
+    item: NamedUser,
+    kind: Contact['kind'],
+    subtitle: string,
+    name: string,
+    avatarUrl: string | null
+  ): Contact {
     return {
       userId: item.userId ?? '',
+      profileId: item.id,
       name,
       subtitle,
       kind,
+      avatarUrl,
     };
   }
 }

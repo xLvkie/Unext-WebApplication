@@ -13,7 +13,8 @@ import { AuthService } from '../../../core/services/auth.service';
 import { DirectoryService } from '../../../core/services/directory.service';
 import {
   RecruiterProfileRequest,
-  RecruiterProfileResponse
+  RecruiterProfileResponse,
+  RecruiterProfileUpdate
 } from '../../../core/models/profile.model';
 import { FeedPostResponse } from '../../../core/models/feed.model';
 import { JobOffer } from '../../../core/models/job.model';
@@ -269,13 +270,14 @@ export class RecruiterProfile implements OnInit {
   saveProfile(): void {
     const name = this.form.companyName.trim();
     const ruc = this.form.ruc.trim();
+    const wasFirstTime = this.isFirstTimeOnboarding();
 
-    if (!name || !ruc) {
+    if (!name || (wasFirstTime && !ruc)) {
       this.errorMessage.set('La razón social / nombre de la empresa y el RUC son obligatorios (*).');
       return;
     }
 
-    if (this.isFirstTimeOnboarding() && !/^(10|20)\d{9}$/.test(ruc)) {
+    if (wasFirstTime && !/^(10|20)\d{9}$/.test(ruc)) {
       this.errorMessage.set('El RUC debe tener 11 dígitos numéricos y comenzar con 10 o 20.');
       return;
     }
@@ -283,9 +285,9 @@ export class RecruiterProfile implements OnInit {
     this.isSaving.set(true);
     this.errorMessage.set(null);
 
-    const payload: RecruiterProfileRequest = {
+    // Payload base con todos los campos editables (SIN el RUC)
+    const updatePayload: RecruiterProfileUpdate = {
       companyName: name,
-      ruc,
       industry: this.form.industry?.trim() || 'Tecnología y Servicios Corporativos',
       headline:
         this.form.headline?.trim().slice(0, this.MAX_HEADLINE) ||
@@ -297,10 +299,10 @@ export class RecruiterProfile implements OnInit {
       bannerUrl: this.form.bannerUrl || undefined
     };
 
-    const wasFirstTime = this.isFirstTimeOnboarding();
+    // Solo enviamos "ruc" cuando es el registro inicial (POST); al editar (PUT) mandamos solo updatePayload
     const request$ = wasFirstTime
-      ? this.profileService.createRecruiterProfile(payload)
-      : this.profileService.updateRecruiterProfile(payload);
+      ? this.profileService.createRecruiterProfile({ ...updatePayload, companyName: name, ruc })
+      : this.profileService.updateRecruiterProfile(updatePayload);
 
     request$.subscribe({
       next: (saved) => {
@@ -324,12 +326,12 @@ export class RecruiterProfile implements OnInit {
       error: (err) => {
         this.isSaving.set(false);
         this.errorMessage.set(
-          readApiError(err, 'No se pudo guardar el perfil. Verifica que el RUC no esté duplicado.')
+          readApiError(err, 'No se pudo guardar el perfil. Verifica los datos ingresados.')
         );
       }
     });
   }
-
+  
   // Verificación OTP Corporativa (POST /api/profiles/organization/verify)
   openOtpModal(): void {
     this.otpErrorMessage.set(null);

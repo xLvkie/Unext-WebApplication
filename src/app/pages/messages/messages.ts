@@ -1,17 +1,17 @@
 import { Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { interval } from 'rxjs';
 
 import { readApiError } from '../../core/utils/api-error';
 import { AuthService } from '../../core/services/auth.service';
 import { DirectoryService } from '../../core/services/directory.service';
+import { ConnectionService } from '../../core/services/connection.service';
 import { formatClock, formatDayLabel, initials, toDate } from '../../core/utils/format';
 import { contextLabel } from '../../core/utils/labels';
-import { ChatMessage, Conversation } from '../../core/models/chat.model';
+import { ChatMessage, Contact, Conversation } from '../../core/models/chat.model';
 import { ChatService } from '../../core/services/chat.service';
 import { Navbar } from '../../shared/components/navbar/navbar';
-import { PostulantProfileResponse } from '../../core/models/profile.model';
 
 interface ChatRow {
   kind: 'day' | 'message';
@@ -20,17 +20,17 @@ interface ChatRow {
   message?: ChatMessage;
   mine?: boolean;
 }
-  
+
 @Component({
   selector: 'app-messages',
   standalone: true,
-  imports: [Navbar],
+  imports: [Navbar, RouterLink],
   templateUrl: './messages.html',
 })
-
 export class Messages {
   private readonly chat = inject(ChatService);
   private readonly route = inject(ActivatedRoute);
+  private readonly connectionService = inject(ConnectionService);
   readonly auth = inject(AuthService);
   readonly directory = inject(DirectoryService);
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
@@ -47,11 +47,16 @@ export class Messages {
   readonly history = signal<ChatMessage[]>([]);
   readonly selectedId = signal<string | null>(null);
   readonly opened = signal<Record<string, boolean>>({});
+
+  // Contactos con los que YA estás conectado en Mi Red
+  readonly connectedContacts = signal<Contact[]>([]);
+
   private stickToBottom = true;
 
   readonly conversations = computed(() => {
     const me = this.auth.session()?.userId ?? '';
     const grouped = new Map<string, Conversation>();
+
     for (const message of this.inbox()) {
       const otherId = message.senderId === me ? message.receiverId : message.senderId;
       if (!otherId || grouped.has(otherId)) {
@@ -59,18 +64,21 @@ export class Messages {
       }
       grouped.set(otherId, {
         userId: otherId,
-        name: this.directory.nameOf(otherId),
+        name: this.resolveName(otherId),
+        avatarUrl: this.resolveAvatar(otherId),
         preview: message.content,
         createdAt: message.createdAt,
         unread: message.receiverId === me && message.isRead === false,
         contextType: message.contextType,
       });
     }
+
     for (const userId of Object.keys(this.opened())) {
       if (!grouped.has(userId)) {
         grouped.set(userId, {
           userId,
-          name: this.directory.nameOf(userId),
+          name: this.resolveName(userId),
+          avatarUrl: this.resolveAvatar(userId),
           preview: 'Nuevo chat',
           unread: false,
         });
@@ -84,19 +92,30 @@ export class Messages {
     if (!term) {
       return this.conversations();
     }
-    return this.conversations().filter((item) => item.name.toLowerCase().includes(term) || item.preview.toLowerCase().includes(term));
+    return this.conversations().filter(
+      (item) =>
+        item.name.toLowerCase().includes(term) || item.preview.toLowerCase().includes(term)
+    );
   });
 
+  // El botón del lápiz ahora SOLO filtra entre tus conexiones confirmadas de Mi Red
   readonly people = computed(() => {
     const me = this.auth.session()?.userId;
     const term = this.peopleQuery().trim().toLowerCase();
-    return this.directory
-      .contacts()
+    return this.connectedContacts()
       .filter((contact) => contact.userId !== me)
-      .filter((contact) => !term || contact.name.toLowerCase().includes(term) || contact.kind.toLowerCase().includes(term));
+      .filter(
+        (contact) =>
+          !term ||
+          contact.name.toLowerCase().includes(term) ||
+          contact.kind.toLowerCase().includes(term) ||
+          contact.subtitle.toLowerCase().includes(term)
+      );
   });
 
-  readonly selected = computed(() => this.conversations().find((item) => item.userId === this.selectedId()) ?? null);
+  readonly selected = computed(
+    () => this.conversations().find((item) => item.userId === this.selectedId()) ?? null
+  );
 
   readonly rows = computed<ChatRow[]>(() => {
     const me = this.auth.session()?.userId;
@@ -136,12 +155,50 @@ export class Messages {
         this.inbox.set([]);
         this.history.set([]);
         this.selectedId.set(null);
+        this.connectedContacts.set([]);
         return;
       }
       untracked(() => {
         this.directory.load().subscribe();
+        this.loadConnectedPeople();
         this.loadInbox(false);
       });
+    });
+  }
+
+  togglePeoplePicker(): void {
+    const next = !this.showPeople();
+    this.showPeople.set(next);
+    if (next) {
+      this.loadConnectedPeople();
+    }
+  }
+
+  loadConnectedPeople(): void {
+    this.connectionService.getNetworkOverview().subscribe({
+      next: (overview) => {
+        const list: Contact[] = (overview.connections || []).map((card) => {
+          const kind: Contact['kind'] =
+            card.role === 'RECRUITER'
+              ? 'Empresa'
+              : card.role === 'INSTITUTION'
+              ? 'Institución'
+              : 'Postulante';
+
+          this.directory.registerContactInfo(card.userId, card.name, card.avatarUrl || null);
+
+          return {
+            userId: card.userId,
+            profileId: card.profileId,
+            name: card.name,
+            subtitle: card.headline || card.subtitle,
+            kind,
+            avatarUrl: card.avatarUrl || null,
+          };
+        });
+        this.connectedContacts.set(list);
+      },
+      error: () => {},
     });
   }
 
@@ -214,6 +271,16 @@ export class Messages {
 
   context(value: string | null | undefined): string {
     return contextLabel(value);
+  }
+
+  private resolveName(userId: string): string {
+    const fromConn = this.connectedContacts().find((c) => c.userId === userId);
+    return fromConn?.name || this.directory.nameOf(userId);
+  }
+
+  private resolveAvatar(userId: string): string | null {
+    const fromConn = this.connectedContacts().find((c) => c.userId === userId);
+    return fromConn?.avatarUrl || this.directory.avatarOf(userId);
   }
 
   private timeOf(conversation: Conversation): number {
