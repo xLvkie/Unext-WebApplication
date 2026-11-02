@@ -124,8 +124,20 @@ export class InstitutionProfile implements OnInit {
     this.isLoading.set(true);
     this.profileService.getMyInstitutionProfile().subscribe({
       next: (data) => {
-        this.profile.set(data);
-        this.syncFormWithProfile(data);
+        const isVerified = Boolean(
+          data.isVerified ||
+          (data.id && localStorage.getItem(`unext_inst_verified_${data.id}`) === 'true') ||
+          (data.userId && localStorage.getItem(`unext_inst_verified_${data.userId}`) === 'true') ||
+          localStorage.getItem('unext_inst_verified_current') === 'true'
+        );
+
+        const mergedData: InstitutionProfileResponse = {
+          ...data,
+          isVerified
+        };
+
+        this.profile.set(mergedData);
+        this.syncFormWithProfile(mergedData);
         this.isLoading.set(false);
 
         if (!data.name || !data.domain) {
@@ -138,7 +150,7 @@ export class InstitutionProfile implements OnInit {
 
         // Recuperar OTP guardado en sesión si la institución no está verificada aún
         const storedOtp = sessionStorage.getItem(`unext_inst_otp_${data.userId || 'me'}`);
-        if (storedOtp && !data.isVerified) {
+        if (storedOtp && !isVerified) {
           this.otpCode = storedOtp;
         }
 
@@ -443,14 +455,31 @@ export class InstitutionProfile implements OnInit {
       next: (msg) => {
         this.isVerifyingOtp.set(false);
         this.isOtpModalOpen.set(false);
-        this.profile.update((p) => ({ ...p, isVerified: true }));
+
+        const p = this.profile();
+        if (p.id) localStorage.setItem(`unext_inst_verified_${p.id}`, 'true');
+        if (p.userId) localStorage.setItem(`unext_inst_verified_${p.userId}`, 'true');
+        localStorage.setItem('unext_inst_verified_current', 'true');
+
+        this.profile.update((curr) => ({ ...curr, isVerified: true }));
         this.showToast(msg || '¡Institución verificada exitosamente!', 'success');
       },
       error: (err) => {
         this.isVerifyingOtp.set(false);
-        this.otpErrorMessage.set(
-          readApiError(err, 'Código de verificación incorrecto o expirado.')
-        );
+        const errMsg = readApiError(err, 'Código de verificación incorrecto o expirado.');
+
+        if (errMsg.toLowerCase().includes('ya se encuentra verificada')) {
+          const p = this.profile();
+          if (p.id) localStorage.setItem(`unext_inst_verified_${p.id}`, 'true');
+          if (p.userId) localStorage.setItem(`unext_inst_verified_${p.userId}`, 'true');
+          localStorage.setItem('unext_inst_verified_current', 'true');
+
+          this.profile.update((curr) => ({ ...curr, isVerified: true }));
+          this.isOtpModalOpen.set(false);
+          this.showToast('Tu cuenta institucional ya se encuentra verificada.', 'success');
+        } else {
+          this.otpErrorMessage.set(errMsg);
+        }
       }
     });
   }

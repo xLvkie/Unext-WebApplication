@@ -16,14 +16,22 @@
             Plataforma Unext
           </span>
           <span class="text-xs text-[#6B7280]">
-            {{ currentRole() === 'RECRUITER' ? '· Portal Corporativo y Atracción de Talento' : '· Red Profesional & Empleabilidad' }}
+            @if (currentRole() === 'INSTITUTION') {
+              · Portal de Acreditación y Convenios Académicos
+            } @else if (currentRole() === 'RECRUITER') {
+              · Portal Corporativo y Atracción de Talento
+            } @else {
+              · Red Profesional & Empleabilidad
+            }
           </span>
         </div>
         <h1 class="text-[28px] font-bold text-gray-900 tracking-tight mt-1">
           Dashboard Principal
         </h1>
         <p class="text-[14px] text-[#6B7280] mt-0.5">
-          @if (currentRole() === 'RECRUITER') {
+          @if (currentRole() === 'INSTITUTION') {
+            Supervisa la convalidación de tus alumnos, avala competencias técnicas oficiales y gestiona convenios de prácticas preprofesionales con empresas líderes.
+          } @else if (currentRole() === 'RECRUITER') {
             Gestiona tus convocatorias, conecta con talento universitario verificado y optimiza tus vacantes con IA.
           } @else {
             Conéctate con tu red profesional, comparte avances de proyectos y accede a vacantes con matching de IA.
@@ -31,29 +39,61 @@
         </p>
       </div>
 
-      <!-- BOTONES DE ACCIÓN RÁPIDA ADAPTATIVOS -->
-      <div class="flex items-center gap-2.5 flex-wrap">
-        <button
-          type="button"
-          (click)="openValidationModal()"
-          class="btn-institutional text-[13px] py-2 px-3.5 shadow-xs"
-        >
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-          </svg>
-          <span>{{ currentRole() === 'RECRUITER' ? 'Verificación Corporativa' : 'Validación Formal' }}</span>
-        </button>
+      <!-- BOTONES DE ACCIÓN RÁPIDA ADAPTATIVOS (SIEMPRE UNO AL LADO DEL OTRO) -->
+      <div class="flex flex-row items-center gap-2.5 shrink-0 flex-nowrap">
+        @if (currentRole() === 'INSTITUTION') {
+          <button
+            type="button"
+            (click)="openValidationModal()"
+            [ngClass]="profile().isInstitutionVerified ? 'btn-institutional' : 'bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#92400E] border border-[#F59E0B]/40'"
+            class="text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 rounded-xl font-semibold transition cursor-pointer"
+          >
+            @if (profile().isInstitutionVerified) {
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              <span>✓ Institución Acreditada</span>
+            } @else {
+              <svg class="w-4 h-4 shrink-0 text-[#B45309]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <span>Acreditación Pendiente</span>
+            }
+          </button>
 
-        <button
-          type="button"
-          (click)="handleHeaderIntelligentAction()"
-          class="btn-match text-[13px] py-2 px-3.5 shadow-xs"
-        >
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-          <span>{{ currentRole() === 'RECRUITER' ? 'Diseñar Vacante con IA' : 'Función Inteligente' }}</span>
-        </button>
+          <button
+            type="button"
+            (click)="handleHeaderIntelligentAction()"
+            class="btn-match text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span>Función Inteligente IA</span>
+          </button>
+        } @else {
+          <button
+            type="button"
+            (click)="openValidationModal()"
+            class="btn-institutional text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <span>{{ currentRole() === 'RECRUITER' ? 'Verificación Corporativa' : 'Validación Formal' }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="handleHeaderIntelligentAction()"
+            class="btn-match text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span>{{ currentRole() === 'RECRUITER' ? 'Diseñar Vacante con IA' : 'Función Inteligente' }}</span>
+          </button>
+        }
       </div>
     </header>
 
@@ -1168,7 +1208,68 @@
         ✕
       </button>
 
-      @if (currentRole() === 'RECRUITER') {
+      @if (currentRole() === 'INSTITUTION') {
+        <!-- VISTA DEL MODAL PARA LA INSTITUCIÓN -->
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-[#059669] text-white flex items-center justify-center font-bold text-lg">
+            🏛️
+          </div>
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#059669] bg-[#059669]/10 px-2 py-0.5 rounded-full">
+              Acreditación Institucional
+            </span>
+            <h3 class="text-[18px] font-bold text-gray-900">
+              Estado de la Institución
+            </h3>
+          </div>
+        </div>
+
+        <p class="text-[13px] text-[#6B7280] leading-relaxed mb-4">
+          La acreditación oficial de Unext certifica a tu casa de estudios para validar competencias técnicas de alumnos y respaldar convenios preprofesionales con empresas líderes.
+        </p>
+
+        <div class="space-y-2.5 text-[12px]">
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Institución</span>
+            <span class="font-bold text-gray-900">{{ institutionData()?.name || profile().firstName || 'Universidad / Instituto' }}</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Dominio Académico</span>
+            <span class="font-bold text-gray-900 font-mono">{{ institutionData()?.domain || 'Registrado' }}</span>
+          </div>
+
+          <div
+            [ngClass]="institutionData()?.isVerified ? 'bg-[#ECFDF5] border-[#059669]/20' : 'bg-[#FEF3C7] border-[#F59E0B]/30'"
+            class="p-3 rounded-xl border flex items-center justify-between"
+          >
+            <span class="font-semibold text-gray-800">Estado de Acreditación</span>
+            <span [ngClass]="institutionData()?.isVerified ? 'text-[#059669]' : 'text-[#B45309]'" class="font-bold">
+              {{ institutionData()?.isVerified ? '✓ Institución Acreditada Oficial' : '⏳ En Proceso de Convalidación' }}
+            </span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Alumnos por Convalidar</span>
+            <span class="font-bold text-[#274DEA]">{{ institutionPendingStudents().length }} pendientes</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Convenios Activos</span>
+            <span class="font-bold text-[#059669]">{{ institutionAgreements().length }} corporativos</span>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-2">
+          <a
+            routerLink="/profile/me"
+            (click)="closeValidationModal()"
+            class="btn-institutional text-[13px] py-2 px-5 w-full text-center"
+          >
+            <span>{{ institutionData()?.isVerified ? '✓ Ver Sede y Perfil Institucional' : '🔐 Validar Dominio Académico (Código OTP)' }}</span>
+          </a>
+        </div>
+      } @else if (currentRole() === 'RECRUITER') {
         <!-- VISTA DEL MODAL PARA EL RECLUTADOR -->
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 rounded-xl bg-[#059669] text-white flex items-center justify-center font-bold">

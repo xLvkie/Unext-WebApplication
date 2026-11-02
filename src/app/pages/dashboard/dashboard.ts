@@ -283,7 +283,14 @@ export class Dashboard implements OnInit {
     } else if (role === 'INSTITUTION') {
       this.profileService.getMyInstitutionProfile().subscribe({
         next: (data) => {
-          this.institutionData.set(data);
+          const isVerified = Boolean(
+            data.isVerified ||
+            (data.id && localStorage.getItem(`unext_inst_verified_${data.id}`) === 'true') ||
+            (data.userId && localStorage.getItem(`unext_inst_verified_${data.userId}`) === 'true') ||
+            localStorage.getItem('unext_inst_verified_current') === 'true'
+          );
+
+          this.institutionData.set({ ...data, isVerified });
           this.profile.set({
             id: data.id || '',
             userId: data.userId || '',
@@ -291,7 +298,7 @@ export class Dashboard implements OnInit {
             lastName: '',
             avatarUrl: data.logoUrl || null,
             headline: data.domain ? `Dominio oficial: ${data.domain}` : 'Institución Educativa',
-            isInstitutionVerified: Boolean(data.isVerified),
+            isInstitutionVerified: isVerified,
             institutionName: data.name || 'Institución Oficial',
             skills: []
           });
@@ -420,7 +427,10 @@ export class Dashboard implements OnInit {
   // FUNCIONES INTELIGENTES IA PARA RECLUTADOR
   // =========================================================================
   handleHeaderIntelligentAction(): void {
-    if (this.currentRole() === 'RECRUITER') {
+    if (this.currentRole() === 'INSTITUTION') {
+      // Función inteligente IA para institución (próximamente) - no hace nada por ahora
+      return;
+    } else if (this.currentRole() === 'RECRUITER') {
       this.openRecruiterJobOptimizer();
     } else {
       this.openAiAnalysis(this.recommendations()[0]);
