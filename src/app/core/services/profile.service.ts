@@ -3,6 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  InstitutionProfileRequest,
+  InstitutionProfileResponse,
+  InstitutionProfileUpdate,
   InstitutionSummary,
   PostulantProfileRequest,
   PostulantProfileResponse,
@@ -79,13 +82,21 @@ export class ProfileService {
   /* ==============================
      INSTITUTION PROFILE
      ============================== */
-  getMyInstitutionProfile(): Observable<any> {
-    return this.http.get<any>(`${this.API_URL}/institution/me`);
+  getMyInstitutionProfile(): Observable<InstitutionProfileResponse> {
+    return this.http.get<InstitutionProfileResponse>(`${this.API_URL}/institution/me`);
+  }
+
+  createInstitutionProfile(request: InstitutionProfileRequest): Observable<string> {
+    return this.http.post(`${this.API_URL}/institution/me`, request, { responseType: 'text' });
+  }
+
+  updateMyInstitutionProfile(request: InstitutionProfileUpdate): Observable<InstitutionProfileResponse> {
+    return this.http.put<InstitutionProfileResponse>(`${this.API_URL}/institution/me`, request);
   }
 
   getInstitutionsDirectory(): Observable<InstitutionSummary[]> {
     return this.http
-      .get<InstitutionSummary[]>(`${this.API_URL}/institutions/directory`)
+      .get<InstitutionSummary[]>(`${this.API_URL}/institution/directory`)
       .pipe(catchError(() => of([])));
   }
 

@@ -1,0 +1,684 @@
+<div class="min-h-screen bg-[#F8FAFC]">
+  <app-navbar />
+
+  <app-toast [toast]="toast()" (dismiss)="toast.set(null)" />
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    @if (isLoading()) {
+      <div class="flex flex-col items-center justify-center py-24 gap-3">
+        <div class="w-10 h-10 border-4 border-[#274DEA]/20 border-t-[#274DEA] rounded-full animate-spin"></div>
+        <p class="text-sm font-medium text-gray-500">Cargando perfil institucional...</p>
+      </div>
+    } @else {
+      <!-- TARJETA PRINCIPAL DEL PERFIL INSTITUCIONAL -->
+      <div class="bg-white rounded-3xl border border-gray-200/80 shadow-xs overflow-hidden mb-8">
+        <!-- Portada Académica Premium -->
+        <div class="h-44 sm:h-56 bg-gradient-to-r from-[#0F172A] via-[#1E293B] to-[#1E3BB8] relative overflow-hidden flex items-end p-6 sm:p-8">
+          <div class="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#38BDF8]/10 blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-[#274DEA]/20 blur-3xl pointer-events-none"></div>
+          
+          <div class="relative z-10 flex items-center justify-between w-full">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-semibold">
+              <svg class="w-4 h-4 text-[#38BDF8]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+              </svg>
+              Sede Central · Portal Universitario Oficial
+            </span>
+
+            <button
+              type="button"
+              (click)="openEditModal()"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/90 hover:bg-white text-gray-900 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+              </svg>
+              Editar información
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido Central e Identidad -->
+        <div class="p-6 sm:p-8 pt-0 relative">
+          <div class="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-6">
+            <div class="flex flex-col sm:flex-row items-start sm:items-end gap-5">
+              <!-- Logotipo Institucional -->
+              <div class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl bg-white p-2 border-4 border-white shadow-md relative group shrink-0 overflow-hidden flex items-center justify-center">
+                @if (profile().logoUrl) {
+                  <img [src]="profile().logoUrl" [alt]="profile().name" class="w-full h-full object-contain rounded-xl" />
+                } @else {
+                  <div class="w-full h-full rounded-xl bg-gradient-to-br from-[#1E3BB8] to-[#0F172A] flex items-center justify-center text-white text-3xl font-black tracking-wider">
+                    {{ institutionInitials() }}
+                  </div>
+                }
+              </div>
+
+              <!-- Título, Dominio y Badges -->
+              <div class="space-y-1.5">
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+                    {{ profile().name || 'Institución Universitaria' }}
+                  </h1>
+                  
+                  @if (profile().isVerified) {
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#10B981]/10 text-[#059669] border border-[#10B981]/30 text-xs font-bold">
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                      </svg>
+                      Acreditada Oficialmente
+                    </span>
+                  } @else {
+                    <button
+                      type="button"
+                      (click)="openOtpModal()"
+                      class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F59E0B]/10 hover:bg-[#F59E0B]/20 text-amber-800 border border-[#F59E0B]/30 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      <svg class="w-3.5 h-3.5 text-[#F59E0B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                      </svg>
+                      Validar Dominio (Pendiente OTP)
+                    </button>
+                  }
+                </div>
+
+                <div class="flex items-center gap-4 text-xs font-semibold text-gray-500">
+                  <span class="inline-flex items-center gap-1 text-[#274DEA]">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                    </svg>
+                    {{ safeDomain() }}
+                  </span>
+                  <span>•</span>
+                  <span>Educación Superior y Convalidaciones</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="flex items-center gap-2.5 w-full sm:w-auto">
+              <a
+                routerLink="/feed"
+                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-semibold shadow-xs transition-all"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                </svg>
+                Ver Muro y Novedades
+              </a>
+            </div>
+          </div>
+
+          <!-- Reseña Institucional -->
+          <div class="mt-6 pt-6 border-t border-gray-100">
+            <h2 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Acerca de la Institución</h2>
+            <p class="text-sm text-gray-700 leading-relaxed max-w-4xl">
+              {{ profile().description || 'Institución educativa comprometida con la excelencia académica, la formación integral y la inserción laboral de sus estudiantes a través de convalidaciones oficiales y convenios con empresas líderes en el país.' }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÉTRICAS Y RESUMEN INSTITUCIONAL EN VIVO -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-black text-gray-900">{{ stats().totalStudents }}</p>
+            <p class="text-xs font-semibold text-gray-500">Alumnos Egresados/Graduados</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-black text-gray-900">{{ stats().pendingVerifications }}</p>
+            <p class="text-xs font-semibold text-gray-500">Solicitudes Pendientes</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-[#10B981]/10 text-[#10B981] flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-black text-gray-900">{{ stats().endorsedCompanies }}</p>
+            <p class="text-xs font-semibold text-gray-500">Empresas Avaladas</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-2xl font-black text-gray-900">{{ stats().activeAgreements }}</p>
+            <p class="text-xs font-semibold text-gray-500">Convenios de Prácticas</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑAS DE GESTIÓN INSTITUCIONAL -->
+      <div class="flex items-center gap-2 border-b border-gray-200 mb-6 overflow-x-auto pb-1">
+        <button
+          type="button"
+          (click)="activeTab.set('overview')"
+          [class.border-[#274DEA]]="activeTab() === 'overview'"
+          [class.text-[#274DEA]]="activeTab() === 'overview'"
+          [class.font-bold]="activeTab() === 'overview'"
+          class="px-4 py-3 border-b-2 border-transparent text-sm text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap cursor-pointer"
+        >
+          Resumen y Servicios
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('students')"
+          [class.border-[#274DEA]]="activeTab() === 'students'"
+          [class.text-[#274DEA]]="activeTab() === 'students'"
+          [class.font-bold]="activeTab() === 'students'"
+          class="px-4 py-3 border-b-2 border-transparent text-sm text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap flex items-center gap-2 cursor-pointer"
+        >
+          <span>Alumnos por Acreditar</span>
+          @if (pendingStudents().length > 0) {
+            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
+              {{ pendingStudents().length }}
+            </span>
+          }
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('skills')"
+          [class.border-[#274DEA]]="activeTab() === 'skills'"
+          [class.text-[#274DEA]]="activeTab() === 'skills'"
+          [class.font-bold]="activeTab() === 'skills'"
+          class="px-4 py-3 border-b-2 border-transparent text-sm text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap flex items-center gap-2 cursor-pointer"
+        >
+          <span>Validación de Habilidades</span>
+          @if (pendingValidations().length > 0) {
+            <span class="px-2 py-0.5 rounded-full bg-blue-100 text-[#274DEA] text-xs font-bold">
+              {{ pendingValidations().length }}
+            </span>
+          }
+        </button>
+
+        <button
+          type="button"
+          (click)="activeTab.set('agreements')"
+          [class.border-[#274DEA]]="activeTab() === 'agreements'"
+          [class.text-[#274DEA]]="activeTab() === 'agreements'"
+          [class.font-bold]="activeTab() === 'agreements'"
+          class="px-4 py-3 border-b-2 border-transparent text-sm text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap cursor-pointer"
+        >
+          Convenios Corporativos
+        </button>
+      </div>
+
+      <!-- TAB 1: RESUMEN Y SERVICIOS -->
+      @if (activeTab() === 'overview') {
+        <div class="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs">
+          <h3 class="text-lg font-bold text-gray-900 mb-2">Plataforma de Acreditación Interuniversitaria</h3>
+          <p class="text-sm text-gray-600 mb-6 max-w-3xl">
+            Como institución aliada registrada en Unext, tu dominio oficial permite que los estudiantes certifiquen su matrícula académica y que los reclutadores validen convenios de prácticas preprofesionales con respaldo institucional.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 rounded-2xl bg-gray-50 border border-gray-200/60">
+              <span class="inline-block p-2 rounded-xl bg-[#274DEA]/10 text-[#274DEA] mb-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </span>
+              <h4 class="text-sm font-bold text-gray-900">Validación de Alumnos</h4>
+              <p class="text-xs text-gray-500 mt-1">
+                Verifica que los postulantes pertenezcan a tu institución mediante correo institucional y código de estudiante.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-gray-50 border border-gray-200/60">
+              <span class="inline-block p-2 rounded-xl bg-[#10B981]/10 text-[#10B981] mb-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+              </span>
+              <h4 class="text-sm font-bold text-gray-900">Insignias de Confianza</h4>
+              <p class="text-xs text-gray-500 mt-1">
+                Otorga sellos de aval institucional a las empresas con convenios activos para dar seguridad a tus alumnos.
+              </p>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-gray-50 border border-gray-200/60">
+              <span class="inline-block p-2 rounded-xl bg-[#8B5CF6]/10 text-[#8B5CF6] mb-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+              </span>
+              <h4 class="text-sm font-bold text-gray-900">Analítica de Empleabilidad</h4>
+              <p class="text-xs text-gray-500 mt-1">
+                Monitorea en tiempo real la tasa de contratación y demanda laboral agrupada por carrera profesional.
+              </p>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- TAB 2: ALUMNOS POR ACREDITAR -->
+      @if (activeTab() === 'students') {
+        <div class="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Solicitudes de Vinculación Académica</h3>
+              <p class="text-xs text-gray-500 mt-0.5">Postulantes que han solicitado asociar su perfil a tu institución</p>
+            </div>
+            <button
+              type="button"
+              (click)="loadPendingStudents()"
+              class="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-colors"
+            >
+              Actualizar lista
+            </button>
+          </div>
+
+          @if (pendingStudents().length === 0) {
+            <div class="py-12 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-gray-100 text-gray-400 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-gray-900">No hay solicitudes pendientes</p>
+              <p class="text-xs text-gray-500 mt-1">Cuando los estudiantes ingresen con su correo institucional, aparecerán aquí para tu revisión.</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (st of pendingStudents(); track st.postulantId) {
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-200/80 gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center font-bold text-sm shrink-0">
+                      {{ (st.firstName?.charAt(0) || '') + (st.lastName?.charAt(0) || '') || 'AL' }}
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-bold text-gray-900">{{ st.firstName }} {{ st.lastName }}</h4>
+                      <p class="text-xs text-gray-500">{{ st.email }}</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 self-end sm:self-center">
+                    <button
+                      type="button"
+                      (click)="verifyStudent(st.postulantId, 'APPROVED')"
+                      class="px-3 py-1.5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                    >
+                      Aprobar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="verifyStudent(st.postulantId, 'REJECTED')"
+                      class="px-3 py-1.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- TAB 3: VALIDACIÓN DE HABILIDADES TÉCNICAS -->
+      @if (activeTab() === 'skills') {
+        <div class="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Acreditación de Habilidades Técnicas</h3>
+              <p class="text-xs text-gray-500 mt-0.5">Estudiantes que han adjuntado evidencias académicas para validar sus competencias</p>
+            </div>
+            <button
+              type="button"
+              (click)="loadPendingValidations()"
+              class="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-colors"
+            >
+              Actualizar lista
+            </button>
+          </div>
+
+          @if (pendingValidations().length === 0) {
+            <div class="py-12 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-gray-100 text-gray-400 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-gray-900">No hay validaciones pendientes</p>
+              <p class="text-xs text-gray-500 mt-1">Los estudiantes validados podrán enviar proyectos para aval institucional.</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (v of pendingValidations(); track v.validationId) {
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-200/80 gap-3">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-1 rounded-md bg-[#274DEA]/10 text-[#274DEA] text-xs font-bold">
+                        {{ v.skillName }}
+                      </span>
+                      <h4 class="text-sm font-bold text-gray-900">{{ v.studentName }}</h4>
+                    </div>
+                    @if (v.evidenceUrl) {
+                      <a [href]="v.evidenceUrl" target="_blank" class="text-xs text-[#274DEA] hover:underline mt-1 inline-block">
+                        Ver evidencia adjunta ↗
+                      </a>
+                    }
+                  </div>
+
+                  <div class="flex items-center gap-2 self-end sm:self-center">
+                    <button
+                      type="button"
+                      (click)="verifySkill(v.validationId, 'APPROVED')"
+                      class="px-3 py-1.5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                    >
+                      Avalar Habilidad
+                    </button>
+                    <button
+                      type="button"
+                      (click)="verifySkill(v.validationId, 'REJECTED')"
+                      class="px-3 py-1.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- TAB 4: CONVENIOS CORPORATIVOS -->
+      @if (activeTab() === 'agreements') {
+        <div class="bg-white rounded-3xl border border-gray-200/80 p-6 sm:p-8 shadow-xs">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Convenios de Prácticas y Empleabilidad</h3>
+              <p class="text-xs text-gray-500 mt-0.5">Empresas con convenios marco o acuerdos de pasantías con tu institución</p>
+            </div>
+            <button
+              type="button"
+              (click)="loadAgreements()"
+              class="px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 transition-colors"
+            >
+              Actualizar convenios
+            </button>
+          </div>
+
+          @if (agreements().length === 0) {
+            <div class="py-12 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-gray-100 text-gray-400 mx-auto flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-gray-900">Aún no hay convenios registrados</p>
+              <p class="text-xs text-gray-500 mt-1">Los convenios corporativos suscritos con empresas en Unext se mostrarán en esta sección.</p>
+            </div>
+          } @else {
+            <div class="space-y-3">
+              @for (ag of agreements(); track ag.id) {
+                <div class="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-bold text-gray-900">{{ ag.companyName || 'Empresa Aliada' }}</h4>
+                    <p class="text-xs text-gray-500">Estado: {{ ag.status }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </main>
+
+  <!-- MODAL DE ONBOARDING / EDICIÓN DEL PERFIL INSTITUCIONAL -->
+  @if (isEditModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-gray-100 overflow-y-auto max-h-[90vh]">
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-[#274DEA]/10 text-[#274DEA] flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">
+                {{ isFirstTimeOnboarding() ? 'Registrar Institución' : 'Editar Información Institucional' }}
+              </h3>
+              <p class="text-xs text-gray-500">
+                {{ isFirstTimeOnboarding() ? 'Completa los datos de tu universidad o instituto para empezar' : 'Mantén actualizados los datos oficiales de tu sede' }}
+              </p>
+            </div>
+          </div>
+
+          @if (!isFirstTimeOnboarding()) {
+            <button
+              type="button"
+              (click)="closeEditModal()"
+              class="text-gray-400 hover:text-gray-600 transition-colors p-1 cursor-pointer"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <div class="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold leading-relaxed">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <form (ngSubmit)="saveProfile()" class="space-y-4">
+          <!-- Nombre de la Institución -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              Nombre de la Institución (*)
+            </label>
+            <input
+              type="text"
+              name="institutionName"
+              [(ngModel)]="form.institutionName"
+              required
+              placeholder="Ej. Universidad Peruana de Ciencias Aplicadas"
+              class="w-full px-4 py-2.5 bg-gray-50 focus:bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-[#274DEA] focus:ring-2 focus:ring-[#274DEA]/15 transition-all"
+            />
+          </div>
+
+          <!-- Dominio Oficial -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              Dominio Web Oficial (*)
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 text-sm font-semibold pointer-events-none">
+                https://
+              </span>
+              <input
+                type="text"
+                name="domain"
+                [(ngModel)]="form.domain"
+                required
+                placeholder="pucp.edu.pe, ulima.edu.pe, etc."
+                class="w-full pl-20 pr-4 py-2.5 bg-gray-50 focus:bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-[#274DEA] focus:ring-2 focus:ring-[#274DEA]/15 transition-all"
+              />
+            </div>
+            <p class="text-[11px] text-gray-500 mt-1">
+              Debe coincidir con la terminación de los correos institucionales (ej: &#64;pucp.edu.pe). Debe ser un dominio único no registrado previamente.
+            </p>
+          </div>
+
+          <!-- Logotipo Institucional -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              Logotipo / Escudo Oficial
+            </label>
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-16 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
+                @if (form.logoUrl) {
+                  <img [src]="form.logoUrl" alt="Preview Logo" class="w-full h-full object-contain" />
+                } @else {
+                  <span class="text-xs font-bold text-gray-400">Sin logo</span>
+                }
+              </div>
+              <label class="cursor-pointer px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200/80 text-gray-700 text-xs font-semibold transition-colors">
+                Subir imagen
+                <input type="file" accept="image/*" (change)="onLogoSelected($event)" class="hidden" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Descripción / Reseña -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              Descripción Institucional (Opcional)
+            </label>
+            <textarea
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Breve reseña sobre las carreras profesionales, enfoque de investigación y convenios..."
+              class="w-full px-4 py-2.5 bg-gray-50 focus:bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-[#274DEA] focus:ring-2 focus:ring-[#274DEA]/15 transition-all resize-none"
+            ></textarea>
+          </div>
+
+          <div class="pt-3 flex items-center justify-end gap-3">
+            @if (!isFirstTimeOnboarding()) {
+              <button
+                type="button"
+                (click)="closeEditModal()"
+                class="px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+            }
+
+            <button
+              type="submit"
+              [disabled]="isSaving()"
+              class="px-6 py-2.5 rounded-xl bg-[#274DEA] hover:bg-[#1E3BB8] disabled:opacity-60 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            >
+              @if (isSaving()) {
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Guardando...</span>
+              } @else {
+                <span>{{ isFirstTimeOnboarding() ? 'Crear perfil institucional' : 'Guardar cambios' }}</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- MODAL DE VERIFICACIÓN OTP INSTITUCIONAL (POST /api/profiles/organization/verify) -->
+  @if (isOtpModalOpen()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-xs">
+      <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-[#10B981]/10 text-[#10B981] flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-gray-900">Validar Dominio Institucional</h3>
+              <p class="text-xs text-gray-500">Paso 2: Código de acreditación oficial</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="isOtpModalOpen.set(false)"
+            class="text-gray-400 hover:text-gray-600 transition-colors p-1 cursor-pointer"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        @if (otpErrorMessage()) {
+          <div class="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold">
+            {{ otpErrorMessage() }}
+          </div>
+        }
+
+        <p class="text-xs text-gray-600 leading-relaxed mb-4">
+          Para activar la insignia de verificación oficial en <strong>{{ profile().name }}</strong>, ingresa el código de seguridad de 6 dígitos generado por el sistema.
+        </p>
+
+        @if (otpCode) {
+          <div class="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-between">
+            <span>Código de prueba generado por el backend:</span>
+            <span class="font-mono font-bold text-sm bg-white px-2.5 py-1 rounded-lg border border-emerald-300">
+              {{ otpCode }}
+            </span>
+          </div>
+        }
+
+        <form (ngSubmit)="submitVerifyOrganization()" class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+              Código de verificación (6 dígitos)
+            </label>
+            <input
+              type="text"
+              name="otpCodeInput"
+              [(ngModel)]="otpCode"
+              maxlength="6"
+              required
+              placeholder="000000"
+              class="w-full tracking-widest text-center font-mono font-bold text-xl px-4 py-3 bg-gray-50 focus:bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-[#10B981] focus:ring-2 focus:ring-[#10B981]/15 transition-all"
+            />
+          </div>
+
+          <div class="pt-2 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              (click)="isOtpModalOpen.set(false)"
+              class="px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Verificar más tarde
+            </button>
+
+            <button
+              type="submit"
+              [disabled]="isVerifyingOtp()"
+              class="px-6 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#059669] disabled:opacity-60 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            >
+              @if (isVerifyingOtp()) {
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>Validando...</span>
+              } @else {
+                <span>Acreditar Institución</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

@@ -10,6 +10,7 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { PostulantProfile } from './pages/profile/postulant/postulant-profile';
 import { PublicPosProfile } from './pages/profile/postulant/public-pos-profile';
 import { RecruiterProfile } from './pages/profile/recruiter/recruiter-profile';
+import { InstitutionProfile } from './pages/profile/institution/institution-profile';
 
 // Funcionalidades principales
 import { RecruiterJobs } from './pages/jobs/recruiter/recruiter-jobs';
@@ -27,6 +28,11 @@ export const routes: Routes = [
   // Perfil y Onboarding
   {
     path: 'profile/me',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionProfile
+  },
+  {
+    path: 'profile/me',
     canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
     component: RecruiterProfile
   },
@@ -35,6 +41,11 @@ export const routes: Routes = [
     component: PostulantProfile // Por defecto carga Postulante
   },
 
+  {
+    path: 'onboarding/complete-profile',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionProfile
+  },
   {
     path: 'onboarding/complete-profile',
     canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
