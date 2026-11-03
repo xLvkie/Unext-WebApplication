@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { 
+  AgreementCreateRequest,
+  AgreementResponse,
   ApplicationStatus, JobApplication, JobOffer, 
   JobOfferRequest, JobOfferUpdate, JobRecommendationResponse, 
   RecruiterApplicantFilters, RecruiterApplicationItem 
@@ -120,4 +122,15 @@ export class JobService {
       .get<string[]>(`${this.RECRUITER_URL}/skills/suggestions`, { params })
       .pipe(catchError(() => of([])));
   }
+
+  getMyRecruiterAgreements(): Observable<AgreementResponse[]> {
+    return this.http
+      .get<AgreementResponse[]>(`${this.RECRUITER_URL}/agreements`)
+      .pipe(catchError(() => of([])));
+  }
+
+  createRecruiterAgreement(payload: AgreementCreateRequest): Observable<AgreementResponse> {
+    return this.http.post<AgreementResponse>(`${this.RECRUITER_URL}/agreements`, payload);
+  }
 }
+

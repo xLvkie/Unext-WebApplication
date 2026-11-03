@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
 import { JobService } from '../../../core/services/job.service';
@@ -9,6 +9,9 @@ import { ProfileService } from '../../../core/services/profile.service';
 import { ConnectionService } from '../../../core/services/connection.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
+  AgreementCreateRequest,
+  AgreementResponse,
+  AgreementStatus,
   ApplicationStatus,
   ExperienceLevel,
   JobModality,
@@ -23,13 +26,14 @@ import {
 } from '../../../core/models/profile.model';
 import { readApiError } from '../../../core/utils/api-error';
 import { formatMoney, toDate } from '../../../core/utils/format';
+import { readFileAsDataUrl } from '../../../core/utils/file-media';
 import {
   applicationLabel,
   experienceLabel,
   modalityLabel
 } from '../../../core/utils/labels';
 
-export type RecruiterJobsTab = 'MY_JOBS' | 'MARKET_EXPLORER';
+export type RecruiterJobsTab = 'MY_JOBS' | 'AGREEMENTS' | 'MARKET_EXPLORER';
 
 @Component({
   selector: 'app-recruiter-jobs',
@@ -42,6 +46,7 @@ export class RecruiterJobs implements OnInit {
   private profileService = inject(ProfileService);
   private connectionService = inject(ConnectionService);
   private authService = inject(AuthService);
+  private route = inject(ActivatedRoute);
   readonly router = inject(Router);
 
   activeTab = signal<RecruiterJobsTab>('MY_JOBS');
@@ -55,12 +60,30 @@ export class RecruiterJobs implements OnInit {
   selectedJob = signal<JobOffer | null>(null);
   applicants = signal<RecruiterApplicationItem[]>([]);
 
-  // Controla qué postulación está expandida (cuando tiene valor, se ocultan las demás)
+  // Convenios emitidos por la empresa
+  myAgreements = signal<AgreementResponse[]>([]);
+  isAgreementModalOpen = signal(false);
+  isSavingAgreement = signal(false);
+  agreementFormError = signal<string | null>(null);
+  agreementFileName = signal<string>('');
+  agreementFileSize = signal<string>('');
+
+  agreementForm: AgreementCreateRequest = {
+    postulantId: '',
+    jobApplicationId: null,
+    title: '',
+    startDate: '',
+    endDate: '',
+    weeklyHours: 30,
+    documentUrl: '',
+    observations: ''
+  };
+
+  // Postulante expandido en vista detallada
   expandedApplicantId = signal<string | null>(null);
   expandedPostulantDetail = signal<PostulantProfileResponse | null>(null);
   isLoadingCandidateDetail = signal(false);
 
-  // Registro local de entrevista presencial realizada
   interviewCompletedMap = signal<Record<string, boolean>>({});
 
   applicantFilters: RecruiterApplicantFilters = {
@@ -117,21 +140,44 @@ export class RecruiterJobs implements OnInit {
     return list.filter((a) => a.status === filter);
   });
 
-  // Postulante actualmente expandido en vista detallada exclusiva
   expandedCandidate = computed<RecruiterApplicationItem | null>(() => {
     const id = this.expandedApplicantId();
     if (!id) return null;
     return this.applicants().find((a) => a.id === id) || null;
   });
 
-  // Habilidades destacadas (Top Skills) del postulante expandido
+  // Busca si la postulación actualmente expandida ya tiene un Convenio de Prácticas emitido
+  agreementForExpandedCandidate = computed<AgreementResponse | null>(() => {
+    const cand = this.expandedCandidate();
+    if (!cand) return null;
+    return (
+      this.myAgreements().find((ag) => ag.jobApplicationId === cand.id) || null
+    );
+  });
+
+  // Evalúa si la vacante actual es TRAINEE y el candidato es universitario verificado
+  canCreateAgreementForExpanded = computed<boolean>(() => {
+    const job = this.selectedJob();
+    const cand = this.expandedCandidate();
+    const detail = this.expandedPostulantDetail();
+    if (!job || !cand) return false;
+
+    const isTraineeJob = job.experienceLevel === 'TRAINEE';
+    const isVerifiedStudent = Boolean(
+      cand.isInstitutionVerified || detail?.isInstitutionVerified
+    );
+    const validStage =
+      cand.status === 'UNDER_REVIEW' || cand.status === 'ACCEPTED';
+
+    return isTraineeJob && isVerifiedStudent && validStage;
+  });
+
   expandedCandidateTopSkills = computed<StudentSkillResponse[]>(() => {
     const detail = this.expandedPostulantDetail();
     if (!detail || !detail.skills) return [];
     return detail.skills.filter((s) => Boolean(s.isTopSkill));
   });
 
-  // Todas las habilidades detalladas del postulante expandido (con validación académica)
   expandedCandidateAllSkills = computed<StudentSkillResponse[]>(() => {
     const detail = this.expandedPostulantDetail();
     if (detail && detail.skills && detail.skills.length > 0) {
@@ -164,12 +210,21 @@ export class RecruiterJobs implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
+
+    this.route.queryParamMap.subscribe((params) => {
+      const tabParam = params.get('tab');
+      if (tabParam === 'agreements') {
+        this.activeTab.set('AGREEMENTS');
+      }
+    });
+
     this.loadMyJobs();
+    this.loadMyAgreements();
     this.loadMarketJobs();
   }
 
   // =========================================================================
-  // 1. LISTAR Y SELECCIONAR MIS VACANTES
+  // 1. LISTAR Y SELECCIONAR MIS VACANTES + CONVENIOS
   // =========================================================================
   loadMyJobs(): void {
     this.isLoadingJobs.set(true);
@@ -193,6 +248,13 @@ export class RecruiterJobs implements OnInit {
     });
   }
 
+  loadMyAgreements(): void {
+    this.jobService.getMyRecruiterAgreements().subscribe({
+      next: (list) => this.myAgreements.set(list),
+      error: () => this.myAgreements.set([])
+    });
+  }
+
   selectJob(job: JobOffer | null): void {
     this.selectedJob.set(job);
     this.statusFilter.set('ALL');
@@ -205,7 +267,7 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // EXPANDIR / CERRAR VISTA DETALLADA EXCLUSIVA DE UNA POSTULACIÓN
+  // EXPANDIR / CERRAR VISTA DETALLADA DE UNA POSTULACIÓN
   // =========================================================================
   expandCandidate(candidate: RecruiterApplicationItem): void {
     this.expandedApplicantId.set(candidate.id);
@@ -228,9 +290,6 @@ export class RecruiterJobs implements OnInit {
     this.expandedPostulantDetail.set(null);
   }
 
-  // =========================================================================
-  // CONEXIÓN AUTOMÁTICA Y REDIRECCIÓN DIRECTA A MENSAJERÍA
-  // =========================================================================
   openChatWithCandidate(candidate: RecruiterApplicationItem): void {
     const targetUserId =
       candidate.postulantUserId || this.expandedPostulantDetail()?.userId;
@@ -241,14 +300,12 @@ export class RecruiterJobs implements OnInit {
     }
 
     this.isOpeningChat.set(true);
-    // Conectamos automáticamente con el postulante y redirigimos a /messages?con=<userId>
     this.connectionService.sendRequest(targetUserId).subscribe({
       next: () => {
         this.isOpeningChat.set(false);
         this.router.navigate(['/messages'], { queryParams: { con: targetUserId } });
       },
       error: () => {
-        // Incluso si ya estaban conectados, redirigimos directo a su conversación
         this.isOpeningChat.set(false);
         this.router.navigate(['/messages'], { queryParams: { con: targetUserId } });
       }
@@ -256,7 +313,131 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // 2. CREAR Y EDITAR VACANTES (MODAL UNIFICADO)
+  // CREACIÓN DE CONVENIO DE PRÁCTICAS DESDE LA POSTULACIÓN
+  // =========================================================================
+  openAgreementModal(candidate: RecruiterApplicationItem): void {
+    const job = this.selectedJob();
+    if (!job) return;
+
+    if (job.experienceLevel !== 'TRAINEE') {
+      this.showToast(
+        'Solo se pueden generar convenios de prácticas para vacantes de nivel Practicante (TRAINEE).',
+        'warning'
+      );
+      return;
+    }
+
+    if (!candidate.isInstitutionVerified && !this.expandedPostulantDetail()?.isInstitutionVerified) {
+      this.showToast(
+        'El postulante debe estar verificado académicamente por su universidad para emitir un convenio.',
+        'warning'
+      );
+      return;
+    }
+
+    const today = new Date();
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(today.getMonth() + 6);
+
+    const formatIso = (d: Date) => d.toISOString().split('T')[0];
+
+    this.agreementFormError.set(null);
+    this.agreementFileName.set('');
+    this.agreementFileSize.set('');
+    this.agreementForm = {
+      postulantId: candidate.postulantProfileId,
+      jobApplicationId: candidate.id,
+      title: `Convenio de Prácticas Preprofesionales - ${job.title} (${candidate.firstName} ${candidate.lastName})`,
+      startDate: formatIso(today),
+      endDate: formatIso(sixMonthsLater),
+      weeklyHours: 30,
+      documentUrl: '',
+      observations: `Convenio generado para la vacante ${job.title}.`
+    };
+
+    this.isAgreementModalOpen.set(true);
+  }
+
+  async onAgreementDocumentSelected(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    if (file.size > 6 * 1024 * 1024) {
+      this.agreementFormError.set('El documento del convenio no debe superar los 6 MB.');
+      return;
+    }
+
+    try {
+      const result = await readFileAsDataUrl(file);
+      this.agreementForm.documentUrl = result.dataUrl;
+      this.agreementFileName.set(result.fileName);
+      this.agreementFileSize.set(result.fileSizeLabel);
+      this.agreementFormError.set(null);
+    } catch {
+      this.agreementFormError.set('No se pudo procesar el archivo seleccionado.');
+    }
+  }
+
+  submitCreateAgreement(): void {
+    this.agreementFormError.set(null);
+
+    if (!this.agreementForm.title.trim()) {
+      this.agreementFormError.set('El título del convenio es obligatorio.');
+      return;
+    }
+    if (!this.agreementForm.startDate || !this.agreementForm.endDate) {
+      this.agreementFormError.set('Las fechas de inicio y fin son obligatorias.');
+      return;
+    }
+    if (this.agreementForm.startDate >= this.agreementForm.endDate) {
+      this.agreementFormError.set('La fecha de fin debe ser posterior a la fecha de inicio.');
+      return;
+    }
+    if (!this.agreementForm.weeklyHours || this.agreementForm.weeklyHours < 1 || this.agreementForm.weeklyHours > 48) {
+      this.agreementFormError.set('Ingresa una cantidad válida de horas semanales (entre 1 y 48 h).');
+      return;
+    }
+    if (!this.agreementForm.documentUrl.trim()) {
+      this.agreementFormError.set('Debes adjuntar el documento PDF/Word del convenio.');
+      return;
+    }
+
+    this.isSavingAgreement.set(true);
+    this.jobService.createRecruiterAgreement(this.agreementForm).subscribe({
+      next: (created) => {
+        this.isSavingAgreement.set(false);
+        this.isAgreementModalOpen.set(false);
+        this.myAgreements.update((list) => [created, ...list]);
+        this.showToast(
+          '📜 ¡Convenio de prácticas registrado y enviado a la universidad del alumno para su firma!',
+          'success'
+        );
+      },
+      error: (err) => {
+        this.isSavingAgreement.set(false);
+        this.agreementFormError.set(
+          readApiError(err, 'No se pudo registrar el convenio de prácticas.')
+        );
+      }
+    });
+  }
+
+  downloadAgreementDocument(agreement: AgreementResponse): void {
+    if (!agreement.documentUrl) return;
+    const link = document.createElement('a');
+    link.href = agreement.documentUrl;
+    link.download = `${agreement.title.replace(/\s+/g, '_')}.pdf`;
+    link.click();
+  }
+
+  agreementStatusBadge(status: AgreementStatus): string {
+    if (status === 'APPROVED') return '✓ Aprobado por Universidad';
+    if (status === 'REJECTED') return '✕ Rechazado por Universidad';
+    return '⏳ Pendiente de firma institucional';
+  }
+
+  // =========================================================================
+  // 2. CREAR Y EDITAR VACANTES
   // =========================================================================
   openCreateJobModal(): void {
     this.editingJobId.set(null);
@@ -340,7 +521,7 @@ export class RecruiterJobs implements OnInit {
     }
 
     if (this.jobForm.requiredSkills.length === 0) {
-      this.jobFormError.set('Agrega al menos una habilidad requerida para el cálculo de compatibilidad IA.');
+      this.jobFormError.set('Agrega al menos una habilidad requerida.');
       return;
     }
 
@@ -381,7 +562,7 @@ export class RecruiterJobs implements OnInit {
         this.showToast(
           idToUpdate
             ? 'Vacante actualizada. Se ha notificado automáticamente a los postulantes en proceso.'
-            : '¡Nueva vacante publicada! El motor de IA notificó a los candidatos compatibles.',
+            : '¡Nueva vacante publicada exitosamente!',
           'success'
         );
       },
@@ -461,7 +642,6 @@ export class RecruiterJobs implements OnInit {
           candidate.postulantUserId || this.expandedPostulantDetail()?.userId;
 
         if (newStatus === 'UNDER_REVIEW') {
-          // Al pasar a Evaluación y habilitar el chat, también creamos el vínculo en Mi Red automáticamente
           if (targetUserId) {
             this.connectionService.sendRequest(targetUserId).subscribe({ error: () => {} });
           }
@@ -538,6 +718,9 @@ export class RecruiterJobs implements OnInit {
     this.activeTab.set(tab);
     if (tab === 'MARKET_EXPLORER' && this.marketJobs().length === 0) {
       this.loadMarketJobs();
+    }
+    if (tab === 'AGREEMENTS') {
+      this.loadMyAgreements();
     }
   }
 

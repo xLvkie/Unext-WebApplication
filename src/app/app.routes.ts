@@ -61,6 +61,7 @@ export const routes: Routes = [
 
   // Vacantes
   { path: 'recruiter/jobs', component: RecruiterJobs },
+  { path: 'agreements', redirectTo: 'recruiter/jobs?tab=agreements', pathMatch: 'full' },
 
   {
     path: 'jobs',

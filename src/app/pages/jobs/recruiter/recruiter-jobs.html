@@ -45,6 +45,16 @@
           >
             🌐 Explorar vacantes de otras empresas
           </button>
+          <button
+            type="button"
+            (click)="switchToTab('AGREEMENTS')"
+            [ngClass]="activeTab() === 'AGREEMENTS'
+              ? 'bg-[#059669] text-white font-bold shadow-2xs'
+              : 'text-gray-600 hover:text-gray-900 font-semibold'"
+            class="px-4 py-1.5 rounded-full text-xs transition"
+          >
+            📜 Convenios Emitidos ({{ myAgreements().length }})
+          </button>
         </div>
 
         <button
@@ -599,8 +609,82 @@
                   </div>
 
                   <!-- ===================================================== -->
-                  <!-- 5. CARD DE GESTIÓN DE ETAPAS (IDÉNTICA A TU CAPTURA)  -->
+                  <!-- SECCIÓN DE CONVENIO DE PRÁCTICAS (SOLO VACANTES TRAINEE) -->
                   <!-- ===================================================== -->
+                  @if (agreementForExpandedCandidate(); as ag) {
+                    <!-- Si ya existe un convenio para esta postulación, mostramos su estado en vivo -->
+                    <div
+                      [ngClass]="{
+                        'bg-[#ECFDF5] border-[#059669]/40': ag.status === 'APPROVED',
+                        'bg-[#FEF3C7]/60 border-[#F59E0B]/40': ag.status === 'PENDING',
+                        'bg-[#EF4444]/10 border-[#EF4444]/30': ag.status === 'REJECTED'
+                      }"
+                      class="p-4 rounded-2xl border space-y-2"
+                    >
+                      <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                          <span class="text-base">📜</span>
+                          <div>
+                            <h5 class="text-xs font-extrabold text-gray-900">{{ ag.title }}</h5>
+                            <p class="text-[11px] text-gray-600">
+                              Vigencia: {{ ag.startDate }} al {{ ag.endDate }} · {{ ag.weeklyHours }} horas/semana
+                            </p>
+                          </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                          <span
+                            [ngClass]="{
+                              'bg-[#059669] text-white': ag.status === 'APPROVED',
+                              'bg-[#F59E0B] text-white': ag.status === 'PENDING',
+                              'bg-[#EF4444] text-white': ag.status === 'REJECTED'
+                            }"
+                            class="px-3 py-1 rounded-full text-[11px] font-extrabold"
+                          >
+                            {{ agreementStatusBadge(ag.status) }}
+                          </span>
+
+                          <button
+                            type="button"
+                            (click)="downloadAgreementDocument(ag)"
+                            class="px-3 py-1 rounded-lg bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-bold"
+                          >
+                            ⬇ Documento
+                          </button>
+                        </div>
+                      </div>
+
+                      @if (ag.observations) {
+                        <p class="text-xs text-gray-700 bg-white/80 p-2.5 rounded-xl border border-gray-200/60">
+                          <strong>Observaciones:</strong> {{ ag.observations }}
+                        </p>
+                      }
+                    </div>
+                  } @else if (canCreateAgreementForExpanded()) {
+                    <!-- Si aún no tiene convenio y la vacante es TRAINEE con alumno verificado -->
+                    <div class="p-4 rounded-2xl bg-[#ECFDF5]/60 border border-[#059669]/30 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p class="text-xs font-extrabold text-[#059669]">
+                          📜 Candidato elegible para Convenio de Prácticas Preprofesionales
+                        </p>
+                        <p class="text-[11px] text-gray-700 mt-0.5">
+                          Esta vacante es de nivel Practicante (TRAINEE) y el alumno está acreditado oficialmente por su universidad.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        (click)="openAgreementModal(cand)"
+                        class="px-4 py-2 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold shadow-xs transition shrink-0"
+                      >
+                        + Emitir Convenio de Prácticas
+                      </button>
+                    </div>
+                  }
+
+                  <!-- ============================ -->
+                  <!-- 5. CARD DE GESTIÓN DE ETAPAS -->
+                  <!-- ============================ -->
                   <div class="p-4 rounded-2xl bg-[#F8FAFC] border border-gray-200/90 space-y-3.5">
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
                       <!-- Etapa 1 -->
@@ -728,12 +812,12 @@
                             🎉 Candidato Contratado
                           </span>
                           @if (currentJob.experienceLevel === 'TRAINEE' && (cand.isInstitutionVerified || expandedPostulantDetail()?.isInstitutionVerified)) {
-                            <a
-                              routerLink="/agreements"
-                              class="px-4 py-2 rounded-xl bg-[#059669] text-white text-xs font-bold hover:bg-[#047857]"
+                            <button
+                              type="button" *ngIf="!agreementForExpandedCandidate()"
+                              (click)="openAgreementModal(cand)" class="px-4 py-2 rounded-xl bg-[#059669] text-white text-xs font-bold hover:bg-[#047857]"
                             >
                               📜 Generar Convenio de Prácticas
-                            </a>
+                            </button>
                           }
                         }
 
@@ -1097,6 +1181,220 @@
             class="px-6 py-2 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-bold text-xs shadow-sm"
           >
             {{ isSavingJob() ? 'Guardando...' : (editingJobId() ? 'Guardar cambios y notificar' : 'Publicar vacante ahora') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- =================================================================== -->
+    <!-- PESTAÑA 3: HISTORIAL DE CONVENIOS EMITIDOS A UNIVERSIDADES          -->
+    <!-- =================================================================== -->
+    @if (activeTab() === 'AGREEMENTS') {
+      <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-4">
+          <div>
+            <h2 class="text-[18px] font-bold text-gray-900">
+              Convenios de Prácticas Emitidos ({{ myAgreements().length }})
+            </h2>
+            <p class="text-[12px] text-[#6B7280]">
+              Seguimiento de los acuerdos enviados a las instituciones educativas de tus practicantes seleccionados.
+            </p>
+          </div>
+          <button
+            type="button"
+            (click)="switchToTab('MY_JOBS')"
+            class="px-4 py-1.5 rounded-full bg-[#274DEA]/10 text-[#274DEA] text-xs font-bold hover:bg-[#274DEA] hover:text-white transition"
+          >
+            ← Ir a Mis Vacantes para emitir un nuevo convenio
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          @for (ag of myAgreements(); track ag.id) {
+            <article class="p-4 rounded-2xl border border-gray-200 bg-[#F8FAFC]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-sm font-bold text-gray-900">{{ ag.title }}</span>
+                  <span
+                    [ngClass]="{
+                      'bg-[#ECFDF5] text-[#059669] border border-[#059669]/30': ag.status === 'APPROVED',
+                      'bg-[#FEF3C7] text-[#B45309] border border-[#F59E0B]/30': ag.status === 'PENDING',
+                      'bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30': ag.status === 'REJECTED'
+                    }"
+                    class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold"
+                  >
+                    {{ agreementStatusBadge(ag.status) }}
+                  </span>
+                </div>
+                <p class="text-xs text-gray-700">
+                  Practicante: <strong>{{ ag.studentName }}</strong> · Horas semanales: <strong>{{ ag.weeklyHours }} h/sem</strong>
+                </p>
+                <p class="text-[11px] text-[#6B7280]">
+                  Periodo: {{ ag.startDate }} al {{ ag.endDate }}
+                </p>
+                @if (ag.observations) {
+                  <p class="text-xs text-gray-600 italic mt-1">
+                    "{{ ag.observations }}"
+                  </p>
+                }
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  (click)="downloadAgreementDocument(ag)"
+                  class="px-4 py-2 rounded-xl border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
+                >
+                  ⬇ Descargar documento
+                </button>
+              </div>
+            </article>
+          } @empty {
+            <div class="p-10 text-center border border-dashed border-gray-200 rounded-2xl space-y-2">
+              <p class="text-sm font-bold text-gray-800">Aún no has emitido convenios de prácticas</p>
+              <p class="text-xs text-[#6B7280] max-w-md mx-auto">
+                Selecciona un postulante verificado dentro de cualquiera de tus vacantes de nivel Practicante (TRAINEE) y haz clic en "Emitir Convenio de Prácticas".
+              </p>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+<!-- ========================================================================= -->
+<!-- MODAL PARA GENERAR CONVENIO DE PRÁCTICAS (DENTRO DE MIS VACANTES)         -->
+<!-- ========================================================================= -->
+@if (isAgreementModalOpen()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-xl w-full shadow-2xl border border-gray-200 overflow-hidden my-8 animate-fade-in">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-[#ECFDF5]/60">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xl">📜</span>
+          <div>
+            <h2 class="text-[18px] font-bold text-gray-900">
+              Generar Convenio de Prácticas Universitarias
+            </h2>
+            <p class="text-[12px] text-[#059669] font-semibold">
+              Se enviará automáticamente a la universidad del estudiante para su revisión y aprobación.
+            </p>
+          </div>
+        </div>
+        <button type="button" (click)="isAgreementModalOpen.set(false)" class="p-2 rounded-full text-gray-500 hover:bg-gray-100">✕</button>
+      </div>
+
+      <form (ngSubmit)="submitCreateAgreement()" class="p-6 space-y-4">
+        @if (agreementFormError()) {
+          <div class="p-3 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+            {{ agreementFormError() }}
+          </div>
+        }
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Título del convenio *</label>
+          <input
+            type="text"
+            name="agreementTitle"
+            [(ngModel)]="agreementForm.title"
+            required
+            class="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-[13px]"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Fecha de inicio *</label>
+            <input
+              type="date"
+              name="startDate"
+              [(ngModel)]="agreementForm.startDate"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Fecha de fin *</label>
+            <input
+              type="date"
+              name="endDate"
+              [(ngModel)]="agreementForm.endDate"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">Horas semanales *</label>
+            <input
+              type="number"
+              name="weeklyHours"
+              min="1"
+              max="30"
+              [(ngModel)]="agreementForm.weeklyHours"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-xl text-[13px]"
+            />
+          </div>
+        </div>
+
+        <!-- Subida de Archivo Real del Convenio (PDF / Word) -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">
+            Documento del Convenio (PDF o Word) *
+          </label>
+          <div class="p-4 rounded-xl border-2 border-dashed border-gray-300 bg-[#F8FAFC] flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              @if (agreementFileName()) {
+                <p class="text-xs font-bold text-[#059669] truncate">
+                  ✓ {{ agreementFileName() }} ({{ agreementFileSize() }})
+                </p>
+              } @else {
+                <p class="text-xs font-semibold text-gray-700">
+                  Selecciona el archivo formal del convenio desde tu equipo
+                </p>
+                <p class="text-[11px] text-[#6B7280]">Formatos soportados: .pdf, .doc, .docx (Máx. 6 MB)</p>
+              }
+            </div>
+
+            <label class="px-4 py-2 rounded-xl bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold cursor-pointer shrink-0 transition">
+              Subir archivo
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,application/pdf"
+                class="hidden"
+                (change)="onAgreementDocumentSelected($event)"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Observaciones o notas para la universidad (Opcional)</label>
+          <textarea
+            name="observations"
+            [(ngModel)]="agreementForm.observations"
+            rows="2"
+            placeholder="Detalles sobre el plan de formación, tutor asignado o modalidad..."
+            class="w-full px-3.5 py-2 border border-gray-300 rounded-xl text-[13px] resize-none"
+          ></textarea>
+        </div>
+
+        <div class="pt-3 border-t border-gray-200 flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            (click)="isAgreementModalOpen.set(false)"
+            class="px-4 py-2 rounded-full border border-gray-300 text-gray-700 font-semibold text-xs"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            [disabled]="isSavingAgreement()"
+            class="px-5 py-2 rounded-full bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs shadow-sm"
+          >
+            {{ isSavingAgreement() ? 'Enviando convenio...' : '📜 Registrar y enviar a la Universidad' }}
           </button>
         </div>
       </form>
