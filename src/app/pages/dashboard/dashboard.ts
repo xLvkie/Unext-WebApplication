@@ -17,6 +17,7 @@ import {
   JobRecommendationResponse
 } from '../../core/models/job.model';
 import {
+  InstitutionProfileResponse,
   PostulantProfileResponse,
   RecruiterProfileResponse
 } from '../../core/models/profile.model';
@@ -38,6 +39,22 @@ export interface RecruiterCandidateSummary {
   lastName: string;
   career?: string | null;
   isInstitutionVerified?: boolean;
+}
+
+export interface PendingStudentItem {
+  postulantId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  isVerified: boolean;
+}
+
+export interface PendingValidationItem {
+  validationId: string;
+  studentName: string;
+  skillName: string;
+  evidenceUrl?: string;
+  status: string;
 }
 
 export interface AiJobBlueprint {
@@ -73,6 +90,23 @@ export class Dashboard implements OnInit {
   recruiterJobs = signal<JobOffer[]>([]);
   recruiterCandidatesCount = signal<number>(0);
   verifiedTalentPool = signal<RecruiterCandidateSummary[]>([]);
+
+  // Estados exclusivos cuando el usuario logueado es INSTITUTION
+  institutionData = signal<InstitutionProfileResponse | null>(null);
+  institutionPendingStudents = signal<PendingStudentItem[]>([]);
+  institutionPendingValidations = signal<PendingValidationItem[]>([]);
+  institutionAgreements = signal<any[]>([]);
+  institutionStats = signal<{
+    totalVerifiedStudents: number;
+    totalActiveAgreements: number;
+    totalEndorsedCompanies: number;
+    employabilityRate: number;
+  }>({
+    totalVerifiedStudents: 0,
+    totalActiveAgreements: 0,
+    totalEndorsedCompanies: 0,
+    employabilityRate: 0
+  });
 
   isLoadingFeed = signal(false);
   isProfileIncomplete = signal(false);
@@ -249,6 +283,14 @@ export class Dashboard implements OnInit {
     } else if (role === 'INSTITUTION') {
       this.profileService.getMyInstitutionProfile().subscribe({
         next: (data) => {
+          const isVerified = Boolean(
+            data.isVerified ||
+            (data.id && localStorage.getItem(`unext_inst_verified_${data.id}`) === 'true') ||
+            (data.userId && localStorage.getItem(`unext_inst_verified_${data.userId}`) === 'true') ||
+            localStorage.getItem('unext_inst_verified_current') === 'true'
+          );
+
+          this.institutionData.set({ ...data, isVerified });
           this.profile.set({
             id: data.id || '',
             userId: data.userId || '',
@@ -256,14 +298,93 @@ export class Dashboard implements OnInit {
             lastName: '',
             avatarUrl: data.logoUrl || null,
             headline: data.domain ? `Dominio oficial: ${data.domain}` : 'Institución Educativa',
-            isInstitutionVerified: Boolean(data.isVerified),
-            institutionName: 'Institución Oficial',
+            isInstitutionVerified: isVerified,
+            institutionName: data.name || 'Institución Oficial',
             skills: []
           });
         },
         error: () => this.isProfileIncomplete.set(true)
       });
+
+      this.loadInstitutionDashboardWidgets();
     }
+  }
+
+  private loadInstitutionDashboardWidgets(): void {
+    // 1. Alumnos por Acreditar
+    this.http.get<PendingStudentItem[]>(`${environment.apiUrl}/institution/students/pending`).subscribe({
+      next: (list) => this.institutionPendingStudents.set(list || []),
+      error: () => this.institutionPendingStudents.set([])
+    });
+
+    // 2. Validar Habilidades
+    this.http.get<PendingValidationItem[]>(`${environment.apiUrl}/institution/validations/pending`).subscribe({
+      next: (list) => this.institutionPendingValidations.set(list || []),
+      error: () => this.institutionPendingValidations.set([])
+    });
+
+    // 3. Convenios Corporativos
+    this.http.get<any[]>(`${environment.apiUrl}/institution/agreements`).subscribe({
+      next: (list) => this.institutionAgreements.set(list || []),
+      error: () => this.institutionAgreements.set([])
+    });
+
+    // 4. Estadísticas
+    this.http.get<any>(`${environment.apiUrl}/institution/dashboard/stats`).subscribe({
+      next: (s) => {
+        if (s) {
+          this.institutionStats.set({
+            totalVerifiedStudents: s.totalVerifiedStudents ?? s.totalStudents ?? 0,
+            totalActiveAgreements: s.totalActiveAgreements ?? 0,
+            totalEndorsedCompanies: s.totalEndorsedCompanies ?? 0,
+            employabilityRate: s.employabilityRate ?? 0
+          });
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  verifyStudentFromDashboard(postulantId: string, status: 'APPROVED' | 'REJECTED'): void {
+    this.http
+      .patch<string>(
+        `${environment.apiUrl}/institution/students/${postulantId}/verify?status=${status}`,
+        {},
+        { responseType: 'text' as 'json' }
+      )
+      .subscribe({
+        next: () => {
+          this.showToast(
+            status === 'APPROVED' ? 'Alumno acreditado con éxito.' : 'Solicitud académica rechazada.',
+            status === 'APPROVED' ? 'success' : 'info'
+          );
+          this.loadInstitutionDashboardWidgets();
+        },
+        error: (err) => {
+          this.showToast(readApiError(err, 'No se pudo actualizar el estado del alumno.'), 'error');
+        }
+      });
+  }
+
+  verifySkillFromDashboard(validationId: string, status: 'APPROVED' | 'REJECTED'): void {
+    this.http
+      .patch<string>(
+        `${environment.apiUrl}/institution/validations/${validationId}/status`,
+        { status },
+        { responseType: 'text' as 'json' }
+      )
+      .subscribe({
+        next: () => {
+          this.showToast(
+            status === 'APPROVED' ? 'Habilidad técnica avalada oficialmente.' : 'Validación rechazada.',
+            status === 'APPROVED' ? 'success' : 'info'
+          );
+          this.loadInstitutionDashboardWidgets();
+        },
+        error: (err) => {
+          this.showToast(readApiError(err, 'No se pudo convalidar la habilidad técnica.'), 'error');
+        }
+      });
   }
 
   private loadRecruiterDashboardWidgets(): void {
@@ -306,7 +427,10 @@ export class Dashboard implements OnInit {
   // CONTENEDORES VISUALES DE IA (Lógica pendiente de implementar más adelante)
   // =========================================================================
   handleHeaderIntelligentAction(): void {
-    if (this.currentRole() === 'RECRUITER') {
+    if (this.currentRole() === 'INSTITUTION') {
+      // Función inteligente IA para institución (próximamente) - no hace nada por ahora
+      return;
+    } else if (this.currentRole() === 'RECRUITER') {
       this.openRecruiterJobOptimizer();
     } else {
       this.openAiAnalysis(this.recommendations()[0]);

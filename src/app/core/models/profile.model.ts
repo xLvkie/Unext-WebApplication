@@ -110,3 +110,28 @@ export interface RecruiterProfileRequest {
 }
 
 export type RecruiterProfileUpdate = Partial<Omit<RecruiterProfileRequest, 'ruc'>>;
+
+/* =============================
+   INSTITUTION PROFILE MODELS
+   ============================= */
+export interface InstitutionProfileRequest {
+  institutionName: string;
+  domain: string;
+}
+
+export interface InstitutionProfileResponse {
+  id: string;
+  userId: string;
+  name: string;
+  domain: string;
+  logoUrl?: string | null;
+  description?: string | null;
+  isVerified?: boolean;
+}
+
+export interface InstitutionProfileUpdate {
+  name?: string;
+  domain?: string;
+  logoUrl?: string | null;
+  description?: string | null;
+}

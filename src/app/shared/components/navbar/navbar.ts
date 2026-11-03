@@ -102,16 +102,9 @@ export class Navbar implements OnInit {
       roles: ['RECRUITER']
     },
     {
-      id: 'agreements',
-      label: 'Convenios',
-      route: '/agreements',
-      icon: 'agreements',
-      roles: ['RECRUITER', 'INSTITUTION']
-    },
-    {
-      id: 'institution-dashboard',
-      label: 'Acreditaciones',
-      route: '/institution/validations',
+      id: 'institution-services',
+      label: 'Servicios Institucionales',
+      route: '/institution/services',
       icon: 'dashboard',
       roles: ['INSTITUTION']
     },

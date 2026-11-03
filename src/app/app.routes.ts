@@ -10,6 +10,7 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { PostulantProfile } from './pages/profile/postulant/postulant-profile';
 import { PublicPosProfile } from './pages/profile/postulant/public-pos-profile';
 import { RecruiterProfile } from './pages/profile/recruiter/recruiter-profile';
+import { InstitutionProfile } from './pages/profile/institution/institution-profile';
 import { PublicRecProfile } from './pages/profile/recruiter/public-rec-profile';
 
 // Funcionalidades principales
@@ -18,6 +19,7 @@ import { JobSearch } from './pages/jobs/job-search';
 import { Messages } from './pages/messages/messages';
 import { Notifications } from './pages/notifications/notifications';
 import { Network } from './pages/network/network';
+import { InstitutionPortal } from './pages/institution/institution-portal';
 
 export const routes: Routes = [
   // Autenticación
@@ -25,7 +27,34 @@ export const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'register', component: Register },
 
+  // Servicios Institucionales (Panel de Gestión: Acreditación de Alumnos, Habilidades y Convenios)
+  {
+    path: 'institution/services',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionPortal
+  },
+  {
+    path: 'institution/servicios',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
+  },
+  {
+    path: 'institution/sede',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
+  },
+  {
+    path: 'institution/portal',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
+  },
+
   // Perfil y Onboarding
+  {
+    path: 'profile/me',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionProfile
+  },
   {
     path: 'profile/me',
     canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
@@ -36,6 +65,11 @@ export const routes: Routes = [
     component: PostulantProfile // Por defecto carga Postulante
   },
 
+  {
+    path: 'onboarding/complete-profile',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionProfile
+  },
   {
     path: 'onboarding/complete-profile',
     canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],

@@ -16,14 +16,22 @@
             Plataforma Unext
           </span>
           <span class="text-xs text-[#6B7280]">
-            {{ currentRole() === 'RECRUITER' ? '· Portal Corporativo y Atracción de Talento' : '· Red Profesional & Empleabilidad' }}
+            @if (currentRole() === 'INSTITUTION') {
+              · Portal de Acreditación y Convenios Académicos
+            } @else if (currentRole() === 'RECRUITER') {
+              · Portal Corporativo y Atracción de Talento
+            } @else {
+              · Red Profesional & Empleabilidad
+            }
           </span>
         </div>
         <h1 class="text-[28px] font-bold text-gray-900 tracking-tight mt-1">
           Dashboard Principal
         </h1>
         <p class="text-[14px] text-[#6B7280] mt-0.5">
-          @if (currentRole() === 'RECRUITER') {
+          @if (currentRole() === 'INSTITUTION') {
+            Supervisa la convalidación de tus alumnos, avala competencias técnicas oficiales y gestiona convenios de prácticas preprofesionales con empresas líderes.
+          } @else if (currentRole() === 'RECRUITER') {
             Gestiona tus convocatorias, conecta con talento universitario verificado y optimiza tus vacantes con IA.
           } @else {
             Conéctate con tu red profesional, comparte avances de proyectos y accede a vacantes con matching de IA.
@@ -31,29 +39,61 @@
         </p>
       </div>
 
-      <!-- BOTONES DE ACCIÓN RÁPIDA ADAPTATIVOS -->
-      <div class="flex items-center gap-2.5 flex-wrap">
-        <button
-          type="button"
-          (click)="openValidationModal()"
-          class="btn-institutional text-[13px] py-2 px-3.5 shadow-xs"
-        >
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-          </svg>
-          <span>{{ currentRole() === 'RECRUITER' ? 'Verificación Corporativa' : 'Validación Formal' }}</span>
-        </button>
+      <!-- BOTONES DE ACCIÓN RÁPIDA ADAPTATIVOS (SIEMPRE UNO AL LADO DEL OTRO) -->
+      <div class="flex flex-row items-center gap-2.5 shrink-0 flex-nowrap">
+        @if (currentRole() === 'INSTITUTION') {
+          <button
+            type="button"
+            (click)="openValidationModal()"
+            [ngClass]="profile().isInstitutionVerified ? 'btn-institutional' : 'bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#92400E] border border-[#F59E0B]/40'"
+            class="text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 rounded-xl font-semibold transition cursor-pointer"
+          >
+            @if (profile().isInstitutionVerified) {
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+              <span>✓ Institución Acreditada</span>
+            } @else {
+              <svg class="w-4 h-4 shrink-0 text-[#B45309]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <span>Acreditación Pendiente</span>
+            }
+          </button>
 
-        <button
-          type="button"
-          (click)="handleHeaderIntelligentAction()"
-          class="btn-match text-[13px] py-2 px-3.5 shadow-xs"
-        >
-          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-          <span>{{ currentRole() === 'RECRUITER' ? 'Diseñar Vacante con IA' : 'Función Inteligente' }}</span>
-        </button>
+          <button
+            type="button"
+            (click)="handleHeaderIntelligentAction()"
+            class="btn-match text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span>Función Inteligente IA</span>
+          </button>
+        } @else {
+          <button
+            type="button"
+            (click)="openValidationModal()"
+            class="btn-institutional text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <span>{{ currentRole() === 'RECRUITER' ? 'Verificación Corporativa' : 'Validación Formal' }}</span>
+          </button>
+
+          <button
+            type="button"
+            (click)="handleHeaderIntelligentAction()"
+            class="btn-match text-[13px] py-2 px-3.5 shadow-xs whitespace-nowrap inline-flex items-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <span>{{ currentRole() === 'RECRUITER' ? 'Diseñar Vacante con IA' : 'Función Inteligente' }}</span>
+          </button>
+        }
       </div>
     </header>
 
@@ -94,7 +134,40 @@
               {{ profile().headline || (currentRole() === 'RECRUITER' ? 'Organización Reclutadora' : 'Añade un titular profesional en tu perfil') }}
             </p>
 
-            @if (currentRole() === 'RECRUITER') {
+            @if (currentRole() === 'INSTITUTION') {
+              <!-- Insignia y Datos Institucionales de la Institución -->
+              @if (profile().isInstitutionVerified) {
+                <div class="mt-3.5 w-full py-2 px-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-center gap-1.5">
+                  <span class="text-[11px] font-bold text-[#059669] truncate">
+                    ✓ Acreditada Oficialmente
+                  </span>
+                </div>
+              } @else {
+                <a
+                  routerLink="/profile/me"
+                  class="mt-3.5 w-full py-2 px-3 rounded-xl bg-[#FEF3C7] border border-[#F59E0B]/40 flex items-center justify-center gap-1.5 hover:bg-[#FDE68A] transition cursor-pointer"
+                >
+                  <span class="text-[11px] font-bold text-[#B45309]">
+                    🔐 Validar Dominio (Código OTP)
+                  </span>
+                </a>
+              }
+
+              <div class="w-full mt-4 pt-3 border-t border-gray-100 text-left space-y-2 text-[12px]">
+                <div class="flex items-center justify-between">
+                  <span class="text-[#6B7280]">Dominio:</span>
+                  <span class="font-semibold text-gray-900 font-mono truncate max-w-[140px]">{{ institutionData()?.domain || 'portal.edu.pe' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#6B7280]">Alumnos Vinculados:</span>
+                  <span class="font-bold text-[#274DEA]">{{ institutionStats().totalVerifiedStudents }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#6B7280]">Convenios Activos:</span>
+                  <span class="font-bold text-[#059669]">{{ institutionStats().totalActiveAgreements }}</span>
+                </div>
+              </div>
+            } @else if (currentRole() === 'RECRUITER') {
               <!-- Insignia y Datos Corporativos del Reclutador -->
               @if (recruiterData()?.isVerified) {
                 <div class="mt-3.5 w-full py-2 px-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 flex items-center justify-center gap-1.5">
@@ -168,8 +241,8 @@
             }
 
             <div class="mt-4 w-full">
-              <a routerLink="/profile/me" class="btn-secondary w-full text-[13px] py-2">
-                <span>{{ currentRole() === 'RECRUITER' ? 'Ver Perfil de Empresa' : 'Ver mi Perfil' }}</span>
+              <a [routerLink]="currentRole() === 'INSTITUTION' ? '/institution/services' : '/profile/me'" class="btn-secondary w-full text-[13px] py-2">
+                <span>{{ currentRole() === 'RECRUITER' ? 'Ver Perfil de Empresa' : (currentRole() === 'INSTITUTION' ? 'Servicios Institucionales' : 'Ver mi Perfil') }}</span>
               </a>
             </div>
           </div>
@@ -178,7 +251,75 @@
         <!-- =============================================================== -->
         <!-- CARD 2 IZQUIERDA: "MIS VACANTES" (RECRUITER) VS "MIS HABILIDADES" -->
         <!-- =============================================================== -->
-        @if (currentRole() === 'RECRUITER') {
+        <!-- =============================================================== -->
+        <!-- CARD 2 IZQUIERDA: SEGÚN ROL (INSTITUTION, RECRUITER, POSTULANT)   -->
+        <!-- =============================================================== -->
+        @if (currentRole() === 'INSTITUTION') {
+          <!-- CARD 2 PARA INSTITUCIÓN: ALUMNOS POR ACREDITAR -->
+          <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-[14px] font-bold text-gray-900">Alumnos por Acreditar</h3>
+              <span class="text-[11px] font-bold text-[#274DEA] bg-[#274DEA]/10 px-2 py-0.5 rounded-full">
+                {{ institutionPendingStudents().length }} Pendiente{{ institutionPendingStudents().length === 1 ? '' : 's' }}
+              </span>
+            </div>
+
+            <p class="text-[12px] text-[#6B7280] mb-3">
+              Estudiantes que solicitan vincularse oficialmente a tu casa de estudios.
+            </p>
+
+            @if (institutionPendingStudents().length > 0) {
+              <div class="space-y-2">
+                @for (st of institutionPendingStudents().slice(0, 3); track st.postulantId) {
+                  <div class="p-2.5 rounded-xl bg-[#F8FAFC] border border-gray-200/80 flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <p class="text-[12px] font-bold text-gray-900 truncate">
+                        {{ st.firstName }} {{ st.lastName }}
+                      </p>
+                      <p class="text-[10px] text-[#6B7280] truncate">
+                        {{ st.email }}
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        (click)="verifyStudentFromDashboard(st.postulantId, 'APPROVED')"
+                        class="px-2 py-1 rounded-md bg-[#10B981] hover:bg-[#059669] text-white text-[10px] font-bold transition cursor-pointer"
+                        title="Aprobar vinculación"
+                      >
+                        Aprobar
+                      </button>
+                      <button
+                        type="button"
+                        (click)="verifyStudentFromDashboard(st.postulantId, 'REJECTED')"
+                        class="px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold transition cursor-pointer"
+                        title="Rechazar"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="p-3 rounded-xl bg-[#F8FAFC] border border-dashed border-gray-200 text-center">
+                <p class="text-[12px] font-semibold text-gray-700">Sin solicitudes pendientes</p>
+                <p class="text-[11px] text-[#6B7280] mt-0.5">
+                  Los estudiantes que registren tu dominio institucional aparecerán aquí.
+                </p>
+              </div>
+            }
+
+            <div class="mt-4 pt-3 border-t border-gray-100">
+              <a
+                routerLink="/institution/services"
+                class="w-full text-center text-[12px] font-bold text-[#274DEA] hover:underline flex items-center justify-center gap-1.5"
+              >
+                <span>Ir a Servicios Institucionales →</span>
+              </a>
+            </div>
+          </div>
+        } @else if (currentRole() === 'RECRUITER') {
           <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-[14px] font-bold text-gray-900">Mis Vacantes</h3>
@@ -285,9 +426,76 @@
         }
 
         <!-- =============================================================== -->
-        <!-- CARD 3 IZQUIERDA: CANDIDATOS Y CONVENIOS (RECRUITER VS POSTULANT) -->
+        <!-- CARD 3 IZQUIERDA: SEGÚN ROL (INSTITUTION, RECRUITER, POSTULANT)   -->
         <!-- =============================================================== -->
-        @if (currentRole() === 'RECRUITER') {
+        @if (currentRole() === 'INSTITUTION') {
+          <!-- CARD 3 PARA INSTITUCIÓN: VALIDAR HABILIDADES -->
+          <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-[13px] font-bold text-gray-900 tracking-tight">
+                Validar Habilidades
+              </h3>
+              <span class="text-[11px] font-bold text-[#059669] bg-[#ECFDF5] px-2 py-0.5 rounded-full">
+                {{ institutionPendingValidations().length }} por revisar
+              </span>
+            </div>
+
+            <p class="text-[12px] text-[#6B7280]">
+              Acredita y certifica las competencias técnicas de tus estudiantes.
+            </p>
+
+            @if (institutionPendingValidations().length > 0) {
+              <div class="space-y-2">
+                @for (v of institutionPendingValidations().slice(0, 3); track v.validationId) {
+                  <div class="p-2.5 rounded-xl bg-[#F8FAFC] border border-gray-200/80 flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#274DEA]/10 text-[#274DEA] mb-0.5">
+                        {{ v.skillName }}
+                      </span>
+                      <p class="text-[11px] font-bold text-gray-900 truncate">
+                        {{ v.studentName }}
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        (click)="verifySkillFromDashboard(v.validationId, 'APPROVED')"
+                        class="px-2 py-1 rounded-md bg-[#10B981] hover:bg-[#059669] text-white text-[10px] font-bold transition cursor-pointer"
+                        title="Convalidar habilidad"
+                      >
+                        Avalar
+                      </button>
+                      <button
+                        type="button"
+                        (click)="verifySkillFromDashboard(v.validationId, 'REJECTED')"
+                        class="px-2 py-1 rounded-md bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold transition cursor-pointer"
+                        title="Rechazar"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="p-3 rounded-xl bg-[#F8FAFC] border border-dashed border-gray-200 text-center">
+                <p class="text-[12px] font-semibold text-gray-700">Sin convalidaciones pendientes</p>
+                <p class="text-[11px] text-[#6B7280] mt-0.5">
+                  Tus alumnos con proyectos o certificados enviarán evidencias aquí.
+                </p>
+              </div>
+            }
+
+            <div class="pt-2 border-t border-gray-100">
+              <a
+                routerLink="/institution/services"
+                class="w-full text-center text-[12px] font-bold text-[#274DEA] hover:underline flex items-center justify-center gap-1.5"
+              >
+                <span>Ir a Servicios Institucionales →</span>
+              </a>
+            </div>
+          </div>
+        } @else if (currentRole() === 'RECRUITER') {
           <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-3">
             <div class="flex items-center justify-between">
               <h3 class="text-[13px] font-bold text-gray-900 tracking-tight">
@@ -683,12 +891,109 @@
 
       </section>
 
-      <!-- ========================================================================= -->
-      <!-- COLUMNA DERECHA (lg:col-span-3): FUNCIONES INTELIGENTES IA POR SEGMENTO   -->
-      <!-- ========================================================================= -->
       <aside class="lg:col-span-3 space-y-5">
+        @if (currentRole() === 'INSTITUTION') {
+          <!-- ============================================================= -->
+          <!-- WIDGET 1 DERECHA INSTITUCIÓN: CONVENIOS CORPORATIVOS          -->
+          <!-- ============================================================= -->
+          <div class="bg-white rounded-2xl border border-gray-200/80 shadow-xs p-5 space-y-3.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center font-bold text-xs">
+                  🏛️
+                </div>
+                <h3 class="text-[14px] font-bold text-gray-900">
+                  Convenios Corporativos
+                </h3>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#6366F1]/10 text-[#6366F1]">
+                {{ institutionAgreements().length }} Activo{{ institutionAgreements().length === 1 ? '' : 's' }}
+              </span>
+            </div>
 
-        @if (currentRole() === 'RECRUITER') {
+            <p class="text-[12px] text-[#6B7280]">
+              Alianzas estratégicas y convenios de prácticas preprofesionales con empresas líderes.
+            </p>
+
+            @if (institutionAgreements().length > 0) {
+              <div class="space-y-2">
+                @for (ag of institutionAgreements().slice(0, 3); track ag.id) {
+                  <div class="p-2.5 rounded-xl border border-gray-200/80 bg-[#F8FAFC] flex items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <p class="text-[12px] font-bold text-gray-900 truncate">
+                        {{ ag.companyName || ag.title || 'Empresa Aliada' }}
+                      </p>
+                      <p class="text-[10px] text-[#059669] font-semibold truncate">
+                        Estado: {{ ag.status || 'Activo' }}
+                      </p>
+                    </div>
+                    <a
+                      routerLink="/profile/me"
+                      class="px-2.5 py-1 rounded-lg bg-[#274DEA]/10 text-[#274DEA] hover:bg-[#274DEA] hover:text-white text-[11px] font-bold shrink-0 transition"
+                    >
+                      Ver
+                    </a>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="p-3 rounded-xl bg-[#F8FAFC] border border-dashed border-gray-200 text-center space-y-1">
+                <p class="text-[12px] font-semibold text-gray-700">Sin convenios registrados</p>
+                <p class="text-[11px] text-[#6B7280]">
+                  Las empresas aliadas en Unext podrán solicitar convenios marco de convalidación laboral.
+                </p>
+              </div>
+            }
+
+            <a
+              routerLink="/institution/services"
+              class="block w-full py-2 rounded-xl border border-[#274DEA]/30 text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold text-center transition"
+            >
+              Administrar en Servicios Institucionales →
+            </a>
+          </div>
+
+          <!-- ============================================================= -->
+          <!-- WIDGET 2 DERECHA INSTITUCIÓN: IMPACTO Y RESPALDO ACADÉMICO    -->
+          <!-- ============================================================= -->
+          <div class="bg-gradient-to-br from-[#274DEA]/10 via-white to-blue-50/40 rounded-2xl border border-[#274DEA]/20 p-5 shadow-xs space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-[#274DEA] text-white flex items-center justify-center font-bold text-xs">
+                  📊
+                </div>
+                <h3 class="text-[14px] font-bold text-gray-900">
+                  Impacto y Respaldo
+                </h3>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#10B981]/15 text-[#059669]">
+                Oficial
+              </span>
+            </div>
+
+            <p class="text-[12px] text-[#6B7280] leading-relaxed">
+              Métricas en tiempo real de vinculación académica e inserción laboral de tus estudiantes.
+            </p>
+
+            <div class="grid grid-cols-2 gap-2 text-center">
+              <div class="p-2.5 rounded-xl bg-white border border-gray-200/80">
+                <p class="text-lg font-black text-[#274DEA]">{{ institutionStats().totalVerifiedStudents }}</p>
+                <p class="text-[10px] font-semibold text-[#6B7280]">Alumnos Acreditados</p>
+              </div>
+              <div class="p-2.5 rounded-xl bg-white border border-gray-200/80">
+                <p class="text-lg font-black text-[#059669]">{{ institutionStats().totalEndorsedCompanies }}</p>
+                <p class="text-[10px] font-semibold text-[#6B7280]">Empresas Avaladas</p>
+              </div>
+            </div>
+
+            <a
+              routerLink="/institution/services"
+              class="btn-primary w-full text-[12px] py-2 text-center block font-bold"
+            >
+              <span>Ir a Servicios Institucionales →</span>
+            </a>
+          </div>
+        } @else if (currentRole() === 'RECRUITER') {
           <!-- ============================================================= -->
           <!-- FUNCIÓN INTELIGENTE #1 RECLUTADOR: DISEÑADOR DE VACANTES IA   -->
           <!-- ============================================================= -->
@@ -903,7 +1208,68 @@
         ✕
       </button>
 
-      @if (currentRole() === 'RECRUITER') {
+      @if (currentRole() === 'INSTITUTION') {
+        <!-- VISTA DEL MODAL PARA LA INSTITUCIÓN -->
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-[#059669] text-white flex items-center justify-center font-bold text-lg">
+            🏛️
+          </div>
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-[#059669] bg-[#059669]/10 px-2 py-0.5 rounded-full">
+              Acreditación Institucional
+            </span>
+            <h3 class="text-[18px] font-bold text-gray-900">
+              Estado de la Institución
+            </h3>
+          </div>
+        </div>
+
+        <p class="text-[13px] text-[#6B7280] leading-relaxed mb-4">
+          La acreditación oficial de Unext certifica a tu casa de estudios para validar competencias técnicas de alumnos y respaldar convenios preprofesionales con empresas líderes.
+        </p>
+
+        <div class="space-y-2.5 text-[12px]">
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Institución</span>
+            <span class="font-bold text-gray-900">{{ institutionData()?.name || profile().firstName || 'Universidad / Instituto' }}</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Dominio Académico</span>
+            <span class="font-bold text-gray-900 font-mono">{{ institutionData()?.domain || 'Registrado' }}</span>
+          </div>
+
+          <div
+            [ngClass]="institutionData()?.isVerified ? 'bg-[#ECFDF5] border-[#059669]/20' : 'bg-[#FEF3C7] border-[#F59E0B]/30'"
+            class="p-3 rounded-xl border flex items-center justify-between"
+          >
+            <span class="font-semibold text-gray-800">Estado de Acreditación</span>
+            <span [ngClass]="institutionData()?.isVerified ? 'text-[#059669]' : 'text-[#B45309]'" class="font-bold">
+              {{ institutionData()?.isVerified ? '✓ Institución Acreditada Oficial' : '⏳ En Proceso de Convalidación' }}
+            </span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Alumnos por Convalidar</span>
+            <span class="font-bold text-[#274DEA]">{{ institutionPendingStudents().length }} pendientes</span>
+          </div>
+
+          <div class="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between">
+            <span class="font-semibold text-gray-800">Convenios Activos</span>
+            <span class="font-bold text-[#059669]">{{ institutionAgreements().length }} corporativos</span>
+          </div>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-2">
+          <a
+            routerLink="/institution/services"
+            (click)="closeValidationModal()"
+            class="btn-institutional text-[13px] py-2 px-5 w-full text-center"
+          >
+            <span>Ir a Servicios Institucionales</span>
+          </a>
+        </div>
+      } @else if (currentRole() === 'RECRUITER') {
         <!-- VISTA DEL MODAL PARA EL RECLUTADOR -->
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 rounded-xl bg-[#059669] text-white flex items-center justify-center font-bold">

@@ -237,6 +237,28 @@ export class PostulantProfile implements OnInit {
         }
 
         if (data.userId) {
+          try {
+            if (data.id) {
+              localStorage.setItem(
+                `unext_postulant_${data.id}`,
+                JSON.stringify({
+                  studentCode: data.studentCode,
+                  career: data.career,
+                  currentCycle: data.currentCycle,
+                  institutionalEmail: data.institutionalEmail,
+                  academicStatus: data.academicStatus
+                })
+              );
+            }
+            localStorage.setItem('unext_last_academic_req', JSON.stringify({
+              studentCode: data.studentCode,
+              career: data.career,
+              currentCycle: data.currentCycle,
+              institutionalEmail: data.institutionalEmail,
+              academicStatus: data.academicStatus
+            }));
+          } catch {}
+
           this.feedService.getImportantPostsByUser(data.userId).subscribe({
             next: (posts) => this.importantPosts.set(posts),
             error: () => this.importantPosts.set([])
@@ -326,11 +348,29 @@ export class PostulantProfile implements OnInit {
     this.isSaving.set(true);
     this.validationService.requestAcademicVerification(this.academicForm).subscribe({
       next: () => {
+        try {
+          const profileId = this.profile()?.id;
+          if (profileId) {
+            localStorage.setItem(`unext_academic_req_${profileId}`, JSON.stringify(this.academicForm));
+            localStorage.setItem(
+              `unext_postulant_${profileId}`,
+              JSON.stringify({
+                studentCode: this.academicForm.studentCode,
+                career: this.academicForm.career,
+                currentCycle: this.academicForm.currentCycle,
+                institutionalEmail: this.academicForm.institutionalEmail,
+                academicStatus: this.academicForm.academicStatus
+              })
+            );
+          }
+          localStorage.setItem('unext_last_academic_req', JSON.stringify(this.academicForm));
+        } catch {}
+
         this.isSaving.set(false);
         this.isAcademicModalOpen.set(false);
         this.loadMyProfile();
         this.showToast(
-          'Solicitud académica enviada. (Bandeja de notificaciones institucional aún por desarrollar).',
+          'Solicitud académica enviada.',
           'info'
         );
       },
