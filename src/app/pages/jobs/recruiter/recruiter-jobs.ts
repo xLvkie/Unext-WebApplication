@@ -1,12 +1,17 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
 import { JobService } from '../../../core/services/job.service';
+import { ProfileService } from '../../../core/services/profile.service';
+import { ConnectionService } from '../../../core/services/connection.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
+  AgreementCreateRequest,
+  AgreementResponse,
+  AgreementStatus,
   ApplicationStatus,
   ExperienceLevel,
   JobModality,
@@ -15,15 +20,20 @@ import {
   RecruiterApplicantFilters,
   RecruiterApplicationItem
 } from '../../../core/models/job.model';
+import {
+  PostulantProfileResponse,
+  StudentSkillResponse
+} from '../../../core/models/profile.model';
 import { readApiError } from '../../../core/utils/api-error';
 import { formatMoney, toDate } from '../../../core/utils/format';
+import { readFileAsDataUrl } from '../../../core/utils/file-media';
 import {
   applicationLabel,
   experienceLabel,
   modalityLabel
 } from '../../../core/utils/labels';
 
-export type RecruiterJobsTab = 'MY_JOBS' | 'MARKET_EXPLORER';
+export type RecruiterJobsTab = 'MY_JOBS' | 'AGREEMENTS' | 'MARKET_EXPLORER';
 
 @Component({
   selector: 'app-recruiter-jobs',
@@ -33,7 +43,10 @@ export type RecruiterJobsTab = 'MY_JOBS' | 'MARKET_EXPLORER';
 })
 export class RecruiterJobs implements OnInit {
   private jobService = inject(JobService);
+  private profileService = inject(ProfileService);
+  private connectionService = inject(ConnectionService);
   private authService = inject(AuthService);
+  private route = inject(ActivatedRoute);
   readonly router = inject(Router);
 
   activeTab = signal<RecruiterJobsTab>('MY_JOBS');
@@ -41,10 +54,35 @@ export class RecruiterJobs implements OnInit {
   isLoadingJobs = signal(true);
   isLoadingApplicants = signal(false);
   isSavingJob = signal(false);
+  isOpeningChat = signal(false);
 
   myJobs = signal<JobOffer[]>([]);
   selectedJob = signal<JobOffer | null>(null);
   applicants = signal<RecruiterApplicationItem[]>([]);
+
+  // Convenios emitidos por la empresa
+  myAgreements = signal<AgreementResponse[]>([]);
+  isAgreementModalOpen = signal(false);
+  isSavingAgreement = signal(false);
+  agreementFormError = signal<string | null>(null);
+  agreementFileName = signal<string>('');
+  agreementFileSize = signal<string>('');
+
+  agreementForm: AgreementCreateRequest = {
+    postulantId: '',
+    jobApplicationId: null,
+    title: '',
+    startDate: '',
+    endDate: '',
+    weeklyHours: 30,
+    documentUrl: '',
+    observations: ''
+  };
+
+  // Postulante expandido en vista detallada
+  expandedApplicantId = signal<string | null>(null);
+  expandedPostulantDetail = signal<PostulantProfileResponse | null>(null);
+  isLoadingCandidateDetail = signal(false);
 
   interviewCompletedMap = signal<Record<string, boolean>>({});
 
@@ -57,7 +95,7 @@ export class RecruiterJobs implements OnInit {
   };
   statusFilter = signal<'ALL' | ApplicationStatus>('ALL');
 
-
+  // Explorador de Mercado
   marketJobs = signal<JobOffer[]>([]);
   selectedMarketJob = signal<JobOffer | null>(null);
   isLoadingMarket = signal(false);
@@ -87,7 +125,6 @@ export class RecruiterJobs implements OnInit {
 
   toast = signal<ToastData | null>(null);
 
-  // Computados útiles
   activeJobsCount = computed(
     () => this.myJobs().filter((j) => j.isActive !== false).length
   );
@@ -101,6 +138,60 @@ export class RecruiterJobs implements OnInit {
     const list = this.applicants();
     if (filter === 'ALL') return list;
     return list.filter((a) => a.status === filter);
+  });
+
+  expandedCandidate = computed<RecruiterApplicationItem | null>(() => {
+    const id = this.expandedApplicantId();
+    if (!id) return null;
+    return this.applicants().find((a) => a.id === id) || null;
+  });
+
+  // Busca si la postulación actualmente expandida ya tiene un Convenio de Prácticas emitido
+  agreementForExpandedCandidate = computed<AgreementResponse | null>(() => {
+    const cand = this.expandedCandidate();
+    if (!cand) return null;
+    return (
+      this.myAgreements().find((ag) => ag.jobApplicationId === cand.id) || null
+    );
+  });
+
+  // Evalúa si la vacante actual es TRAINEE y el candidato es universitario verificado
+  canCreateAgreementForExpanded = computed<boolean>(() => {
+    const job = this.selectedJob();
+    const cand = this.expandedCandidate();
+    const detail = this.expandedPostulantDetail();
+    if (!job || !cand) return false;
+
+    const isTraineeJob = job.experienceLevel === 'TRAINEE';
+    const isVerifiedStudent = Boolean(
+      cand.isInstitutionVerified || detail?.isInstitutionVerified
+    );
+    const validStage =
+      cand.status === 'UNDER_REVIEW' || cand.status === 'ACCEPTED';
+
+    return isTraineeJob && isVerifiedStudent && validStage;
+  });
+
+  expandedCandidateTopSkills = computed<StudentSkillResponse[]>(() => {
+    const detail = this.expandedPostulantDetail();
+    if (!detail || !detail.skills) return [];
+    return detail.skills.filter((s) => Boolean(s.isTopSkill));
+  });
+
+  expandedCandidateAllSkills = computed<StudentSkillResponse[]>(() => {
+    const detail = this.expandedPostulantDetail();
+    if (detail && detail.skills && detail.skills.length > 0) {
+      return detail.skills;
+    }
+    const cand = this.expandedCandidate();
+    if (!cand || !cand.skills) return [];
+    return cand.skills.map((name, idx) => ({
+      id: `sk-${idx}`,
+      name,
+      masteryLevel: 'INTERMEDIO',
+      isTopSkill: false,
+      isValidatedByInstitution: false
+    }));
   });
 
   countByStatus = computed(() => {
@@ -119,12 +210,21 @@ export class RecruiterJobs implements OnInit {
       this.router.navigate(['/login']);
       return;
     }
+
+    this.route.queryParamMap.subscribe((params) => {
+      const tabParam = params.get('tab');
+      if (tabParam === 'agreements') {
+        this.activeTab.set('AGREEMENTS');
+      }
+    });
+
     this.loadMyJobs();
+    this.loadMyAgreements();
     this.loadMarketJobs();
   }
 
   // =========================================================================
-  // LISTAR Y SELECCIONAR MIS VACANTES
+  // 1. LISTAR Y SELECCIONAR MIS VACANTES + CONVENIOS
   // =========================================================================
   loadMyJobs(): void {
     this.isLoadingJobs.set(true);
@@ -148,9 +248,17 @@ export class RecruiterJobs implements OnInit {
     });
   }
 
+  loadMyAgreements(): void {
+    this.jobService.getMyRecruiterAgreements().subscribe({
+      next: (list) => this.myAgreements.set(list),
+      error: () => this.myAgreements.set([])
+    });
+  }
+
   selectJob(job: JobOffer | null): void {
     this.selectedJob.set(job);
     this.statusFilter.set('ALL');
+    this.closeExpandedCandidate();
     if (job) {
       this.loadApplicantsForSelectedJob();
     } else {
@@ -159,7 +267,177 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // CREAR Y EDITAR VACANTES (MODAL UNIFICADO)
+  // EXPANDIR / CERRAR VISTA DETALLADA DE UNA POSTULACIÓN
+  // =========================================================================
+  expandCandidate(candidate: RecruiterApplicationItem): void {
+    this.expandedApplicantId.set(candidate.id);
+    this.expandedPostulantDetail.set(null);
+    this.isLoadingCandidateDetail.set(true);
+
+    this.profileService.getPostulantPublicProfile(candidate.postulantProfileId).subscribe({
+      next: (detail) => {
+        this.expandedPostulantDetail.set(detail);
+        this.isLoadingCandidateDetail.set(false);
+      },
+      error: () => {
+        this.isLoadingCandidateDetail.set(false);
+      }
+    });
+  }
+
+  closeExpandedCandidate(): void {
+    this.expandedApplicantId.set(null);
+    this.expandedPostulantDetail.set(null);
+  }
+
+  openChatWithCandidate(candidate: RecruiterApplicationItem): void {
+    const targetUserId =
+      candidate.postulantUserId || this.expandedPostulantDetail()?.userId;
+
+    if (!targetUserId) {
+      this.router.navigate(['/messages']);
+      return;
+    }
+
+    this.isOpeningChat.set(true);
+    this.connectionService.sendRequest(targetUserId).subscribe({
+      next: () => {
+        this.isOpeningChat.set(false);
+        this.router.navigate(['/messages'], { queryParams: { con: targetUserId } });
+      },
+      error: () => {
+        this.isOpeningChat.set(false);
+        this.router.navigate(['/messages'], { queryParams: { con: targetUserId } });
+      }
+    });
+  }
+
+  // =========================================================================
+  // CREACIÓN DE CONVENIO DE PRÁCTICAS DESDE LA POSTULACIÓN
+  // =========================================================================
+  openAgreementModal(candidate: RecruiterApplicationItem): void {
+    const job = this.selectedJob();
+    if (!job) return;
+
+    if (job.experienceLevel !== 'TRAINEE') {
+      this.showToast(
+        'Solo se pueden generar convenios de prácticas para vacantes de nivel Practicante (TRAINEE).',
+        'warning'
+      );
+      return;
+    }
+
+    if (!candidate.isInstitutionVerified && !this.expandedPostulantDetail()?.isInstitutionVerified) {
+      this.showToast(
+        'El postulante debe estar verificado académicamente por su universidad para emitir un convenio.',
+        'warning'
+      );
+      return;
+    }
+
+    const today = new Date();
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(today.getMonth() + 6);
+
+    const formatIso = (d: Date) => d.toISOString().split('T')[0];
+
+    this.agreementFormError.set(null);
+    this.agreementFileName.set('');
+    this.agreementFileSize.set('');
+    this.agreementForm = {
+      postulantId: candidate.postulantProfileId,
+      jobApplicationId: candidate.id,
+      title: `Convenio de Prácticas Preprofesionales - ${job.title} (${candidate.firstName} ${candidate.lastName})`,
+      startDate: formatIso(today),
+      endDate: formatIso(sixMonthsLater),
+      weeklyHours: 30,
+      documentUrl: '',
+      observations: `Convenio generado para la vacante ${job.title}.`
+    };
+
+    this.isAgreementModalOpen.set(true);
+  }
+
+  async onAgreementDocumentSelected(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    if (file.size > 6 * 1024 * 1024) {
+      this.agreementFormError.set('El documento del convenio no debe superar los 6 MB.');
+      return;
+    }
+
+    try {
+      const result = await readFileAsDataUrl(file);
+      this.agreementForm.documentUrl = result.dataUrl;
+      this.agreementFileName.set(result.fileName);
+      this.agreementFileSize.set(result.fileSizeLabel);
+      this.agreementFormError.set(null);
+    } catch {
+      this.agreementFormError.set('No se pudo procesar el archivo seleccionado.');
+    }
+  }
+
+  submitCreateAgreement(): void {
+    this.agreementFormError.set(null);
+
+    if (!this.agreementForm.title.trim()) {
+      this.agreementFormError.set('El título del convenio es obligatorio.');
+      return;
+    }
+    if (!this.agreementForm.startDate || !this.agreementForm.endDate) {
+      this.agreementFormError.set('Las fechas de inicio y fin son obligatorias.');
+      return;
+    }
+    if (this.agreementForm.startDate >= this.agreementForm.endDate) {
+      this.agreementFormError.set('La fecha de fin debe ser posterior a la fecha de inicio.');
+      return;
+    }
+    if (!this.agreementForm.weeklyHours || this.agreementForm.weeklyHours < 1 || this.agreementForm.weeklyHours > 48) {
+      this.agreementFormError.set('Ingresa una cantidad válida de horas semanales (entre 1 y 48 h).');
+      return;
+    }
+    if (!this.agreementForm.documentUrl.trim()) {
+      this.agreementFormError.set('Debes adjuntar el documento PDF/Word del convenio.');
+      return;
+    }
+
+    this.isSavingAgreement.set(true);
+    this.jobService.createRecruiterAgreement(this.agreementForm).subscribe({
+      next: (created) => {
+        this.isSavingAgreement.set(false);
+        this.isAgreementModalOpen.set(false);
+        this.myAgreements.update((list) => [created, ...list]);
+        this.showToast(
+          '📜 ¡Convenio de prácticas registrado y enviado a la universidad del alumno para su firma!',
+          'success'
+        );
+      },
+      error: (err) => {
+        this.isSavingAgreement.set(false);
+        this.agreementFormError.set(
+          readApiError(err, 'No se pudo registrar el convenio de prácticas.')
+        );
+      }
+    });
+  }
+
+  downloadAgreementDocument(agreement: AgreementResponse): void {
+    if (!agreement.documentUrl) return;
+    const link = document.createElement('a');
+    link.href = agreement.documentUrl;
+    link.download = `${agreement.title.replace(/\s+/g, '_')}.pdf`;
+    link.click();
+  }
+
+  agreementStatusBadge(status: AgreementStatus): string {
+    if (status === 'APPROVED') return '✓ Aprobado por Universidad';
+    if (status === 'REJECTED') return '✕ Rechazado por Universidad';
+    return '⏳ Pendiente de firma institucional';
+  }
+
+  // =========================================================================
+  // 2. CREAR Y EDITAR VACANTES
   // =========================================================================
   openCreateJobModal(): void {
     this.editingJobId.set(null);
@@ -243,7 +521,7 @@ export class RecruiterJobs implements OnInit {
     }
 
     if (this.jobForm.requiredSkills.length === 0) {
-      this.jobFormError.set('Agrega al menos una habilidad requerida para el cálculo de compatibilidad IA.');
+      this.jobFormError.set('Agrega al menos una habilidad requerida.');
       return;
     }
 
@@ -284,7 +562,7 @@ export class RecruiterJobs implements OnInit {
         this.showToast(
           idToUpdate
             ? 'Vacante actualizada. Se ha notificado automáticamente a los postulantes en proceso.'
-            : '¡Nueva vacante publicada! El motor de IA notificó a los candidatos compatibles.',
+            : '¡Nueva vacante publicada exitosamente!',
           'success'
         );
       },
@@ -322,7 +600,7 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // ADMINISTRAR POSTULANTES Y EMBUDO DE SELECCIÓN (PIPELINE GUIADO)
+  // 3. ADMINISTRAR POSTULANTES Y EMBUDO DE SELECCIÓN
   // =========================================================================
   loadApplicantsForSelectedJob(): void {
     const job = this.selectedJob();
@@ -360,19 +638,25 @@ export class RecruiterJobs implements OnInit {
           list.map((item) => (item.id === candidate.id ? { ...item, status: newStatus } : item))
         );
 
+        const targetUserId =
+          candidate.postulantUserId || this.expandedPostulantDetail()?.userId;
+
         if (newStatus === 'UNDER_REVIEW') {
+          if (targetUserId) {
+            this.connectionService.sendRequest(targetUserId).subscribe({ error: () => {} });
+          }
           this.showToast(
-            `¡${candidate.firstName} pasó a Evaluación! Se le notificó que el chat está habilitado.`,
+            `¡${candidate.firstName} pasó a Evaluación! El chat directo ha sido habilitado.`,
             'info'
           );
         } else if (newStatus === 'ACCEPTED') {
           this.showToast(
-            `🎉 ¡${candidate.firstName} ${candidate.lastName} ha sido ACEPTADO / CONTRATADO en la vacante!`,
+            `🎉 ¡${candidate.firstName} ${candidate.lastName} ha sido CONTRATADO en la vacante!`,
             'success'
           );
         } else if (newStatus === 'REJECTED') {
           this.showToast(
-            `Postulación de ${candidate.firstName} finalizada (No seleccionado).`,
+            `Postulación de ${candidate.firstName} marcada como descartada.`,
             'warning'
           );
         }
@@ -395,34 +679,55 @@ export class RecruiterJobs implements OnInit {
   }
 
   downloadCandidateCv(candidate: RecruiterApplicationItem): void {
-    if (!candidate.cvUrl) {
+    const cvUrl = candidate.cvUrl || this.expandedPostulantDetail()?.cvUrl;
+    const cvName =
+      candidate.cvFileName ||
+      this.expandedPostulantDetail()?.cvFileName ||
+      `CV_${candidate.firstName}_${candidate.lastName}.pdf`;
+
+    if (!cvUrl) {
       this.showToast('Este candidato aún no ha adjuntado un archivo de CV en su perfil.', 'warning');
       return;
     }
     const link = document.createElement('a');
-    link.href = candidate.cvUrl;
-    link.download = candidate.cvFileName || `CV_${candidate.firstName}_${candidate.lastName}.pdf`;
+    link.href = cvUrl;
+    link.download = cvName;
     link.click();
   }
 
+  hasCandidateCv(candidate: RecruiterApplicationItem): boolean {
+    return Boolean(candidate.cvUrl || this.expandedPostulantDetail()?.cvUrl);
+  }
+
+  institutionInitials(name?: string | null): string {
+    if (!name) return 'UNI';
+    return (
+      name
+        .split(/\s+/)
+        .filter((w) => w.length > 2)
+        .slice(0, 3)
+        .map((w) => w[0].toUpperCase())
+        .join('') || 'UNI'
+    );
+  }
+
   // =========================================================================
-  // EXPLORAR VACANTES DE OTRAS EMPRESAS (MODO REFERENCIA / BENCHMARK)
+  // 4. EXPLORAR VACANTES DE OTRAS EMPRESAS
   // =========================================================================
   switchToTab(tab: RecruiterJobsTab): void {
     this.activeTab.set(tab);
     if (tab === 'MARKET_EXPLORER' && this.marketJobs().length === 0) {
       this.loadMarketJobs();
     }
+    if (tab === 'AGREEMENTS') {
+      this.loadMyAgreements();
+    }
   }
 
   loadMarketJobs(): void {
     this.isLoadingMarket.set(true);
     this.jobService
-      .search(
-        this.marketKeyword,
-        this.marketModality,
-        this.marketExperience
-      )
+      .search(this.marketKeyword, this.marketModality, this.marketExperience)
       .subscribe({
         next: (offers) => {
           this.marketJobs.set(offers);
