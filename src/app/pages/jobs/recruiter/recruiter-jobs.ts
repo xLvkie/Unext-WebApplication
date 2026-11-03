@@ -5,6 +5,8 @@ import { Router, RouterLink } from '@angular/router';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
 import { JobService } from '../../../core/services/job.service';
+import { ProfileService } from '../../../core/services/profile.service';
+import { ConnectionService } from '../../../core/services/connection.service';
 import { AuthService } from '../../../core/services/auth.service';
 import {
   ApplicationStatus,
@@ -15,6 +17,10 @@ import {
   RecruiterApplicantFilters,
   RecruiterApplicationItem
 } from '../../../core/models/job.model';
+import {
+  PostulantProfileResponse,
+  StudentSkillResponse
+} from '../../../core/models/profile.model';
 import { readApiError } from '../../../core/utils/api-error';
 import { formatMoney, toDate } from '../../../core/utils/format';
 import {
@@ -33,6 +39,8 @@ export type RecruiterJobsTab = 'MY_JOBS' | 'MARKET_EXPLORER';
 })
 export class RecruiterJobs implements OnInit {
   private jobService = inject(JobService);
+  private profileService = inject(ProfileService);
+  private connectionService = inject(ConnectionService);
   private authService = inject(AuthService);
   readonly router = inject(Router);
 
@@ -41,11 +49,18 @@ export class RecruiterJobs implements OnInit {
   isLoadingJobs = signal(true);
   isLoadingApplicants = signal(false);
   isSavingJob = signal(false);
+  isOpeningChat = signal(false);
 
   myJobs = signal<JobOffer[]>([]);
   selectedJob = signal<JobOffer | null>(null);
   applicants = signal<RecruiterApplicationItem[]>([]);
 
+  // Controla qué postulación está expandida (cuando tiene valor, se ocultan las demás)
+  expandedApplicantId = signal<string | null>(null);
+  expandedPostulantDetail = signal<PostulantProfileResponse | null>(null);
+  isLoadingCandidateDetail = signal(false);
+
+  // Registro local de entrevista presencial realizada
   interviewCompletedMap = signal<Record<string, boolean>>({});
 
   applicantFilters: RecruiterApplicantFilters = {
@@ -57,7 +72,7 @@ export class RecruiterJobs implements OnInit {
   };
   statusFilter = signal<'ALL' | ApplicationStatus>('ALL');
 
-
+  // Explorador de Mercado
   marketJobs = signal<JobOffer[]>([]);
   selectedMarketJob = signal<JobOffer | null>(null);
   isLoadingMarket = signal(false);
@@ -87,7 +102,6 @@ export class RecruiterJobs implements OnInit {
 
   toast = signal<ToastData | null>(null);
 
-  // Computados útiles
   activeJobsCount = computed(
     () => this.myJobs().filter((j) => j.isActive !== false).length
   );
@@ -101,6 +115,37 @@ export class RecruiterJobs implements OnInit {
     const list = this.applicants();
     if (filter === 'ALL') return list;
     return list.filter((a) => a.status === filter);
+  });
+
+  // Postulante actualmente expandido en vista detallada exclusiva
+  expandedCandidate = computed<RecruiterApplicationItem | null>(() => {
+    const id = this.expandedApplicantId();
+    if (!id) return null;
+    return this.applicants().find((a) => a.id === id) || null;
+  });
+
+  // Habilidades destacadas (Top Skills) del postulante expandido
+  expandedCandidateTopSkills = computed<StudentSkillResponse[]>(() => {
+    const detail = this.expandedPostulantDetail();
+    if (!detail || !detail.skills) return [];
+    return detail.skills.filter((s) => Boolean(s.isTopSkill));
+  });
+
+  // Todas las habilidades detalladas del postulante expandido (con validación académica)
+  expandedCandidateAllSkills = computed<StudentSkillResponse[]>(() => {
+    const detail = this.expandedPostulantDetail();
+    if (detail && detail.skills && detail.skills.length > 0) {
+      return detail.skills;
+    }
+    const cand = this.expandedCandidate();
+    if (!cand || !cand.skills) return [];
+    return cand.skills.map((name, idx) => ({
+      id: `sk-${idx}`,
+      name,
+      masteryLevel: 'INTERMEDIO',
+      isTopSkill: false,
+      isValidatedByInstitution: false
+    }));
   });
 
   countByStatus = computed(() => {
@@ -124,7 +169,7 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // LISTAR Y SELECCIONAR MIS VACANTES
+  // 1. LISTAR Y SELECCIONAR MIS VACANTES
   // =========================================================================
   loadMyJobs(): void {
     this.isLoadingJobs.set(true);
@@ -151,6 +196,7 @@ export class RecruiterJobs implements OnInit {
   selectJob(job: JobOffer | null): void {
     this.selectedJob.set(job);
     this.statusFilter.set('ALL');
+    this.closeExpandedCandidate();
     if (job) {
       this.loadApplicantsForSelectedJob();
     } else {
@@ -159,7 +205,58 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // CREAR Y EDITAR VACANTES (MODAL UNIFICADO)
+  // EXPANDIR / CERRAR VISTA DETALLADA EXCLUSIVA DE UNA POSTULACIÓN
+  // =========================================================================
+  expandCandidate(candidate: RecruiterApplicationItem): void {
+    this.expandedApplicantId.set(candidate.id);
+    this.expandedPostulantDetail.set(null);
+    this.isLoadingCandidateDetail.set(true);
+
+    this.profileService.getPostulantPublicProfile(candidate.postulantProfileId).subscribe({
+      next: (detail) => {
+        this.expandedPostulantDetail.set(detail);
+        this.isLoadingCandidateDetail.set(false);
+      },
+      error: () => {
+        this.isLoadingCandidateDetail.set(false);
+      }
+    });
+  }
+
+  closeExpandedCandidate(): void {
+    this.expandedApplicantId.set(null);
+    this.expandedPostulantDetail.set(null);
+  }
+
+  // =========================================================================
+  // CONEXIÓN AUTOMÁTICA Y REDIRECCIÓN DIRECTA A MENSAJERÍA
+  // =========================================================================
+  openChatWithCandidate(candidate: RecruiterApplicationItem): void {
+    const targetUserId =
+      candidate.postulantUserId || this.expandedPostulantDetail()?.userId;
+
+    if (!targetUserId) {
+      this.router.navigate(['/messages']);
+      return;
+    }
+
+    this.isOpeningChat.set(true);
+    // Conectamos automáticamente con el postulante y redirigimos a /messages?con=<userId>
+    this.connectionService.sendRequest(targetUserId).subscribe({
+      next: () => {
+        this.isOpeningChat.set(false);
+        this.router.navigate(['/messages'], { queryParams: { con: targetUserId } });
+      },
+      error: () => {
+        // Incluso si ya estaban conectados, redirigimos directo a su conversación
+        this.isOpeningChat.set(false);
+        this.router.navigate(['/messages'], { queryParams: { con: targetUserId } });
+      }
+    });
+  }
+
+  // =========================================================================
+  // 2. CREAR Y EDITAR VACANTES (MODAL UNIFICADO)
   // =========================================================================
   openCreateJobModal(): void {
     this.editingJobId.set(null);
@@ -322,7 +419,7 @@ export class RecruiterJobs implements OnInit {
   }
 
   // =========================================================================
-  // ADMINISTRAR POSTULANTES Y EMBUDO DE SELECCIÓN (PIPELINE GUIADO)
+  // 3. ADMINISTRAR POSTULANTES Y EMBUDO DE SELECCIÓN
   // =========================================================================
   loadApplicantsForSelectedJob(): void {
     const job = this.selectedJob();
@@ -360,19 +457,26 @@ export class RecruiterJobs implements OnInit {
           list.map((item) => (item.id === candidate.id ? { ...item, status: newStatus } : item))
         );
 
+        const targetUserId =
+          candidate.postulantUserId || this.expandedPostulantDetail()?.userId;
+
         if (newStatus === 'UNDER_REVIEW') {
+          // Al pasar a Evaluación y habilitar el chat, también creamos el vínculo en Mi Red automáticamente
+          if (targetUserId) {
+            this.connectionService.sendRequest(targetUserId).subscribe({ error: () => {} });
+          }
           this.showToast(
-            `¡${candidate.firstName} pasó a Evaluación! Se le notificó que el chat está habilitado.`,
+            `¡${candidate.firstName} pasó a Evaluación! El chat directo ha sido habilitado.`,
             'info'
           );
         } else if (newStatus === 'ACCEPTED') {
           this.showToast(
-            `🎉 ¡${candidate.firstName} ${candidate.lastName} ha sido ACEPTADO / CONTRATADO en la vacante!`,
+            `🎉 ¡${candidate.firstName} ${candidate.lastName} ha sido CONTRATADO en la vacante!`,
             'success'
           );
         } else if (newStatus === 'REJECTED') {
           this.showToast(
-            `Postulación de ${candidate.firstName} finalizada (No seleccionado).`,
+            `Postulación de ${candidate.firstName} marcada como descartada.`,
             'warning'
           );
         }
@@ -395,18 +499,40 @@ export class RecruiterJobs implements OnInit {
   }
 
   downloadCandidateCv(candidate: RecruiterApplicationItem): void {
-    if (!candidate.cvUrl) {
+    const cvUrl = candidate.cvUrl || this.expandedPostulantDetail()?.cvUrl;
+    const cvName =
+      candidate.cvFileName ||
+      this.expandedPostulantDetail()?.cvFileName ||
+      `CV_${candidate.firstName}_${candidate.lastName}.pdf`;
+
+    if (!cvUrl) {
       this.showToast('Este candidato aún no ha adjuntado un archivo de CV en su perfil.', 'warning');
       return;
     }
     const link = document.createElement('a');
-    link.href = candidate.cvUrl;
-    link.download = candidate.cvFileName || `CV_${candidate.firstName}_${candidate.lastName}.pdf`;
+    link.href = cvUrl;
+    link.download = cvName;
     link.click();
   }
 
+  hasCandidateCv(candidate: RecruiterApplicationItem): boolean {
+    return Boolean(candidate.cvUrl || this.expandedPostulantDetail()?.cvUrl);
+  }
+
+  institutionInitials(name?: string | null): string {
+    if (!name) return 'UNI';
+    return (
+      name
+        .split(/\s+/)
+        .filter((w) => w.length > 2)
+        .slice(0, 3)
+        .map((w) => w[0].toUpperCase())
+        .join('') || 'UNI'
+    );
+  }
+
   // =========================================================================
-  // EXPLORAR VACANTES DE OTRAS EMPRESAS (MODO REFERENCIA / BENCHMARK)
+  // 4. EXPLORAR VACANTES DE OTRAS EMPRESAS
   // =========================================================================
   switchToTab(tab: RecruiterJobsTab): void {
     this.activeTab.set(tab);
@@ -418,11 +544,7 @@ export class RecruiterJobs implements OnInit {
   loadMarketJobs(): void {
     this.isLoadingMarket.set(true);
     this.jobService
-      .search(
-        this.marketKeyword,
-        this.marketModality,
-        this.marketExperience
-      )
+      .search(this.marketKeyword, this.marketModality, this.marketExperience)
       .subscribe({
         next: (offers) => {
           this.marketJobs.set(offers);

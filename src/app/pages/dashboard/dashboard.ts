@@ -303,7 +303,7 @@ export class Dashboard implements OnInit {
   }
 
   // =========================================================================
-  // FUNCIONES INTELIGENTES IA PARA RECLUTADOR
+  // CONTENEDORES VISUALES DE IA (Lógica pendiente de implementar más adelante)
   // =========================================================================
   handleHeaderIntelligentAction(): void {
     if (this.currentRole() === 'RECRUITER') {
@@ -314,50 +314,28 @@ export class Dashboard implements OnInit {
   }
 
   openRecruiterJobOptimizer(): void {
-    this.generateBlueprintFromPrompt();
+    // TODO: Conectar más adelante con el endpoint o servicio de IA para generar borradores
     this.showRecruiterOptimizerModal.set(true);
   }
 
   generateBlueprintFromPrompt(): void {
-    const prompt = this.aiRolePrompt.trim().toLowerCase();
-
-    if (prompt.includes('data') || prompt.includes('datos') || prompt.includes('ia')) {
-      this.generatedBlueprint.set({
-        roleTitle: 'Practicante / Analista de Datos & BI',
-        suggestedModality: 'HYBRID',
-        suggestedLevel: 'TRAINEE',
-        salaryRange: 'S/. 1,300 - S/. 2,000 al mes (Con Convenio Universitario)',
-        recommendedSkills: ['Python', 'SQL', 'Power BI', 'PostgreSQL', 'Estadística Aplicada'],
-        optimizedDescription:
-          'Únete a nuestro equipo de Analítica Avanzada para diseñar tableros de control ejecutivos, automatizar pipelines ETL y transformar datos de negocio en decisiones estratégicas.'
-      });
-    } else if (prompt.includes('ux') || prompt.includes('ui') || prompt.includes('diseño') || prompt.includes('frontend')) {
-      this.generatedBlueprint.set({
-        roleTitle: 'Desarrollador Frontend & UI/UX Specialist',
-        suggestedModality: 'REMOTE',
-        suggestedLevel: 'JUNIOR',
-        salaryRange: 'S/. 2,000 - S/. 3,200 al mes',
-        recommendedSkills: ['Angular', 'TypeScript', 'Tailwind CSS', 'Figma', 'Diseño de Interfaces'],
-        optimizedDescription:
-          'Buscamos talento creativo con dominio en Angular y sistemas de diseño en Figma/Tailwind CSS para construir experiencias digitales fluidas, accesibles y de alto impacto.'
-      });
-    } else {
-      this.generatedBlueprint.set({
-        roleTitle: this.aiRolePrompt.trim() || 'Ingeniero de Software Full Stack',
-        suggestedModality: 'HYBRID',
-        suggestedLevel: 'JUNIOR',
-        salaryRange: 'S/. 1,800 - S/. 2,800 al mes',
-        recommendedSkills: ['Java', 'Spring Boot', 'Angular', 'TypeScript', 'PostgreSQL', 'Git'],
-        optimizedDescription:
-          'Buscamos estudiantes de últimos ciclos o egresados verificados con bases sólidas en ingeniería de software, desarrollo de microservicios en Spring Boot y aplicaciones SPA modernas.'
-      });
-    }
+    // TODO: Aquí se implementará la lógica de generación y optimización de vacante con IA
+    this.showToast('El motor de IA se conectará en una siguiente fase.', 'info');
   }
 
   copyBlueprintAndGoToJobs(): void {
+    // TODO: Pasar los parámetros generados por IA al creador de vacantes
     this.showRecruiterOptimizerModal.set(false);
-    this.showToast('Plantilla IA lista. Redirigiendo al creador de vacantes...', 'success');
     this.router.navigate(['/recruiter/jobs']);
+  }
+
+  openAiAnalysis(job: JobRecommendationResponse | undefined): void {
+    // TODO: Aquí se implementará el cálculo detallado de compatibilidad IA para el postulante
+    if (!job) {
+      this.showToast('Vista previa de compatibilidad IA (lógica pendiente).', 'info');
+      return;
+    }
+    this.selectedJobForAi.set(job);
   }
 
   // =========================================================================
@@ -620,18 +598,6 @@ export class Dashboard implements OnInit {
 
   applicationStatusLabel(status: string): string {
     return applicationLabel(status);
-  }
-
-  openAiAnalysis(job: JobRecommendationResponse | undefined): void {
-    if (!job) {
-      this.showToast('No hay vacantes recomendadas disponibles para analizar.', 'info');
-      return;
-    }
-    this.selectedJobForAi.set(job);
-    this.isAnalyzingAi.set(true);
-    setTimeout(() => {
-      this.isAnalyzingAi.set(false);
-    }, 400);
   }
 
   closeAiModal(): void {

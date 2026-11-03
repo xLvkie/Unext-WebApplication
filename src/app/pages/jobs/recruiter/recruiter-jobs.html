@@ -4,9 +4,7 @@
 <main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-5">
 
-    <!-- =================================================================== -->
-    <!-- CABECERA SUPERIOR + CONMUTADOR DE LOS 2 MODOS + BOTÓN CREAR VACANTE -->
-    <!-- =================================================================== -->
+    <!-- CABECERA SUPERIOR + CONMUTADOR DE MODOS + BOTÓN PUBLICAR VACANTE -->
     <header class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
         <div class="flex items-center gap-2">
@@ -26,7 +24,6 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5">
-        <!-- Selector entre "Mis Vacantes" y "Explorar Mercado" -->
         <div class="p-1 rounded-full bg-[#F8FAFC] border border-gray-200 flex items-center">
           <button
             type="button"
@@ -50,7 +47,6 @@
           </button>
         </div>
 
-        <!-- Acción 1: Botón Principal para Crear Nueva Vacante -->
         <button
           type="button"
           (click)="openCreateJobModal()"
@@ -62,12 +58,12 @@
     </header>
 
     <!-- =================================================================== -->
-    <!-- MODO 1: ADMINISTRAR MIS VACANTES, EDITARLAS Y GESTIONAR CANDIDATOS  -->
+    <!-- MODO 1: ADMINISTRAR MIS VACANTES Y GESTIONAR CANDIDATOS             -->
     <!-- =================================================================== -->
     @if (activeTab() === 'MY_JOBS') {
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-        <!-- COLUMNA IZQUIERDA (lg:col-span-4): LISTA DE MIS VACANTES CREADAS -->
+        <!-- COLUMNA IZQUIERDA (lg:col-span-4): LISTA DE MIS VACANTES -->
         <aside class="lg:col-span-4 space-y-3">
           <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4">
             <div class="flex items-center justify-between mb-3">
@@ -119,7 +115,6 @@
                       {{ salaryText(job.minSalary, job.maxSalary) }}
                     </p>
 
-                    <!-- Botones rápidos de Acción 2: Editar vacante o Cerrarla -->
                     <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
                       <span class="text-[#6B7280]">{{ formatRelativeDate(job.createdAt) }}</span>
                       <div class="flex items-center gap-2">
@@ -155,11 +150,11 @@
           </div>
         </aside>
 
-        <!-- COLUMNA DERECHA (lg:col-span-8): DETALLE DE VACANTE + EMBUDO DE POSTULANTES -->
+        <!-- COLUMNA DERECHA (lg:col-span-8): DETALLE DE VACANTE + POSTULANTES -->
         <section class="lg:col-span-8 space-y-4">
           @if (selectedJob(); as currentJob) {
 
-            <!-- Resumen de la Vacante Seleccionada + Botón de Editar -->
+            <!-- Resumen de la Vacante Seleccionada -->
             <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-3">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -205,167 +200,180 @@
             </div>
 
             <!-- =========================================================== -->
-            <!-- ACCIÓN 3: ADMINISTRACIÓN DE CANDIDATOS (EMBUDO DE 4 ETAPAS) -->
+            <!-- SECCIÓN DE POSTULANTES: LISTA COMPACTA VS VISTA DETALLADA   -->
             <!-- =========================================================== -->
             <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-4">
-              
+
               <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
                 <div>
                   <h3 class="text-[16px] font-bold text-gray-900">
                     Postulantes a esta vacante ({{ countByStatus().ALL }})
                   </h3>
                   <p class="text-[12px] text-[#6B7280]">
-                    Sigue el flujo: 1. Revisar Perfil y CV → 2. Charla en Mensajería y Entrevista Presencial → 3. Contratar o Descartar.
+                    @if (expandedCandidate()) {
+                      Evaluando postulación en detalle. Cierra esta vista para volver al listado general.
+                    } @else {
+                      Haz clic sobre cualquier candidato de la lista para desplegar su perfil completo, CV y etapas de selección.
+                    }
                   </p>
                 </div>
-              </div>
 
-              <!-- Píldoras de Etapa del Proceso -->
-              <div class="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  (click)="statusFilter.set('ALL')"
-                  [ngClass]="statusFilter() === 'ALL' ? 'bg-gray-900 text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
-                  class="px-3.5 py-1.5 rounded-full text-xs transition"
-                >
-                  Todos ({{ countByStatus().ALL }})
-                </button>
-                <button
-                  type="button"
-                  (click)="statusFilter.set('RECEIVED')"
-                  [ngClass]="statusFilter() === 'RECEIVED' ? 'bg-[#274DEA] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
-                  class="px-3.5 py-1.5 rounded-full text-xs transition"
-                >
-                  1. Nuevos / Revisión CV ({{ countByStatus().RECEIVED }})
-                </button>
-                <button
-                  type="button"
-                  (click)="statusFilter.set('UNDER_REVIEW')"
-                  [ngClass]="statusFilter() === 'UNDER_REVIEW' ? 'bg-[#F59E0B] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
-                  class="px-3.5 py-1.5 rounded-full text-xs transition"
-                >
-                  2. En Charla / Entrevista ({{ countByStatus().UNDER_REVIEW }})
-                </button>
-                <button
-                  type="button"
-                  (click)="statusFilter.set('ACCEPTED')"
-                  [ngClass]="statusFilter() === 'ACCEPTED' ? 'bg-[#059669] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
-                  class="px-3.5 py-1.5 rounded-full text-xs transition"
-                >
-                  3. Contratados ({{ countByStatus().ACCEPTED }})
-                </button>
-                <button
-                  type="button"
-                  (click)="statusFilter.set('REJECTED')"
-                  [ngClass]="statusFilter() === 'REJECTED' ? 'bg-[#EF4444] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
-                  class="px-3.5 py-1.5 rounded-full text-xs transition"
-                >
-                  No seleccionados ({{ countByStatus().REJECTED }})
-                </button>
-              </div>
-
-              <!-- Barra de Filtros Académicos (Carrera, Ciclo mínimo, Habilidad) -->
-              <div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-200/80 grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-                <input
-                  type="text"
-                  [(ngModel)]="applicantFilters.career"
-                  placeholder="Filtrar por carrera..."
-                  class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
-                />
-                <input
-                  type="text"
-                  [(ngModel)]="applicantFilters.skill"
-                  placeholder="Habilidad (ej. Angular)..."
-                  class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="12"
-                  [(ngModel)]="applicantFilters.minCycle"
-                  placeholder="Ciclo mín. (1-12)"
-                  class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
-                />
-                <div class="flex items-center gap-1.5">
+                @if (expandedCandidate()) {
                   <button
                     type="button"
-                    (click)="loadApplicantsForSelectedJob()"
-                    class="flex-1 py-1.5 px-3 rounded-lg bg-[#274DEA] text-white text-xs font-bold hover:bg-[#1E3BB8]"
+                    (click)="closeExpandedCandidate()"
+                    class="px-3.5 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold flex items-center gap-1.5 transition"
                   >
-                    Filtrar
+                    <span>← Volver al listado ({{ filteredApplicants().length }})</span>
+                  </button>
+                }
+              </div>
+
+              <!-- ========================================================= -->
+              <!-- CASO A: NINGÚN CANDIDATO EXPANDIDO -> MOSTRAR EL LISTADO  -->
+              <!-- ========================================================= -->
+              @if (!expandedCandidate()) {
+                <!-- Píldoras de Filtro por Etapa -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    (click)="statusFilter.set('ALL')"
+                    [ngClass]="statusFilter() === 'ALL' ? 'bg-gray-900 text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                    class="px-3.5 py-1.5 rounded-full text-xs transition"
+                  >
+                    Todos ({{ countByStatus().ALL }})
                   </button>
                   <button
                     type="button"
-                    (click)="clearApplicantFilters()"
-                    class="py-1.5 px-2.5 rounded-lg border border-gray-300 text-gray-600 text-xs hover:bg-gray-100"
-                    title="Limpiar filtros"
+                    (click)="statusFilter.set('RECEIVED')"
+                    [ngClass]="statusFilter() === 'RECEIVED' ? 'bg-[#274DEA] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                    class="px-3.5 py-1.5 rounded-full text-xs transition"
                   >
-                    ✕
+                    1. Nuevos / Revisión CV ({{ countByStatus().RECEIVED }})
+                  </button>
+                  <button
+                    type="button"
+                    (click)="statusFilter.set('UNDER_REVIEW')"
+                    [ngClass]="statusFilter() === 'UNDER_REVIEW' ? 'bg-[#F59E0B] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                    class="px-3.5 py-1.5 rounded-full text-xs transition"
+                  >
+                    2. En Charla / Entrevista ({{ countByStatus().UNDER_REVIEW }})
+                  </button>
+                  <button
+                    type="button"
+                    (click)="statusFilter.set('ACCEPTED')"
+                    [ngClass]="statusFilter() === 'ACCEPTED' ? 'bg-[#059669] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                    class="px-3.5 py-1.5 rounded-full text-xs transition"
+                  >
+                    3. Contratados ({{ countByStatus().ACCEPTED }})
+                  </button>
+                  <button
+                    type="button"
+                    (click)="statusFilter.set('REJECTED')"
+                    [ngClass]="statusFilter() === 'REJECTED' ? 'bg-[#EF4444] text-white font-bold' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 font-semibold'"
+                    class="px-3.5 py-1.5 rounded-full text-xs transition"
+                  >
+                    No seleccionados ({{ countByStatus().REJECTED }})
                   </button>
                 </div>
-              </div>
 
-              <!-- Listado de Tarjetas de Postulantes con Stepper de Reclutamiento -->
-              @if (isLoadingApplicants()) {
-                <div class="space-y-3">
-                  @for (s of [1, 2]; track s) {
-                    <div class="h-36 rounded-xl bg-slate-100 animate-pulse"></div>
-                  }
+                <!-- Filtros Académicos Rápidos -->
+                <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200/80 grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                  <input
+                    type="text"
+                    [(ngModel)]="applicantFilters.career"
+                    placeholder="Filtrar por carrera..."
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
+                  />
+                  <input
+                    type="text"
+                    [(ngModel)]="applicantFilters.skill"
+                    placeholder="Habilidad (ej. Java)..."
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    [(ngModel)]="applicantFilters.minCycle"
+                    placeholder="Ciclo mín. (1-12)"
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs"
+                  />
+                  <div class="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      (click)="loadApplicantsForSelectedJob()"
+                      class="flex-1 py-1.5 px-3 rounded-lg bg-[#274DEA] text-white text-xs font-bold hover:bg-[#1E3BB8]"
+                    >
+                      Filtrar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="clearApplicantFilters()"
+                      class="py-1.5 px-2.5 rounded-lg border border-gray-300 text-gray-600 text-xs hover:bg-gray-100"
+                      title="Limpiar filtros"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-              } @else {
-                <div class="space-y-4">
-                  @for (cand of filteredApplicants(); track cand.id) {
-                    <article class="p-5 rounded-2xl border border-gray-200/90 bg-white hover:border-[#274DEA]/40 transition space-y-4 shadow-2xs">
-                      
-                      <!-- Cabecera del Candidato + Porcentaje de Compatibilidad IA -->
-                      <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="flex items-center gap-3.5">
-                          <a
-                            [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
-                            class="w-13 h-13 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-extrabold text-sm flex items-center justify-center overflow-hidden border border-[#274DEA]/30 shrink-0"
-                          >
+
+                <!-- LISTADO COMPACTO DE SOLICITUDES (AVATAR 44x44 FIJO, NOMBRE, HEADLINE, MATCH IA Y ESTADO) -->
+                @if (isLoadingApplicants()) {
+                  <div class="space-y-2.5">
+                    @for (s of [1, 2, 3]; track s) {
+                      <div class="h-18 rounded-xl bg-slate-100 animate-pulse"></div>
+                    }
+                  </div>
+                } @else {
+                  <div class="divide-y divide-gray-100 border border-gray-200/80 rounded-2xl overflow-hidden">
+                    @for (cand of filteredApplicants(); track cand.id) {
+                      <div
+                        (click)="expandCandidate(cand)"
+                        class="p-3.5 sm:px-4 bg-white hover:bg-[#274DEA]/[0.03] transition cursor-pointer flex items-center justify-between gap-3 group"
+                      >
+                        <!-- Izquierda: Avatar 44x44 estricto + Nombre + Headline -->
+                        <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                          <div class="w-11 h-11 min-w-[44px] max-w-[44px] min-h-[44px] max-h-[44px] rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-xs flex items-center justify-center overflow-hidden border border-[#274DEA]/25 shrink-0">
                             @if (cand.avatarUrl) {
-                              <img [src]="cand.avatarUrl" [alt]="cand.firstName" class="w-full h-full object-cover" />
+                              <img
+                                [src]="cand.avatarUrl"
+                                [alt]="cand.firstName"
+                                class="w-11 h-11 object-cover block"
+                              />
                             } @else {
                               <span>{{ cand.firstName.charAt(0) }}{{ cand.lastName.charAt(0) }}</span>
                             }
-                          </a>
+                          </div>
 
-                          <div>
-                            <div class="flex items-center gap-2 flex-wrap">
-                              <a
-                                [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
-                                class="text-[15px] font-bold text-gray-900 hover:text-[#274DEA] hover:underline"
-                              >
+                          <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                              <p class="text-[14px] font-bold text-gray-900 group-hover:text-[#274DEA] truncate">
                                 {{ cand.firstName }} {{ cand.lastName }}
-                              </a>
-
+                              </p>
                               @if (cand.isInstitutionVerified) {
-                                <span class="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] text-[10px] font-bold border border-[#059669]/30">
-                                  ✓ Acreditado por Universidad
+                                <span
+                                  class="px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] text-[10px] font-bold border border-[#059669]/30 shrink-0"
+                                  title="Estudiante / Egresado Verificado por su Institución"
+                                >
+                                  ✓ Universitario Verificado
                                 </span>
                               }
                             </div>
-
-                            <p class="text-[12px] text-gray-700 mt-0.5">
-                              {{ cand.headline || 'Candidato en Unext' }}
+                            <p class="text-[12px] text-[#6B7280] truncate mt-0.5">
+                              {{ cand.headline || (cand.career ? 'Estudiante de ' + cand.career : 'Candidato en Unext') }}
                             </p>
-
-                            @if (cand.career) {
-                              <p class="text-[11px] text-[#274DEA] font-semibold mt-0.5">
-                                🎓 {{ cand.career }} {{ cand.currentCycle ? ('· Ciclo ' + cand.currentCycle) : '' }}
-                              </p>
-                            }
                           </div>
                         </div>
 
-                        <!-- Derecha: Match IA + Estado Actual -->
-                        <div class="flex flex-col items-end gap-1.5">
+                        <!-- Derecha: Match IA + Estado + Flecha de expandir -->
+                        <div class="flex items-center gap-2.5 shrink-0">
                           @if (cand.compatibilityPercent != null) {
-                            <span class="px-3 py-1 rounded-full bg-[#C3A7FF]/30 text-[#2E1065] text-xs font-extrabold">
+                            <span class="px-2.5 py-1 rounded-full bg-[#C3A7FF]/30 text-[#2E1065] text-[11px] font-extrabold">
                               ⚡ {{ cand.compatibilityPercent }}% Match IA
                             </span>
                           }
+
                           <span
                             [ngClass]="{
                               'bg-[#274DEA]/10 text-[#274DEA]': cand.status === 'RECEIVED',
@@ -373,180 +381,377 @@
                               'bg-[#ECFDF5] text-[#059669]': cand.status === 'ACCEPTED',
                               'bg-[#EF4444]/10 text-[#EF4444]': cand.status === 'REJECTED'
                             }"
-                            class="px-2.5 py-0.5 rounded-md text-[11px] font-bold"
+                            class="px-2.5 py-1 rounded-full text-[11px] font-bold"
                           >
                             {{ statusText(cand.status) }}
                           </span>
+
+                          <span class="text-gray-400 group-hover:text-[#274DEA] text-xs font-bold pl-1">
+                            Ver detalle →
+                          </span>
                         </div>
                       </div>
+                    } @empty {
+                      <div class="p-10 text-center">
+                        <p class="text-[14px] font-bold text-gray-800">
+                          No hay postulantes en esta etapa para "{{ currentJob.title }}"
+                        </p>
+                        <p class="text-[12px] text-[#6B7280] mt-1">
+                          Cuando los candidatos postulen a tu oferta o cambies el filtro de etapa, aparecerán en esta lista.
+                        </p>
+                      </div>
+                    }
+                  </div>
+                }
+              }
 
-                      <!-- Habilidades del Candidato -->
-                      @if (cand.skills && cand.skills.length > 0) {
-                        <div class="flex flex-wrap gap-1.5">
-                          @for (sk of cand.skills; track sk) {
-                            <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium">
-                              {{ sk }}
+              <!-- ========================================================= -->
+              <!-- CASO B: CANDIDATO EXPANDIDO (SE CIERRAN LOS DEMÁS)        -->
+              <!-- ========================================================= -->
+              @if (expandedCandidate(); as cand) {
+                <article class="rounded-2xl border border-[#274DEA]/30 bg-white p-5 space-y-5 shadow-xs animate-fade-in">
+                  
+                  <!-- 1. Cabecera del Postulante Expandido (Avatar 64x64 fijo, Nombre, Headline, Match IA y Estado) -->
+                  <div class="flex flex-wrap items-start justify-between gap-4 border-b border-gray-100 pb-4">
+                    <div class="flex items-start gap-4 min-w-0 flex-1">
+                      <div class="w-16 h-16 min-w-[64px] max-w-[64px] min-h-[64px] max-h-[64px] rounded-full bg-[#274DEA]/15 text-[#274DEA] font-extrabold text-lg flex items-center justify-center overflow-hidden border-2 border-[#059669] shrink-0 shadow-xs">
+                        @if (cand.avatarUrl || expandedPostulantDetail()?.avatarUrl) {
+                          <img
+                            [src]="cand.avatarUrl || expandedPostulantDetail()?.avatarUrl"
+                            [alt]="cand.firstName"
+                            class="w-16 h-16 object-cover block"
+                          />
+                        } @else {
+                          <span>{{ cand.firstName.charAt(0) }}{{ cand.lastName.charAt(0) }}</span>
+                        }
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <h4 class="text-[18px] font-bold text-gray-900">
+                            {{ cand.firstName }} {{ cand.lastName }}
+                          </h4>
+                          @if (cand.isInstitutionVerified || expandedPostulantDetail()?.isInstitutionVerified) {
+                            <span class="px-2.5 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669] text-[11px] font-bold border border-[#059669]/30">
+                              ✓ Perfil Universitario Verificado
                             </span>
                           }
                         </div>
-                      }
 
-                      <!-- ===================================================== -->
-                      <!-- STEPPER VISUAL DEL FLUJO DE CONTRATACIÓN (4 PASOS)    -->
-                      <!-- ===================================================== -->
-                      <div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-gray-200/80 space-y-3">
-                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[11px]">
-                          <!-- Paso 1 -->
-                          <div
-                            [ngClass]="cand.status === 'RECEIVED' ? 'border-[#274DEA] bg-[#274DEA]/5 text-[#274DEA] font-bold' : 'border-gray-200 bg-white text-[#059669] font-semibold'"
-                            class="p-2 rounded-lg border flex items-center gap-1.5"
-                          >
-                            <span>1. Revisión de Perfil y CV</span>
-                          </div>
+                        <p class="text-[13px] text-gray-700 mt-1 leading-snug">
+                          {{ expandedPostulantDetail()?.headline || cand.headline || 'Profesional en búsqueda de oportunidades en Unext' }}
+                        </p>
 
-                          <!-- Paso 2 -->
-                          <div
-                            [ngClass]="cand.status === 'UNDER_REVIEW' ? 'border-[#F59E0B] bg-[#FEF3C7]/60 text-[#B45309] font-bold' : (cand.status === 'ACCEPTED' ? 'border-gray-200 bg-white text-[#059669] font-semibold' : 'border-gray-200 bg-white text-gray-400')"
-                            class="p-2 rounded-lg border flex items-center gap-1.5"
-                          >
-                            <span>2. Charla por Mensajería</span>
-                          </div>
+                        <p class="text-[11px] text-[#6B7280] mt-1">
+                          Postuló el {{ formatRelativeDate(cand.appliedAt) }}
+                        </p>
+                      </div>
+                    </div>
 
-                          <!-- Paso 3 -->
-                          <div
-                            [ngClass]="isInterviewCompleted(cand.id) || cand.status === 'ACCEPTED' ? 'border-[#059669] bg-[#ECFDF5] text-[#059669] font-bold' : 'border-gray-200 bg-white text-gray-500'"
-                            class="p-2 rounded-lg border flex items-center gap-1.5"
-                          >
-                            <span>3. Entrevista Presencial</span>
-                          </div>
-
-                          <!-- Paso 4 -->
-                          <div
-                            [ngClass]="cand.status === 'ACCEPTED' ? 'border-[#059669] bg-[#059669] text-white font-bold' : (cand.status === 'REJECTED' ? 'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444] font-bold' : 'border-gray-200 bg-white text-gray-400')"
-                            class="p-2 rounded-lg border flex items-center gap-1.5"
-                          >
-                            <span>4. {{ cand.status === 'REJECTED' ? 'Descartado' : 'Contratado' }}</span>
-                          </div>
-                        </div>
-
-                        <!-- BARRA DE BOTONES DE ACCIÓN SEGÚN LA ETAPA DEL POSTULANTE -->
-                        <div class="pt-2 border-t border-gray-200/70 flex flex-wrap items-center justify-between gap-2">
-                          
-                          <!-- Acciones permanentes de revisión: Ver Perfil y Descargar CV -->
-                          <div class="flex items-center gap-2 flex-wrap">
-                            <a
-                              [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
-                              class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold transition"
-                            >
-                              👤 Ver perfil completo
-                            </a>
-
-                            <button
-                              type="button"
-                              (click)="downloadCandidateCv(cand)"
-                              class="px-3 py-1.5 rounded-lg border border-[#274DEA]/30 bg-white hover:bg-[#274DEA]/5 text-[#274DEA] text-xs font-bold transition"
-                            >
-                              📄 {{ cand.cvUrl ? 'Ver / Descargar CV' : 'Sin CV adjunto' }}
-                            </button>
-
-                            @if (cand.status === 'UNDER_REVIEW' || cand.status === 'ACCEPTED') {
-                              <a
-                                routerLink="/messages"
-                                class="px-3 py-1.5 rounded-lg bg-[#274DEA]/10 text-[#274DEA] hover:bg-[#274DEA] hover:text-white text-xs font-bold transition"
-                              >
-                                💬 Abrir charla en Mensajería
-                              </a>
-                            }
-                          </div>
-
-                          <!-- Botones de progresión de etapa -->
-                          <div class="flex items-center gap-2 flex-wrap">
-                            @if (cand.status === 'RECEIVED') {
-                              <button
-                                type="button"
-                                (click)="changeCandidateStatus(cand, 'REJECTED')"
-                                class="px-3 py-1.5 rounded-lg border border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition"
-                              >
-                                ✕ Descartar
-                              </button>
-                              <button
-                                type="button"
-                                (click)="changeCandidateStatus(cand, 'UNDER_REVIEW')"
-                                class="px-4 py-1.5 rounded-lg bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-2xs transition"
-                              >
-                                Pasar a Evaluación y Habilitar Chat →
-                              </button>
-                            }
-
-                            @if (cand.status === 'UNDER_REVIEW') {
-                              <!-- Checkbox para confirmar que ya tuvo la entrevista presencial -->
-                              <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-gray-300 text-xs font-semibold text-gray-700 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  [checked]="isInterviewCompleted(cand.id)"
-                                  (change)="toggleInterviewStep(cand.id)"
-                                  class="rounded text-[#059669]"
-                                />
-                                <span>📅 Entrevista presencial realizada</span>
-                              </label>
-
-                              <button
-                                type="button"
-                                (click)="changeCandidateStatus(cand, 'REJECTED')"
-                                class="px-3 py-1.5 rounded-lg border border-[#EF4444]/40 text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition"
-                              >
-                                ✕ Desaprobar
-                              </button>
-
-                              <button
-                                type="button"
-                                (click)="changeCandidateStatus(cand, 'ACCEPTED')"
-                                class="px-4 py-1.5 rounded-lg bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold shadow-2xs transition"
-                              >
-                                ✓ Aprobar y Contratar
-                              </button>
-                            }
-
-                            @if (cand.status === 'ACCEPTED') {
-                              <span class="px-3 py-1.5 rounded-lg bg-[#ECFDF5] text-[#059669] text-xs font-extrabold">
-                                🎉 Candidato Contratado
-                              </span>
-                              @if (currentJob.experienceLevel === 'TRAINEE' && cand.isInstitutionVerified) {
-                                <a
-                                  routerLink="/agreements"
-                                  class="px-3.5 py-1.5 rounded-lg bg-[#059669] text-white text-xs font-bold hover:bg-[#047857]"
-                                >
-                                  📜 Generar Convenio de Prácticas
-                                </a>
-                              }
-                            }
-
-                            @if (cand.status === 'REJECTED') {
-                              <button
-                                type="button"
-                                (click)="changeCandidateStatus(cand, 'UNDER_REVIEW')"
-                                class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 text-xs font-semibold"
-                              >
-                                ↺ Reevaluar candidato
-                              </button>
-                            }
-                          </div>
-
-                        </div>
+                    <div class="flex flex-col items-end gap-2 shrink-0">
+                      <div class="flex items-center gap-2">
+                        @if (cand.compatibilityPercent != null) {
+                          <span class="px-3 py-1 rounded-full bg-[#C3A7FF]/35 text-[#2E1065] text-xs font-extrabold">
+                            ⚡ {{ cand.compatibilityPercent }}% Match IA
+                          </span>
+                        }
+                        <span
+                          [ngClass]="{
+                            'bg-[#274DEA]/10 text-[#274DEA]': cand.status === 'RECEIVED',
+                            'bg-[#FEF3C7] text-[#B45309]': cand.status === 'UNDER_REVIEW',
+                            'bg-[#ECFDF5] text-[#059669]': cand.status === 'ACCEPTED',
+                            'bg-[#EF4444]/10 text-[#EF4444]': cand.status === 'REJECTED'
+                          }"
+                          class="px-3 py-1 rounded-full text-xs font-bold"
+                        >
+                          {{ statusText(cand.status) }}
+                        </span>
                       </div>
 
-                    </article>
-                  } @empty {
-                    <div class="p-10 text-center border border-dashed border-gray-200 rounded-2xl">
-                      <p class="text-[14px] font-bold text-gray-800">
-                        No hay postulantes en esta etapa para "{{ currentJob.title }}"
-                      </p>
-                      <p class="text-[12px] text-[#6B7280] mt-1">
-                        Cuando los candidatos postulen a tu oferta o cambies el filtro de etapa, aparecerán aquí.
-                      </p>
+                      <button
+                        type="button"
+                        (click)="closeExpandedCandidate()"
+                        class="text-xs font-semibold text-gray-500 hover:text-[#EF4444]"
+                      >
+                        ✕ Cerrar vista detallada
+                      </button>
                     </div>
+                  </div>
+
+                  <!-- 2. Credencial Universitaria Oficial (Si el postulante es universitario verificado) -->
+                  @if (expandedPostulantDetail(); as detail) {
+                    @if (detail.isInstitutionVerified || detail.institutionName || detail.studentCode) {
+                      <div class="p-3.5 rounded-xl bg-[#ECFDF5]/60 border border-[#059669]/30 flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 min-w-[40px] max-w-[40px] rounded-xl bg-white border border-[#059669]/30 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                            @if (detail.institutionLogoUrl) {
+                              <img
+                                [src]="detail.institutionLogoUrl"
+                                [alt]="detail.institutionName"
+                                class="w-10 h-10 object-cover block"
+                              />
+                            } @else {
+                              <span class="text-[11px] font-extrabold text-[#059669]">
+                                {{ institutionInitials(detail.institutionName) }}
+                              </span>
+                            }
+                          </div>
+
+                          <div>
+                            <p class="text-[13px] font-bold text-gray-900">
+                              {{ detail.institutionName || 'Institución Universitaria Afiliada' }}
+                            </p>
+                            <p class="text-[12px] text-[#059669] font-semibold">
+                              {{ detail.career || cand.career || 'Carrera universitaria' }}
+                              @if (detail.currentCycle || cand.currentCycle) {
+                                <span> · {{ detail.currentCycle || cand.currentCycle }}° Ciclo</span>
+                              }
+                            </p>
+                          </div>
+                        </div>
+
+                        @if (detail.studentCode) {
+                          <div class="px-3 py-1.5 rounded-lg bg-white border border-[#059669]/25 text-xs">
+                            <span class="text-[#6B7280]">Código de estudiante: </span>
+                            <strong class="font-mono text-gray-900">{{ detail.studentCode }}</strong>
+                          </div>
+                        }
+                      </div>
+                    }
                   }
-                </div>
+
+                  <!-- 3. Descripción / Acerca del Postulante -->
+                  <div class="space-y-1.5">
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-gray-500">
+                      Descripción / Presentación del candidato
+                    </h5>
+                    @if (isLoadingCandidateDetail()) {
+                      <div class="h-12 rounded-xl bg-slate-100 animate-pulse"></div>
+                    } @else {
+                      <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line bg-[#F8FAFC] p-3.5 rounded-xl border border-gray-100">
+                        {{ expandedPostulantDetail()?.bio || 'El postulante aún no ha agregado una biografía extendida, pero puedes revisar su CV y habilidades certificadas a continuación.' }}
+                      </p>
+                    }
+                  </div>
+
+                  <!-- 4. Habilidades del Postulante (Destacadas + Normales + Validadas por Institución con Logo) -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <h5 class="text-xs font-bold uppercase tracking-wider text-gray-500">
+                        Habilidades Técnicas y Certificaciones Académicas
+                      </h5>
+                    </div>
+
+                    <!-- Principales Aptitudes (Destacadas ★) -->
+                    @if (expandedCandidateTopSkills().length > 0) {
+                      <div class="p-3 rounded-xl bg-[#FEF3C7]/40 border border-[#F59E0B]/30 flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-bold text-[#B45309]">★ Aptitudes principales:</span>
+                        @for (topSk of expandedCandidateTopSkills(); track topSk.id) {
+                          <span class="px-2.5 py-0.5 rounded-full bg-white border border-[#F59E0B]/40 text-gray-900 text-xs font-bold shadow-2xs">
+                            {{ topSk.name }} ({{ topSk.masteryLevel }})
+                          </span>
+                        }
+                      </div>
+                    }
+
+                    <!-- Todas las habilidades (Mostrando sello e institución si está validada académicamente) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      @for (sk of expandedCandidateAllSkills(); track sk.id) {
+                        <div
+                          [ngClass]="sk.isValidatedByInstitution
+                            ? 'border-[#059669]/40 bg-[#ECFDF5]/40'
+                            : 'border-gray-200 bg-[#F8FAFC]'"
+                          class="p-2.5 rounded-xl border flex items-center justify-between gap-2"
+                        >
+                          <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                              <span class="text-xs font-bold text-gray-900">{{ sk.name }}</span>
+                              <span class="px-2 py-0.5 rounded-full bg-[#274DEA]/10 text-[#274DEA] text-[10px] font-bold">
+                                {{ sk.masteryLevel }}
+                              </span>
+                              @if (sk.isTopSkill) {
+                                <span class="text-[#F59E0B] text-xs" title="Habilidad Destacada">★</span>
+                              }
+                            </div>
+
+                            @if (sk.isValidatedByInstitution) {
+                              <div class="mt-1 flex items-center gap-1.5">
+                                <div class="w-4 h-4 min-w-[16px] max-w-[16px] rounded-full bg-white border border-[#059669]/40 flex items-center justify-center overflow-hidden shrink-0">
+                                  @if (sk.validatedInstitutionLogoUrl || expandedPostulantDetail()?.institutionLogoUrl) {
+                                    <img
+                                      [src]="sk.validatedInstitutionLogoUrl || expandedPostulantDetail()?.institutionLogoUrl"
+                                      alt="Logo"
+                                      class="w-4 h-4 object-cover block"
+                                    />
+                                  } @else {
+                                    <span class="text-[8px] font-extrabold text-[#059669]">✓</span>
+                                  }
+                                </div>
+                                <span class="text-[10px] font-bold text-[#059669] truncate">
+                                  Certificada por {{ sk.validatedInstitutionName || expandedPostulantDetail()?.institutionName || 'Universidad' }}
+                                </span>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- ===================================================== -->
+                  <!-- 5. CARD DE GESTIÓN DE ETAPAS (IDÉNTICA A TU CAPTURA)  -->
+                  <!-- ===================================================== -->
+                  <div class="p-4 rounded-2xl bg-[#F8FAFC] border border-gray-200/90 space-y-3.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+                      <!-- Etapa 1 -->
+                      <div
+                        [ngClass]="cand.status === 'RECEIVED'
+                          ? 'border-[#274DEA] bg-[#274DEA]/10 text-[#274DEA] font-bold ring-1 ring-[#274DEA]/30'
+                          : 'border-gray-200 bg-white text-[#059669] font-semibold'"
+                        class="px-3 py-2.5 rounded-xl border flex items-center justify-center text-center"
+                      >
+                        <span>1. Revisión de Perfil y CV</span>
+                      </div>
+
+                      <!-- Etapa 2 -->
+                      <div
+                        [ngClass]="cand.status === 'UNDER_REVIEW'
+                          ? 'border-[#274DEA] bg-[#274DEA]/10 text-[#274DEA] font-bold ring-1 ring-[#274DEA]/30'
+                          : (cand.status === 'ACCEPTED' ? 'border-gray-200 bg-white text-[#059669] font-semibold' : 'border-gray-200 bg-white text-gray-400')"
+                        class="px-3 py-2.5 rounded-xl border flex items-center justify-center text-center"
+                      >
+                        <span>2. Charla por Mensajería</span>
+                      </div>
+
+                      <!-- Etapa 3 -->
+                      <div
+                        [ngClass]="isInterviewCompleted(cand.id) || cand.status === 'ACCEPTED'
+                          ? 'border-[#059669] bg-[#ECFDF5] text-[#059669] font-bold'
+                          : 'border-gray-200 bg-white text-gray-500'"
+                        class="px-3 py-2.5 rounded-xl border flex items-center justify-center text-center"
+                      >
+                        <span>3. Entrevista Presencial</span>
+                      </div>
+
+                      <!-- Etapa 4 -->
+                      <div
+                        [ngClass]="cand.status === 'ACCEPTED'
+                          ? 'border-[#059669] bg-[#059669] text-white font-bold'
+                          : (cand.status === 'REJECTED' ? 'border-[#EF4444] bg-[#EF4444]/10 text-[#EF4444] font-bold' : 'border-gray-200 bg-white text-gray-400')"
+                        class="px-3 py-2.5 rounded-xl border flex items-center justify-center text-center"
+                      >
+                        <span>4. {{ cand.status === 'REJECTED' ? 'Descartado' : 'Contratado' }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Barra de Botones de Acción del Proceso -->
+                    <div class="pt-3 border-t border-gray-200/80 flex flex-wrap items-center justify-between gap-2.5">
+                      
+                      <!-- Izquierda: Ver Perfil Público, CV y Abrir Charla en Mensajería -->
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <a
+                          [routerLink]="['/profile/view/postulant', cand.postulantProfileId]"
+                          class="px-3.5 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 text-xs font-bold transition"
+                        >
+                          👤 Ver perfil completo
+                        </a>
+
+                        <button
+                          type="button"
+                          (click)="downloadCandidateCv(cand)"
+                          class="px-3.5 py-2 rounded-xl border border-[#274DEA]/40 bg-white hover:bg-[#274DEA]/5 text-[#274DEA] text-xs font-bold transition"
+                        >
+                          📄 {{ hasCandidateCv(cand) ? 'Ver / Descargar CV' : 'Sin CV adjunto' }}
+                        </button>
+
+                        @if (cand.status === 'UNDER_REVIEW' || cand.status === 'ACCEPTED') {
+                          <button
+                            type="button"
+                            [disabled]="isOpeningChat()"
+                            (click)="openChatWithCandidate(cand)"
+                            class="px-4 py-2 rounded-xl bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-2xs transition"
+                          >
+                            💬 {{ isOpeningChat() ? 'Conectando...' : 'Abrir charla por Mensajería' }}
+                          </button>
+                        }
+                      </div>
+
+                      <!-- Derecha: Botones de Progresión de Etapa -->
+                      <div class="flex items-center gap-2 flex-wrap">
+                        @if (cand.status === 'RECEIVED') {
+                          <button
+                            type="button"
+                            (click)="changeCandidateStatus(cand, 'REJECTED')"
+                            class="px-3.5 py-2 rounded-xl border border-[#EF4444]/40 bg-white text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition"
+                          >
+                            ✕ Descartar
+                          </button>
+                          <button
+                            type="button"
+                            (click)="changeCandidateStatus(cand, 'UNDER_REVIEW')"
+                            class="px-4 py-2 rounded-xl bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-xs transition"
+                          >
+                            Pasar a Evaluación y Habilitar Chat →
+                          </button>
+                        }
+
+                        @if (cand.status === 'UNDER_REVIEW') {
+                          <label class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-300 text-xs font-bold text-gray-700 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              [checked]="isInterviewCompleted(cand.id)"
+                              (change)="toggleInterviewStep(cand.id)"
+                              class="rounded text-[#059669]"
+                            />
+                            <span>📅 Entrevista presencial realizada</span>
+                          </label>
+
+                          <button
+                            type="button"
+                            (click)="changeCandidateStatus(cand, 'REJECTED')"
+                            class="px-3.5 py-2 rounded-xl border border-[#EF4444]/40 bg-white text-[#EF4444] hover:bg-[#EF4444]/10 text-xs font-bold transition"
+                          >
+                            ✕ Descartar
+                          </button>
+
+                          <button
+                            type="button"
+                            (click)="changeCandidateStatus(cand, 'ACCEPTED')"
+                            class="px-4 py-2 rounded-xl bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold shadow-xs transition"
+                          >
+                            ✓ Aprobar y Contratar
+                          </button>
+                        }
+
+                        @if (cand.status === 'ACCEPTED') {
+                          <span class="px-3.5 py-2 rounded-xl bg-[#ECFDF5] text-[#059669] text-xs font-extrabold">
+                            🎉 Candidato Contratado
+                          </span>
+                          @if (currentJob.experienceLevel === 'TRAINEE' && (cand.isInstitutionVerified || expandedPostulantDetail()?.isInstitutionVerified)) {
+                            <a
+                              routerLink="/agreements"
+                              class="px-4 py-2 rounded-xl bg-[#059669] text-white text-xs font-bold hover:bg-[#047857]"
+                            >
+                              📜 Generar Convenio de Prácticas
+                            </a>
+                          }
+                        }
+
+                        @if (cand.status === 'REJECTED') {
+                          <button
+                            type="button"
+                            (click)="changeCandidateStatus(cand, 'UNDER_REVIEW')"
+                            class="px-3.5 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 text-xs font-bold"
+                          >
+                            ↺ Reevaluar candidato
+                          </button>
+                        }
+                      </div>
+
+                    </div>
+                  </div>
+
+                </article>
               }
 
             </div>
@@ -565,12 +770,10 @@
     }
 
     <!-- =================================================================== -->
-    <!-- MODO 2 (ACCIÓN 4): EXPLORAR VACANTES DE OTRAS EMPRESAS (SOLO LECTURA) -->
+    <!-- MODO 2: EXPLORAR VACANTES DE OTRAS EMPRESAS (SOLO LECTURA)          -->
     <!-- =================================================================== -->
     @if (activeTab() === 'MARKET_EXPLORER') {
       <section class="space-y-4">
-
-        <!-- Buscador idéntico al del Postulante -->
         <form
           (ngSubmit)="loadMarketJobs()"
           class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
@@ -625,7 +828,6 @@
           </div>
         </form>
 
-        <!-- Vista Maestro-Detalle de las Vacantes del Mercado (Sin botón de Postular) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <div class="lg:col-span-5 space-y-2.5 max-h-[68vh] overflow-y-auto pr-1">
             @for (offer of marketJobs(); track offer.id) {
@@ -669,7 +871,6 @@
                     </p>
                   </div>
 
-                  <!-- Aviso de modo referencia en lugar del botón Postular -->
                   <span class="px-3.5 py-1.5 rounded-full bg-slate-100 border border-gray-300 text-gray-700 text-xs font-bold">
                     👁 Vista de referencia corporativa (Solo lectura)
                   </span>
@@ -704,16 +905,13 @@
             }
           </div>
         </div>
-
       </section>
     }
 
   </div>
 </main>
 
-<!-- ========================================================================= -->
-<!-- MODAL UNIFICADO PARA CREAR (ACCIÓN 1) Y EDITAR VACANTE (ACCIÓN 2)         -->
-<!-- ========================================================================= -->
+<!-- MODAL UNIFICADO PARA CREAR Y EDITAR VACANTE -->
 @if (isJobModalOpen()) {
   <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-gray-200 overflow-hidden my-8 animate-fade-in">
@@ -814,7 +1012,6 @@
           </div>
         </div>
 
-        <!-- Habilidades Requeridas para el Matching IA -->
         <div>
           <label class="block text-xs font-bold text-gray-700 mb-1">
             Habilidades técnicas requeridas (Al menos 1 para el Matching IA) *
