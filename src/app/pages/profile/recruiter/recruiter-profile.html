@@ -613,28 +613,125 @@
 }
 
 @if (isOtpModalOpen()) {
-  <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-[18px] font-bold text-gray-900">Verificación Corporativa (OTP)</h3>
-        <button type="button" (click)="isOtpModalOpen.set(false)" class="text-gray-500 hover:text-gray-900">✕</button>
-      </div>
-      @if (profile().pendingVerificationCode) {
-        <div class="p-3 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 text-xs text-gray-700 flex items-center justify-between">
-          <span>Código de prueba generado en backend:</span>
-          <span class="font-mono font-extrabold text-sm text-[#274DEA]">{{ profile().pendingVerificationCode }}</span>
+  <div class="fixed inset-0 z-50 bg-gray-900/65 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-gray-200 space-y-5 animate-fade-in">
+      
+      <!-- Cabecera con Icono de Escudo -->
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-2xl bg-[#ECFDF5] border border-[#059669]/30 text-[#059669] flex items-center justify-center text-lg font-extrabold shrink-0">
+            🔐
+          </div>
+          <div>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#ECFDF5] text-[#059669]">
+              Seguridad UNEXT
+            </span>
+            <h3 class="text-[18px] font-bold text-gray-900 mt-0.5">
+              Verificación por Código OTP
+            </h3>
+          </div>
         </div>
-      }
-      @if (otpErrorMessage()) {
-        <div class="p-3 rounded-xl bg-[#EF4444]/10 text-[#EF4444] text-xs font-semibold">{{ otpErrorMessage() }}</div>
-      }
-      <input type="text" [(ngModel)]="otpCode" maxlength="6" placeholder="000000" class="w-full px-4 py-2.5 border border-gray-400 rounded-xl text-center font-mono text-lg font-extrabold tracking-widest" />
-      <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
-        <button type="button" (click)="isOtpModalOpen.set(false)" class="px-4 py-2 rounded-full text-gray-600 text-xs font-semibold">Más tarde</button>
-        <button type="button" [disabled]="isVerifyingOtp()" (click)="submitVerifyOrganization()" class="px-5 py-2 rounded-full bg-[#059669] text-white text-xs font-bold">
-          {{ isVerifyingOtp() ? 'Verificando...' : '✓ Activar cuenta corporativa' }}
+        <button
+          type="button"
+          (click)="isOtpModalOpen.set(false)"
+          class="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-800 transition"
+        >
+          ✕
         </button>
       </div>
+
+      <p class="text-[13px] text-[#6B7280] leading-relaxed">
+        Hemos generado un código único de 6 dígitos en el servidor y lo enviamos a tu <strong>bandeja de notificaciones</strong> para acreditar oficialmente tu organización.
+      </p>
+
+      <!-- Tarjeta de Notificación en Vivo con el Código del Backend -->
+      <div class="p-3.5 rounded-2xl bg-gradient-to-r from-[#ECFDF5] to-[#F8FAFC] border border-[#059669]/30 flex items-center justify-between gap-3">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-[#059669] block">
+            🔔 Código activo en tu cuenta
+          </span>
+          <span class="font-mono font-black text-xl tracking-[0.25em] text-gray-900 mt-0.5 block">
+            {{ profile().pendingVerificationCode || '••••••' }}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          @if (profile().pendingVerificationCode) {
+            <button
+              type="button"
+              (click)="fillOtpFromBackendBadge()"
+              class="px-3 py-1.5 rounded-xl bg-white border border-[#059669]/40 text-[#059669] hover:bg-[#059669] hover:text-white text-xs font-bold transition shadow-2xs"
+            >
+              Autocompletar
+            </button>
+          }
+          <button
+            type="button"
+            [disabled]="isResendingOtp()"
+            (click)="requestNewOtpCode()"
+            class="p-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-[#274DEA] hover:border-[#274DEA]/40 text-xs font-bold transition"
+            title="Generar un nuevo código en el servidor"
+          >
+            {{ isResendingOtp() ? '...' : '🔄' }}
+          </button>
+        </div>
+      </div>
+
+      @if (otpErrorMessage()) {
+        <div class="p-3 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+          {{ otpErrorMessage() }}
+        </div>
+      }
+
+      <!-- 6 Casillas Individuales Estilo Banca Digital -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-bold text-gray-700">Ingresa los 6 dígitos de verificación</label>
+          <button
+            type="button"
+            [disabled]="isResendingOtp()"
+            (click)="requestNewOtpCode()"
+            class="text-[11px] font-bold text-[#274DEA] hover:underline"
+          >
+            Solicitar nuevo código
+          </button>
+        </div>
+
+        <div class="grid grid-cols-6 gap-2" (paste)="onOtpPaste($event)">
+          @for (digit of [0, 1, 2, 3, 4, 5]; track digit) {
+            <input
+              [id]="'otp-box-' + digit"
+              type="text"
+              inputmode="numeric"
+              maxlength="1"
+              [value]="otpDigits[digit]"
+              (input)="onOtpDigitInput(digit, $event)"
+              (keydown)="onOtpDigitKeydown(digit, $event)"
+              class="w-full h-12 sm:h-14 border-2 border-gray-300 rounded-xl text-center font-mono text-xl font-extrabold text-gray-900 bg-[#F8FAFC] focus:bg-white focus:outline-none focus:border-[#059669] focus:ring-2 focus:ring-[#059669]/20 transition"
+            />
+          }
+        </div>
+      </div>
+
+      <!-- Botones Inferiores -->
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
+        <button
+          type="button"
+          (click)="isOtpModalOpen.set(false)"
+          class="px-4 py-2.5 rounded-full text-gray-600 hover:bg-gray-100 text-xs font-semibold transition"
+        >
+          Más tarde
+        </button>
+        <button
+          type="button"
+          [disabled]="isVerifyingOtp()"
+          (click)="submitVerifyOrganization()"
+          class="px-6 py-2.5 rounded-full bg-[#059669] hover:bg-[#047857] disabled:opacity-60 text-white text-xs font-bold shadow-sm transition flex items-center gap-1.5"
+        >
+          <span>{{ isVerifyingOtp() ? 'Verificando en servidor...' : '✓ Confirmar y acreditar cuenta' }}</span>
+        </button>
+      </div>
+
     </div>
   </div>
 }

@@ -9,14 +9,14 @@
     <div>
       <div class="flex items-center gap-2">
         <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider text-primary bg-primary-soft">
-          Servicios Institucionales
+          Gestión Académica Universitaria
         </span>
         <span class="text-xs text-ink-muted">
           · {{ institution()?.name || 'Universidad Aliada' }}
         </span>
       </div>
       <h1 class="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-ink">
-        Panel de Servicios y Acreditación
+        Centro de Gestión Académica y Empleabilidad
       </h1>
       <p class="mt-1 text-xs sm:text-sm text-ink-muted">
         Gestiona la convalidación de tus alumnos, avala competencias técnicas y administra convenios de prácticas preprofesionales.
@@ -495,7 +495,7 @@
                   <button
                     type="button"
                     [disabled]="processingAgreementId() === agr.id"
-                    (click)="updateAgreementStatus(agr, 'ACTIVE')"
+                    (click)="updateAgreementStatus(agr, 'APPROVED')"
                     class="btn-institutional text-xs py-1.5 px-3 font-semibold"
                   >
                     Aprobar Convenio

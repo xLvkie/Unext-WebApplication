@@ -9,6 +9,12 @@ import { NotificationCategory, NotificationItem } from '../../core/models/notifi
 import { readApiError } from '../../core/utils/api-error';
 import { toDate } from '../../core/utils/format';
 
+export interface QuickLinkItem {
+  label: string;
+  route: string;
+  queryParams?: Record<string, string>;
+}
+
 @Component({
   selector: 'app-notifications',
   standalone: true,
@@ -26,13 +32,12 @@ export class Notifications implements OnInit {
 
   currentRole = computed(() => this.authService.getStoredRole() || 'POSTULANT');
 
-  // Textos dinámicos y escalables para los 3 segmentos
   roleDescription = computed(() => {
     switch (this.currentRole()) {
       case 'RECRUITER':
         return 'Revisa postulaciones recibidas en tus vacantes, estado de convenios e interacciones en la red.';
       case 'INSTITUTION':
-        return 'Supervisa solicitudes de acreditación estudiantil, convenios de prácticas e interacciones.';
+        return 'Supervisa solicitudes de acreditación estudiantil, validación de habilidades y convenios de prácticas.';
       default:
         return 'Revisa el estado de tus postulaciones, validaciones académicas e interacciones en la comunidad.';
     }
@@ -43,7 +48,7 @@ export class Notifications implements OnInit {
       case 'RECRUITER':
         return 'Administración de mis Vacantes';
       case 'INSTITUTION':
-        return 'Bolsa y Empleabilidad';
+        return 'Empleabilidad e Insignias';
       default:
         return 'Empleos y Postulaciones';
     }
@@ -54,24 +59,28 @@ export class Notifications implements OnInit {
       case 'RECRUITER':
         return 'Gestión de Convenios';
       case 'INSTITUTION':
-        return 'Acreditaciones y Convenios';
+        return 'Gestión Académica y Convenios';
       default:
         return 'Validación Académica';
     }
   });
 
-  quickLinks = computed(() => {
+  quickLinks = computed<QuickLinkItem[]>(() => {
     switch (this.currentRole()) {
       case 'RECRUITER':
         return [
           { label: 'Administración de mis vacantes', route: '/recruiter/jobs' },
-          { label: 'Manejo de convenios universitarios', route: '/agreements' },
+          {
+            label: 'Manejo de convenios universitarios',
+            route: '/recruiter/jobs',
+            queryParams: { tab: 'agreements' }
+          },
           { label: 'Perfil corporativo de empresa', route: '/profile/me' }
         ];
       case 'INSTITUTION':
         return [
-          { label: 'Solicitudes de acreditación', route: '/institution/validations' },
-          { label: 'Convenios de prácticas', route: '/agreements' },
+          { label: 'Centro de Gestión Académica', route: '/institution/services' },
+          { label: 'Explorar conexiones en Mi Red', route: '/directory' },
           { label: 'Perfil institucional', route: '/profile/me' }
         ];
       default:
@@ -130,8 +139,10 @@ export class Notifications implements OnInit {
     if (this.notificationService.unreadCount() === 0) return;
 
     this.notificationService.markAllAsRead().subscribe({
-      next: () => this.showToast('Todas las notificaciones fueron marcadas como leídas.', 'success'),
-      error: (err) => this.showToast(readApiError(err, 'No se pudo completar la acción.'), 'error')
+      next: () =>
+        this.showToast('Todas las notificaciones fueron marcadas como leídas.', 'success'),
+      error: (err) =>
+        this.showToast(readApiError(err, 'No se pudo completar la acción.'), 'error')
     });
   }
 
@@ -139,7 +150,8 @@ export class Notifications implements OnInit {
     event.stopPropagation();
     this.notificationService.deleteNotification(item.id).subscribe({
       next: () => this.showToast('Notificación eliminada.', 'info'),
-      error: (err) => this.showToast(readApiError(err, 'No se pudo eliminar la notificación.'), 'error')
+      error: (err) =>
+        this.showToast(readApiError(err, 'No se pudo eliminar la notificación.'), 'error')
     });
   }
 
@@ -147,8 +159,12 @@ export class Notifications implements OnInit {
     if (!item.isRead) {
       this.handleMarkAsRead(item);
     }
-    const route = this.resolveTargetRoute(item);
-    this.router.navigate([route]);
+    const target = this.resolveTargetDestination(item);
+    if (target.queryParams) {
+      this.router.navigate([target.route], { queryParams: target.queryParams });
+    } else {
+      this.router.navigate([target.route]);
+    }
   }
 
   resolveKind(item: NotificationItem): 'JOBS' | 'ACADEMIC' | 'FEED' {
@@ -158,7 +174,10 @@ export class Notifications implements OnInit {
       text.includes('postulaci') ||
       text.includes('empleo') ||
       text.includes('candidato') ||
-      text.includes('oferta')
+      text.includes('oferta') ||
+      text.includes('proceso') ||
+      text.includes('seleccionado') ||
+      text.includes('aceptado')
     ) {
       return 'JOBS';
     }
@@ -169,31 +188,72 @@ export class Notifications implements OnInit {
       text.includes('habilidad') ||
       text.includes('instituci') ||
       text.includes('convenio') ||
-      text.includes('práctica')
+      text.includes('práctica') ||
+      text.includes('insignia') ||
+      text.includes('código') ||
+      text.includes('otp') ||
+      text.includes('oficializado')
     ) {
       return 'ACADEMIC';
     }
     return 'FEED';
   }
 
-  // Redirige a la vista correcta según el rol del usuario autenticado
-  resolveTargetRoute(item: NotificationItem): string {
-    const kind = this.resolveKind(item);
+  // Redirección exacta según el contenido de la notificación y el rol (POSTULANT, RECRUITER, INSTITUTION)
+  resolveTargetDestination(item: NotificationItem): {
+    route: string;
+    queryParams?: Record<string, string>;
+  } {
+    const text = `${item.title} ${item.content}`.toLowerCase();
     const role = this.currentRole();
 
+    // 1. Códigos de seguridad OTP o insignias de perfil -> Perfil propio
+    if (text.includes('código') || text.includes('otp') || text.includes('insignia')) {
+      return { route: '/profile/me' };
+    }
+
+    // 2. Mensajería o chat habilitado
+    if (text.includes('mensajería') || text.includes('mensaje')) {
+      return { route: '/messages' };
+    }
+
+    // 3. Solicitudes de conexión en Mi Red
+    if (
+      text.includes('conexión') ||
+      text.includes('conectar') ||
+      text.includes('solicitud para conectar')
+    ) {
+      return { route: '/directory' };
+    }
+
+    // 4. Convenios de prácticas
+    if (text.includes('convenio') || text.includes('práctica')) {
+      if (role === 'RECRUITER') {
+        return { route: '/recruiter/jobs', queryParams: { tab: 'agreements' } };
+      }
+      if (role === 'INSTITUTION') {
+        return { route: '/institution/services' };
+      }
+      return { route: '/profile/me' };
+    }
+
+    // 5. Según categoría general (JOBS / ACADEMIC / FEED)
+    const kind = this.resolveKind(item);
     if (kind === 'JOBS') {
-      return role === 'RECRUITER' ? '/recruiter/jobs' : '/jobs';
+      if (role === 'RECRUITER') return { route: '/recruiter/jobs' };
+      if (role === 'INSTITUTION') return { route: '/institution/services' };
+      return { route: '/jobs' };
     }
+
     if (kind === 'ACADEMIC') {
-      if (role === 'RECRUITER') return '/agreements';
-      if (role === 'INSTITUTION') return '/institution/validations';
-      return '/profile/me';
+      if (role === 'INSTITUTION') return { route: '/institution/services' };
+      if (role === 'RECRUITER') {
+        return { route: '/recruiter/jobs', queryParams: { tab: 'agreements' } };
+      }
+      return { route: '/profile/me' };
     }
-    const text = `${item.title} ${item.content}`.toLowerCase();
-    if (text.includes('conexión') || text.includes('conectar') || text.includes('solicitud')) {
-      return '/directory';
-    }
-    return '/feed';
+
+    return { route: '/feed' };
   }
 
   formatRelativeTime(value: unknown): string {

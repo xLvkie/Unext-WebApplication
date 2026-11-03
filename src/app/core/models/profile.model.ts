@@ -125,13 +125,18 @@ export interface InstitutionProfileResponse {
   name: string;
   domain: string;
   logoUrl?: string | null;
+  bannerUrl?: string | null;
+  bannerText?: string | null;
   description?: string | null;
   isVerified?: boolean;
+  pendingVerificationCode?: string | null;
 }
 
 export interface InstitutionProfileUpdate {
   name?: string;
   domain?: string;
   logoUrl?: string | null;
+  bannerUrl?: string | null;
+  bannerText?: string | null;
   description?: string | null;
-}
+}

@@ -61,6 +61,9 @@ export class RecruiterProfile implements OnInit {
   allCompanyPosts = signal<FeedPostResponse[]>([]);
   companyJobs = signal<JobOffer[]>([]);
 
+  otpDigits: string[] = ['', '', '', '', '', ''];
+  isResendingOtp = signal(false);
+
   profile = signal<RecruiterProfileResponse>({
     id: '',
     userId: '',
@@ -134,10 +137,7 @@ export class RecruiterProfile implements OnInit {
   );
 
   suggestedPeers = computed(() =>
-    this.directoryService
-      .contacts()
-      .filter((c) => c.userId !== this.profile().userId)
-      .slice(0, 4)
+    this.directoryService.dailyCommunityPeers(this.profile().userId, 6)
   );
 
   ngOnInit(): void {
@@ -346,14 +346,86 @@ export class RecruiterProfile implements OnInit {
 
   openOtpModal(): void {
     this.otpErrorMessage.set(null);
-    this.otpCode = this.profile().pendingVerificationCode || '';
+    const currentCode = (this.profile().pendingVerificationCode || '').trim();
+    if (currentCode.length === 6) {
+      this.otpCode = currentCode;
+      this.otpDigits = currentCode.split('');
+    } else {
+      this.otpDigits = ['', '', '', '', '', ''];
+      this.otpCode = '';
+      this.requestNewOtpCode(true);
+    }
     this.isOtpModalOpen.set(true);
   }
 
+  onOtpDigitInput(index: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const val = input.value.replace(/\D/g, '').slice(-1);
+    this.otpDigits[index] = val;
+    input.value = val;
+    this.otpCode = this.otpDigits.join('');
+
+    if (val && index < 5) {
+      const nextInput = document.getElementById(`otp-box-${index + 1}`) as HTMLInputElement | null;
+      nextInput?.focus();
+      nextInput?.select();
+    }
+  }
+
+  onOtpDigitKeydown(index: number, event: KeyboardEvent): void {
+    if (event.key === 'Backspace' && !this.otpDigits[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-box-${index - 1}`) as HTMLInputElement | null;
+      prevInput?.focus();
+    }
+  }
+
+  onOtpPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    const pasted = (event.clipboardData?.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    if (!pasted) return;
+    for (let i = 0; i < 6; i++) {
+      this.otpDigits[i] = pasted[i] || '';
+    }
+    this.otpCode = this.otpDigits.join('');
+  }
+
+  fillOtpFromBackendBadge(): void {
+    const code = (this.profile().pendingVerificationCode || '').trim();
+    if (code.length === 6) {
+      this.otpDigits = code.split('');
+      this.otpCode = code;
+    }
+  }
+
+  requestNewOtpCode(silent = false): void {
+    this.isResendingOtp.set(true);
+    this.otpErrorMessage.set(null);
+
+    this.profileService.resendOrganizationCode().subscribe({
+      next: (res) => {
+        this.isResendingOtp.set(false);
+        if (res.code) {
+          this.profile.update((p) => ({ ...p, pendingVerificationCode: res.code }));
+          this.otpDigits = res.code.split('');
+          this.otpCode = res.code;
+        }
+        if (!silent) {
+          this.showToast('Nuevo código generado y enviado a tus notificaciones.', 'info');
+        }
+      },
+      error: (err) => {
+        this.isResendingOtp.set(false);
+        if (!silent) {
+          this.otpErrorMessage.set(readApiError(err, 'No se pudo generar un nuevo código.'));
+        }
+      }
+    });
+  }
+
   submitVerifyOrganization(): void {
-    const cleanCode = this.otpCode.trim();
-    if (!cleanCode) {
-      this.otpErrorMessage.set('Ingresa el código de verificación de 6 dígitos.');
+    const cleanCode = this.otpDigits.join('').trim() || this.otpCode.trim();
+    if (cleanCode.length !== 6) {
+      this.otpErrorMessage.set('Completa los 6 dígitos del código de verificación.');
       return;
     }
 
@@ -364,16 +436,21 @@ export class RecruiterProfile implements OnInit {
       next: (msg) => {
         this.isVerifyingOtp.set(false);
         this.isOtpModalOpen.set(false);
-        this.loadMyRecruiterProfile();
+        this.profile.update((curr) => ({
+          ...curr,
+          isVerified: true,
+          pendingVerificationCode: null
+        }));
         this.showToast(msg || '¡Organización verificada exitosamente!', 'success');
       },
       error: (err) => {
         this.isVerifyingOtp.set(false);
-        this.otpErrorMessage.set(readApiError(err, 'Código de verificación incorrecto.'));
+        this.otpErrorMessage.set(
+          readApiError(err, 'Código de verificación incorrecto. Solicita uno nuevo si expiró.')
+        );
       }
     });
   }
-
   // Fijar o desfijar una publicación entre Importantes y Normales
   handleToggleImportantPost(post: FeedPostResponse): void {
     this.feedService.toggleImportant(post.id).subscribe({

@@ -213,8 +213,15 @@ export class RecruiterJobs implements OnInit {
 
     this.route.queryParamMap.subscribe((params) => {
       const tabParam = params.get('tab');
+      const qParam = params.get('q');
       if (tabParam === 'agreements') {
         this.activeTab.set('AGREEMENTS');
+      } else if (tabParam === 'market' || qParam) {
+        this.activeTab.set('MARKET_EXPLORER');
+        if (qParam) {
+          this.marketKeyword = qParam;
+          this.loadMarketJobs();
+        }
       }
     });
 

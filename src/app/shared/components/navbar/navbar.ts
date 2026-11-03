@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ProfileService } from '../../../core/services/profile.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { UserRole } from '../../../core/models/auth.model';
+import { JobService } from '../../../core/services/job.service';
 
 export interface NavItem {
   id: string;
@@ -27,9 +28,8 @@ export class Navbar implements OnInit {
   private profileService = inject(ProfileService);
   private notificationService = inject(NotificationService);
   private router = inject(Router);
+  private jobService = inject(JobService);
 
-  // Inputs opcionales: si una página (como Profile) quiere pasarlos en vivo, tienen prioridad;
-  // si solo pones <app-navbar />, el componente usa los datos que carga automáticamente en ngOnInit.
   unreadNotifications = input<number | null>(null);
   unreadMessages = input<number>(0);
   userName = input<string>('');
@@ -38,7 +38,6 @@ export class Navbar implements OnInit {
 
   searchChange = output<string>();
 
-  // Estado interno cargado automáticamente desde el backend según el segmento
   private fetchedName = signal<string>('Mi Cuenta');
   private fetchedSubtitle = signal<string>('Ver perfil');
   private fetchedAvatar = signal<string | null>(null);
@@ -103,7 +102,7 @@ export class Navbar implements OnInit {
     },
     {
       id: 'institution-services',
-      label: 'Servicios Institucionales',
+      label: 'Gestión Académica',
       route: '/institution/services',
       icon: 'dashboard',
       roles: ['INSTITUTION']
@@ -144,9 +143,7 @@ export class Navbar implements OnInit {
     if (!this.isLoggedIn()) return;
 
     // 1. Cargar contador de notificaciones automáticamente si aún no está en memoria
-    if (this.notificationService.notifications().length === 0) {
-      this.notificationService.getMyNotifications().subscribe({ error: () => {} });
-    }
+    this.notificationService.startPolling();
 
     // 2. Cargar nombre, subtítulo/headline y logo/avatar automáticamente según los 3 segmentos
     const role = this.currentRole() || 'POSTULANT';
@@ -185,9 +182,30 @@ export class Navbar implements OnInit {
   onSearchSubmit(): void {
     const q = this.searchQuery.trim();
     this.searchChange.emit(q);
-    if (q) {
-      this.router.navigate(['/directory'], { queryParams: { search: q } });
-    }
+    if (!q) return;
+
+    const role = this.currentRole() || 'POSTULANT';
+
+    // Consultamos si el término buscado coincide con alguna vacante activa en la plataforma
+    this.jobService.search(q, '', '').subscribe({
+      next: (matchingJobs) => {
+        if (matchingJobs && matchingJobs.length > 0 && role !== 'INSTITUTION') {
+          if (role === 'RECRUITER') {
+            this.router.navigate(['/recruiter/jobs'], {
+              queryParams: { q, tab: 'market' }
+            });
+          } else {
+            this.router.navigate(['/jobs'], { queryParams: { q } });
+          }
+        } else {
+          // Si no coincide con una vacante, busca personas/empresas/instituciones en Mi Red
+          this.router.navigate(['/directory'], { queryParams: { search: q } });
+        }
+      },
+      error: () => {
+        this.router.navigate(['/directory'], { queryParams: { search: q } });
+      }
+    });
   }
 
   toggleProfileMenu(): void {
@@ -200,6 +218,7 @@ export class Navbar implements OnInit {
 
   logout(): void {
     this.isProfileMenuOpen.set(false);
+    this.notificationService.stopPolling();
     this.authService.logout();
     this.router.navigate(['/login']);
   }

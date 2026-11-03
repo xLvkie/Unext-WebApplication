@@ -106,14 +106,6 @@ export class ProfileService {
       .pipe(catchError(() => of([])));
   }
 
-  verifyOrganization(code: string): Observable<string> {
-    return this.http.post(
-      `${this.API_URL}/organization/verify`,
-      { code },
-      { responseType: 'text' }
-    );
-  }
-
   /* =============================
      PUBLIC PROFILE VIEW (POR ID)
     ============================== */
@@ -129,5 +121,24 @@ export class ProfileService {
 
   getInstitutionPublicProfile(institutionId: string): Observable<any> {
     return this.http.get<any>(`${this.API_URL}/institutions/directory/${institutionId}`);
+  }
+
+  /* =============================
+     METODO DE VERFICACION
+     ============================= */
+
+  verifyOrganization(code: string): Observable<string> {
+    return this.http.post(
+      `${this.API_URL}/organization/verify`,
+      { code },
+      { responseType: 'text' }
+    );
+  }
+
+  resendOrganizationCode(): Observable<{ message: string; code: string }> {
+    return this.http.post<{ message: string; code: string }>(
+      `${this.API_URL}/organization/resend-code`,
+      {}
+    );
   }
 }

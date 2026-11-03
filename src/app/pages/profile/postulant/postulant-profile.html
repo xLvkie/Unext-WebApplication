@@ -48,10 +48,10 @@
             <div class="flex flex-wrap justify-between items-end -mt-16 sm:-mt-20 mb-4 relative z-10 gap-3">
               <div class="flex items-end gap-3 sm:gap-4 flex-wrap">
                 <div class="relative group">
-                  <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white p-1.5 shadow-md">
+                  <div class="w-32 h-32 sm:w-36 sm:h-36 min-w-[128px] max-w-[144px] rounded-full bg-white p-1.5 shadow-md">
                     <div class="w-full h-full rounded-full bg-gradient-to-br from-[#274DEA] to-[#1E3BB8] text-white font-extrabold text-4xl flex items-center justify-center relative overflow-hidden border-4 border-[#059669]">
                       @if (profile().avatarUrl) {
-                        <img [src]="profile().avatarUrl" alt="Foto de perfil" class="w-full h-full object-cover" />
+                        <img [src]="profile().avatarUrl" alt="Foto de perfil" class="w-full h-full object-cover block" />
                       } @else {
                         <span>{{ initials() }}</span>
                       }
@@ -70,11 +70,11 @@
                 @if (profile().isInstitutionVerified) {
                   <div class="flex items-center gap-2 pb-2 animate-fade-in">
                     <div
-                      class="w-11 h-11 rounded-full bg-white border-2 border-[#059669] shadow-sm flex items-center justify-center overflow-hidden"
+                      class="w-11 h-11 min-w-[44px] max-w-[44px] rounded-full bg-white border-2 border-[#059669] shadow-sm flex items-center justify-center overflow-hidden"
                       [title]="'Verificado académicamente por ' + (profile().institutionName || 'Institución')"
                     >
                       @if (profile().institutionLogoUrl) {
-                        <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                        <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-11 h-11 object-cover block" />
                       } @else {
                         <span class="text-[11px] font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
                       }
@@ -149,9 +149,9 @@
 
               @if (profile().isInstitutionVerified && profile().institutionName) {
                 <div class="md:col-span-4 flex items-center gap-2.5 md:justify-end">
-                  <div class="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                  <div class="w-10 h-10 min-w-[40px] max-w-[40px] rounded-xl bg-white border border-gray-200 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
                     @if (profile().institutionLogoUrl) {
-                      <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                      <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-10 h-10 object-cover block" />
                     } @else {
                       <span class="text-xs font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
                     }
@@ -247,17 +247,215 @@
           (removeClick)="removeCv()"
         />
 
+        <!-- ================================================================= -->
+        <!-- CARD 5 PRINCIPAL: PUBLICACIONES DEL POSTULANTE (IMPORTANTES vs NORMALES) -->
+        <!-- ================================================================= -->
+        <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
+            <div>
+              <h2 class="text-[18px] font-bold text-gray-900">
+                Mis Publicaciones y Actividad
+              </h2>
+              <p class="text-[12px] text-[#6B7280]">
+                Gestiona tus publicaciones destacadas permanentes (máx. {{ MAX_IMPORTANT_POSTS }}) y tus publicaciones temporales del muro.
+              </p>
+            </div>
+
+            <a
+              routerLink="/feed"
+              class="px-4 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
+            >
+              + Crear publicación en el Feed
+            </a>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              (click)="postsTab.set('IMPORTANT')"
+              [ngClass]="postsTab() === 'IMPORTANT'
+                ? 'bg-[#FEF3C7] text-[#B45309] border-[#F59E0B]/50 font-extrabold shadow-2xs'
+                : 'bg-[#F8FAFC] text-gray-600 border-gray-200 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+            >
+              <span>📌 Publicaciones Importantes</span>
+              <span class="px-2 py-0.5 rounded-full bg-white text-[11px] font-extrabold">
+                {{ importantPosts().length }} / {{ MAX_IMPORTANT_POSTS }}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              (click)="postsTab.set('NORMAL')"
+              [ngClass]="postsTab() === 'NORMAL'
+                ? 'bg-[#274DEA] text-white border-[#274DEA] font-extrabold shadow-2xs'
+                : 'bg-[#F8FAFC] text-gray-600 border-gray-200 hover:bg-gray-100 font-semibold'"
+              class="px-4 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+            >
+              <span>🕒 Publicaciones Normales (Temporales)</span>
+              <span
+                [ngClass]="postsTab() === 'NORMAL' ? 'bg-white/20 text-white' : 'bg-white text-gray-700'"
+                class="px-2 py-0.5 rounded-full text-[11px] font-extrabold"
+              >
+                {{ normalPosts().length }}
+              </span>
+            </button>
+          </div>
+
+          @if (postsTab() === 'IMPORTANT') {
+            <div class="space-y-3">
+              @for (post of importantPosts(); track post.id) {
+                <article class="p-4 rounded-2xl border border-[#F59E0B]/40 bg-[#FEF3C7]/15 space-y-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] text-[11px] font-bold">
+                        📌 Publicación Importante · Permanente
+                      </span>
+                      <span class="text-xs text-[#6B7280]">· {{ formatPostDate(post.createdAt) }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        (click)="handleToggleImportantPost(post)"
+                        class="px-3 py-1 rounded-lg bg-white border border-gray-300 hover:border-[#B45309] text-[#B45309] text-xs font-bold transition"
+                      >
+                        Quitar de importantes
+                      </button>
+                      <button
+                        type="button"
+                        (click)="handleDeletePost(post.id)"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-[#EF4444] text-xs"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+
+                  <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+
+                  @if (post.mediaUrls && post.mediaUrls.length > 0) {
+                    <div [ngClass]="post.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'" class="grid gap-2 rounded-xl overflow-hidden">
+                      @for (m of post.mediaUrls; track $index) {
+                        <div class="rounded-xl overflow-hidden border border-gray-200 max-h-64">
+                          @if (isVideo(m)) {
+                            <video [src]="m" controls class="w-full max-h-64 object-contain bg-black"></video>
+                          } @else {
+                            <img [src]="m" alt="Media" class="w-full max-h-64 object-cover block" />
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <div class="pt-2 border-t border-gray-200/70 flex items-center gap-4 text-xs text-[#6B7280]">
+                    <span>👍 {{ post.likesCount }} me gusta</span>
+                    <span>💬 {{ post.commentsCount }} comentarios</span>
+                  </div>
+                </article>
+              } @empty {
+                <div class="p-8 rounded-2xl border border-dashed border-gray-200 bg-[#F8FAFC] text-center space-y-1.5">
+                  <p class="text-sm font-bold text-gray-800">No tienes publicaciones importantes fijadas</p>
+                  <p class="text-xs text-[#6B7280] max-w-md mx-auto">
+                    Destaca hasta {{ MAX_IMPORTANT_POSTS }} publicaciones desde tu muro o desde la pestaña de publicaciones normales para que nunca caduquen.
+                  </p>
+                </div>
+              }
+            </div>
+          }
+
+          @if (postsTab() === 'NORMAL') {
+            <div class="space-y-3">
+              @for (post of normalPosts(); track post.id) {
+                <article class="p-4 rounded-2xl border border-gray-200 bg-[#F8FAFC]/70 space-y-3">
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-0.5 rounded-full bg-gray-200/80 text-gray-700 text-[11px] font-bold">
+                        ⏳ {{ formatExpirationRemaining(post.expiresAt) }}
+                      </span>
+                      <span class="text-xs text-[#6B7280]">· Publicada el {{ formatPostDate(post.createdAt) }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                      <button
+                        type="button"
+                        (click)="handleToggleImportantPost(post)"
+                        class="px-3 py-1 rounded-lg bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#B45309] text-xs font-bold transition"
+                      >
+                        📌 Destacar en Importantes
+                      </button>
+                      <button
+                        type="button"
+                        (click)="handleDeletePost(post.id)"
+                        class="p-1.5 rounded-lg text-gray-400 hover:text-[#EF4444] text-xs"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </div>
+
+                  <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+
+                  @if (post.mediaUrls && post.mediaUrls.length > 0) {
+                    <div [ngClass]="post.mediaUrls.length > 1 ? 'grid-cols-2' : 'grid-cols-1'" class="grid gap-2 rounded-xl overflow-hidden">
+                      @for (m of post.mediaUrls; track $index) {
+                        <div class="rounded-xl overflow-hidden border border-gray-200 max-h-64">
+                          @if (isVideo(m)) {
+                            <video [src]="m" controls class="w-full max-h-64 object-contain bg-black"></video>
+                          } @else {
+                            <img [src]="m" alt="Media" class="w-full max-h-64 object-cover block" />
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <div class="pt-2 border-t border-gray-200/70 flex items-center gap-4 text-xs text-[#6B7280]">
+                    <span>👍 {{ post.likesCount }} me gusta</span>
+                    <span>💬 {{ post.commentsCount }} comentarios</span>
+                  </div>
+                </article>
+              } @empty {
+                <div class="p-8 rounded-2xl border border-dashed border-gray-200 bg-[#F8FAFC] text-center">
+                  <p class="text-sm font-bold text-gray-800">No tienes publicaciones temporales activas</p>
+                </div>
+              }
+            </div>
+          }
+        </section>
+
       </div>
 
-      <!-- COLUMNA LATERAL DERECHA -->
-      <aside class="lg:col-span-3">
-        <app-profile-sidebar
-          [importantPosts]="importantPosts()"
-          [maxImportantPosts]="3"
-          [isOwnProfile]="true"
-          [suggestedPeers]="suggestedPeers()"
-          (unpinPost)="handleUnpinImportantPost($event)"
-        />
+      <!-- COLUMNA LATERAL DERECHA: COMUNIDAD EN LA RED (6 USUARIOS DIARIOS) -->
+      <aside class="lg:col-span-3 space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
+          <h3 class="text-[15px] font-bold text-gray-900">Comunidad en la red</h3>
+          <p class="text-[12px] text-[#6B7280]">Sugerencias que se renuevan cada día</p>
+
+          <div class="mt-4 space-y-4">
+            @for (peer of suggestedPeers(); track peer.userId) {
+              <div class="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-none last:pb-0">
+                <div class="w-10 h-10 min-w-[40px] max-w-[40px] rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center overflow-hidden shrink-0">
+                  @if (peer.avatarUrl) {
+                    <img [src]="peer.avatarUrl" [alt]="peer.name" class="w-10 h-10 object-cover block" />
+                  } @else {
+                    <span>{{ peer.name.charAt(0).toUpperCase() }}</span>
+                  }
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-[13px] font-bold text-gray-900 truncate">{{ peer.name }}</p>
+                  <p class="text-[11px] text-[#6B7280] truncate">{{ peer.subtitle }}</p>
+                  <a
+                    routerLink="/directory"
+                    class="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 text-[11px] font-semibold transition"
+                  >
+                    <span>Ver en Mi Red</span>
+                  </a>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
       </aside>
 
     </div>
@@ -276,7 +474,7 @@
   (confirm)="isUnverifiedWarningModalOpen.set(false); openAcademicVerificationModal()"
 />
 
-<!-- MODAL DE VERIFICACIÓN ACADÉMICA (CASO 1 Y CASO 2) -->
+<!-- MODAL DE VERIFICACIÓN ACADÉMICA -->
 @if (isAcademicModalOpen()) {
   <div class="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-[1px] flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-gray-200 my-8 animate-fade-in space-y-5">
@@ -334,7 +532,7 @@
           </select>
         } @else {
           <p class="p-3 rounded-xl bg-[#FEF3C7] text-[#B45309] text-xs font-semibold">
-            Aún no hay cuentas de tipo INSTITUCIÓN registradas en la base de datos.
+            Aún no hay instituciones educativas disponibles en el directorio.
           </p>
         }
       </div>
@@ -384,8 +582,9 @@
         </div>
       }
 
-      <div class="p-3 rounded-xl bg-slate-100 text-[11px] text-gray-600">
-        ℹ️ Al enviar esta solicitud, el backend dispara una notificación automática a la institución. (La vista de recepción de notificaciones de la institución aún está por desarrollar).
+      <!-- Aviso limpio para el usuario final (sin términos técnicos de backend) -->
+      <div class="p-3.5 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 text-[12px] text-gray-700 leading-relaxed">
+        ℹ️ Al enviar esta solicitud, <strong>el sistema se encargará de notificar automáticamente a tu institución educativa</strong> para que revise tus datos y active tu insignia oficial en tu perfil.
       </div>
 
       <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">
@@ -443,8 +642,9 @@
         </div>
       </div>
 
-      <div class="p-3 rounded-xl bg-[#ECFDF5] border border-[#059669]/20 text-[11px] text-gray-700">
-        🔔 <strong>Gatillo de Notificación:</strong> El backend creará un registro en <code>NotificationService</code> para la institución (interfaz de bandeja institucional aún por desarrollar).
+      <!-- Aviso limpio para el usuario final (sin términos técnicos de backend) -->
+      <div class="p-3.5 rounded-xl bg-[#ECFDF5] border border-[#059669]/25 text-[12px] text-gray-700 leading-relaxed">
+        🔔 <strong>Evaluación Académica:</strong> El sistema enviará tu evidencia al área académica de <strong>{{ profile().institutionName || 'tu institución' }}</strong> y te notificaremos apenas se otorgue el sello de certificación.
       </div>
 
       <div class="flex justify-end gap-2 pt-3 border-t border-gray-100">

@@ -109,10 +109,7 @@ export class PublicRecProfile implements OnInit {
   });
 
   suggestedPeers = computed(() =>
-    this.directoryService
-      .contacts()
-      .filter((c) => c.userId !== this.profile().userId)
-      .slice(0, 4)
+    this.directoryService.dailyCommunityPeers(this.profile().userId, 6)
   );
 
   ngOnInit(): void {

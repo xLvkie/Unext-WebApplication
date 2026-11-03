@@ -43,9 +43,10 @@
         <!-- Accesos directos dinámicos según POSTULANT, RECRUITER o INSTITUTION -->
         <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 space-y-2">
           <h2 class="text-[13px] font-bold text-gray-900 mb-1">Accesos directos</h2>
-          @for (link of quickLinks(); track link.route; let first = $first) {
+          @for (link of quickLinks(); track link.label; let first = $first) {
             <a
               [routerLink]="link.route"
+              [queryParams]="link.queryParams"
               [ngClass]="!first ? 'border-t border-gray-100 pt-2.5' : ''"
               class="flex items-center justify-between text-[12px] font-semibold text-gray-700 hover:text-[#274DEA] py-1 transition"
             >

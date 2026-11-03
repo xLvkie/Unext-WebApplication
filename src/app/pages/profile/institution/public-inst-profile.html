@@ -1,0 +1,299 @@
+<!-- NAVBAR SUPERIOR AUTOMÁTICO -->
+<app-navbar />
+
+<main class="min-h-screen bg-[#F4F2EE]/60 pb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    @if (isLoading()) {
+      <div class="bg-white rounded-2xl border border-gray-200 p-10 text-center space-y-3">
+        <div class="w-20 h-20 rounded-2xl bg-slate-200 animate-pulse mx-auto"></div>
+        <div class="h-5 w-48 bg-slate-200 animate-pulse mx-auto rounded"></div>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- ================================================================= -->
+        <!-- COLUMNA PRINCIPAL IZQUIERDA (lg:col-span-9) - SOLO LECTURA        -->
+        <!-- ================================================================= -->
+        <div class="lg:col-span-9 space-y-4">
+
+          <!-- CARD 1: CABECERA PÚBLICA DE LA INSTITUCIÓN (SIN BOTONES DE EDICIÓN) -->
+          <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs overflow-hidden relative">
+            <div class="h-44 sm:h-52 relative overflow-hidden bg-gradient-to-r from-[#0A192F] via-[#064E3B] to-[#1E3BB8]">
+              @if (profile().bannerUrl) {
+                <img [src]="profile().bannerUrl" alt="Portada" class="w-full h-full object-cover" />
+                <div class="absolute inset-0 bg-black/15"></div>
+              } @else {
+                <div class="w-full h-full flex flex-col justify-center px-6 sm:pl-48 sm:pr-16">
+                  <p class="text-white text-lg sm:text-2xl md:text-3xl font-bold tracking-tight truncate max-w-full">
+                    {{ safeBannerTitle() }}
+                  </p>
+                  <p class="text-[#A7F3D0] font-mono text-xs sm:text-sm mt-1 truncate max-w-full">
+                    {{ safeBannerSubtitle() }}
+                  </p>
+                </div>
+              }
+            </div>
+
+            <div class="px-6 pb-6 relative">
+              <div class="flex flex-wrap justify-between items-end -mt-16 sm:-mt-20 mb-4 relative z-10 gap-3">
+                <div class="flex items-end gap-3 sm:gap-4 flex-wrap">
+                  <div class="w-32 h-32 sm:w-36 sm:h-36 min-w-[128px] max-w-[144px] rounded-2xl bg-white p-1.5 shadow-md">
+                    <div class="w-full h-full rounded-xl bg-gradient-to-br from-[#059669] to-[#1E3BB8] text-white font-extrabold text-4xl flex items-center justify-center overflow-hidden border-2 border-gray-100">
+                      @if (profile().logoUrl) {
+                        <img [src]="profile().logoUrl" [alt]="profile().name" class="w-full h-full object-cover block" />
+                      } @else {
+                        <span>{{ institutionInitials() }}</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 pb-2">
+                    <div class="px-3.5 py-1.5 rounded-full bg-[#ECFDF5] border border-[#059669]/30 flex items-center gap-1.5 shadow-2xs">
+                      <span class="text-[11px] font-bold text-[#059669]">
+                        ✓ Casa de Estudios Oficial · &#64;{{ profile().domain }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                <div class="md:col-span-8">
+                  <div class="flex items-center gap-2.5 flex-wrap">
+                    <h1 class="text-2xl font-bold text-gray-900">{{ profile().name }}</h1>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#059669]/10 text-[#059669]">
+                      Institución Educativa
+                    </span>
+                  </div>
+
+                  <p class="text-[15px] text-gray-800 mt-1.5 leading-snug">
+                    Entidad académica acreditadora de estudiantes, egresados, competencias técnicas y convenios preprofesionales en Unext.
+                  </p>
+
+                  <div class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[#6B7280]">
+                    <span>Perú · Dominio oficial: <strong class="text-gray-800 font-mono">{{ profile().domain }}</strong></span>
+                    <span>·</span>
+                    <a [href]="'https://' + safeDomain()" target="_blank" rel="noopener" class="text-[#274DEA] font-semibold hover:underline">
+                      Visitar portal institucional ↗
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BOTONES DE VISITANTE (+ CONECTAR / SEGUIR / MENSAJE) -->
+              <div class="mt-5 flex flex-wrap items-center gap-2.5">
+                @switch (connectionState().status) {
+                  @case ('NONE') {
+                    <button
+                      type="button"
+                      [disabled]="isActionLoading()"
+                      (click)="handleConnectClick()"
+                      class="px-5 py-2 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white font-bold text-[14px] shadow-xs flex items-center gap-2 transition"
+                    >
+                      <span>+ Conectar con institución</span>
+                    </button>
+                  }
+                  @case ('PENDING_SENT') {
+                    <button
+                      type="button"
+                      [disabled]="isActionLoading()"
+                      (click)="handleCancelOrRemoveConnection()"
+                      class="px-5 py-2 rounded-full bg-[#FEF3C7] border border-[#F59E0B]/40 text-[#B45309] font-bold text-[14px] transition"
+                    >
+                      <span>⏳ Solicitud enviada (Cancelar)</span>
+                    </button>
+                  }
+                  @case ('CONNECTED') {
+                    <span class="px-4 py-2 rounded-full bg-[#ECFDF5] border border-[#059669]/30 text-[#059669] font-bold text-[14px]">
+                      ✓ Conectado con esta institución
+                    </span>
+                  }
+                }
+
+                <button
+                  type="button"
+                  (click)="handleToggleFollow()"
+                  [ngClass]="isFollowing()
+                    ? 'bg-[#274DEA]/10 text-[#274DEA] border-[#274DEA]/30'
+                    : 'border-gray-400 text-gray-700 hover:bg-gray-100'"
+                  class="px-4 py-2 rounded-full border font-bold text-[14px] transition"
+                >
+                  {{ isFollowing() ? '✓ Siguiendo comunicados' : '+ Seguir institución' }}
+                </button>
+
+                <a
+                  [routerLink]="['/messages']"
+                  [queryParams]="{ con: profile().userId }"
+                  class="px-5 py-2 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 font-bold text-[14px] transition"
+                >
+                  💬 Enviar mensaje
+                </a>
+              </div>
+            </div>
+          </section>
+
+          <!-- CARD 2: ACERCA DE LA INSTITUCIÓN (SOLO LECTURA) -->
+          <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-4">
+            <h2 class="text-[18px] font-bold text-gray-900">Acerca de la institución</h2>
+            <p class="text-[14px] text-gray-700 leading-relaxed whitespace-pre-line">
+              {{ profile().description || 'Institución de educación superior registrada oficialmente en la red profesional Unext para la acreditación de talento universitario y convenios de prácticas.' }}
+            </p>
+          </section>
+
+          <!-- ================================================================= -->
+          <!-- CARD 3: PUBLICACIONES DE LA INSTITUCIÓN (IMPORTANTES vs NORMALES) -->
+          <!-- ================================================================= -->
+          <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-5">
+            <div>
+              <h2 class="text-[18px] font-bold text-gray-900">
+                Comunicados y Publicaciones de {{ profile().name }}
+              </h2>
+              <p class="text-[12px] text-[#6B7280]">
+                Anuncios importantes permanentes y actividad reciente en la plataforma.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                (click)="postsTab.set('IMPORTANT')"
+                [ngClass]="postsTab() === 'IMPORTANT'
+                  ? 'bg-[#FEF3C7] text-[#B45309] border-[#F59E0B]/50 font-extrabold shadow-2xs'
+                  : 'bg-[#F8FAFC] text-gray-600 border-gray-200 hover:bg-gray-100 font-semibold'"
+                class="px-4 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+              >
+                <span>📌 Comunicados Importantes ({{ importantPosts().length }})</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="postsTab.set('NORMAL')"
+                [ngClass]="postsTab() === 'NORMAL'
+                  ? 'bg-[#274DEA] text-white border-[#274DEA] font-extrabold shadow-2xs'
+                  : 'bg-[#F8FAFC] text-gray-600 border-gray-200 hover:bg-gray-100 font-semibold'"
+                class="px-4 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+              >
+                <span>🕒 Publicaciones Recientes ({{ normalPosts().length }})</span>
+              </button>
+            </div>
+
+            @if (postsTab() === 'IMPORTANT') {
+              <div class="space-y-3">
+                @for (post of importantPosts(); track post.id) {
+                  <article class="p-4 rounded-2xl border border-[#F59E0B]/40 bg-[#FEF3C7]/15 space-y-3">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] text-[11px] font-bold">
+                        📌 Destacada por la institución
+                      </span>
+                      <span class="text-xs text-[#6B7280]">· {{ formatPostDate(post.createdAt) }}</span>
+                    </div>
+                    <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+                    @if (post.mediaUrls && post.mediaUrls.length > 0) {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                        @for (m of post.mediaUrls; track $index) {
+                          <div class="rounded-xl overflow-hidden border border-gray-200 max-h-64">
+                            @if (isVideo(m)) {
+                              <video [src]="m" controls class="w-full max-h-64 object-contain bg-black"></video>
+                            } @else {
+                              <img [src]="m" alt="Media" class="w-full max-h-64 object-cover block" />
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                    <div class="pt-2 border-t border-gray-200/70 flex items-center gap-4 text-xs text-[#6B7280]">
+                      <span>👍 {{ post.likesCount }} me gusta</span>
+                      <span>💬 {{ post.commentsCount }} comentarios</span>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="text-xs text-[#6B7280] py-4 text-center">
+                    Esta institución aún no tiene comunicados importantes fijados.
+                  </p>
+                }
+              </div>
+            }
+
+            @if (postsTab() === 'NORMAL') {
+              <div class="space-y-3">
+                @for (post of normalPosts(); track post.id) {
+                  <article class="p-4 rounded-2xl border border-gray-200 bg-[#F8FAFC]/70 space-y-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-[#6B7280]">Publicada el {{ formatPostDate(post.createdAt) }}</span>
+                      <span>·</span>
+                      <span class="text-[11px] text-[#6B7280]">⏳ {{ formatExpirationRemaining(post.expiresAt) }}</span>
+                    </div>
+                    <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+                    @if (post.mediaUrls && post.mediaUrls.length > 0) {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                        @for (m of post.mediaUrls; track $index) {
+                          <div class="rounded-xl overflow-hidden border border-gray-200 max-h-64">
+                            @if (isVideo(m)) {
+                              <video [src]="m" controls class="w-full max-h-64 object-contain bg-black"></video>
+                            } @else {
+                              <img [src]="m" alt="Media" class="w-full max-h-64 object-cover block" />
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                    <div class="pt-2 border-t border-gray-200/70 flex items-center gap-4 text-xs text-[#6B7280]">
+                      <span>👍 {{ post.likesCount }} me gusta</span>
+                      <span>💬 {{ post.commentsCount }} comentarios</span>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="text-xs text-[#6B7280] py-4 text-center">
+                    No hay publicaciones recientes activas.
+                  </p>
+                }
+              </div>
+            }
+          </section>
+
+        </div>
+
+        <!-- COLUMNA LATERAL DERECHA -->
+        <aside class="lg:col-span-3">
+          <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
+            <h3 class="text-[15px] font-bold text-gray-900">Otros perfiles en Unext</h3>
+            <p class="text-[12px] text-[#6B7280]">Comunidad académica y corporativa</p>
+            <div class="mt-4 space-y-4">
+              @for (peer of suggestedPeers(); track peer.userId) {
+                <div class="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-none last:pb-0">
+                  <div class="w-10 h-10 min-w-[40px] max-w-[40px] rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center overflow-hidden shrink-0">
+                    @if (peer.avatarUrl) {
+                      <img [src]="peer.avatarUrl" [alt]="peer.name" class="w-10 h-10 object-cover block" />
+                    } @else {
+                      <span>{{ peer.name.charAt(0).toUpperCase() }}</span>
+                    }
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-bold text-gray-900 truncate">{{ peer.name }}</p>
+                    <p class="text-[11px] text-[#6B7280] truncate">{{ peer.subtitle }}</p>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        </aside>
+
+      </div>
+    }
+
+  </div>
+</main>
+
+<app-alert-modal
+  [isOpen]="isRestrictionModalOpen()"
+  title="Requisito para conectar con esta institución"
+  [message]="restrictionModalMessage()"
+  variant="warning"
+  confirmText="Ir a mi perfil"
+  cancelText="Entendido"
+  (close)="isRestrictionModalOpen.set(false)"
+  (confirm)="isRestrictionModalOpen.set(false); router.navigate(['/profile/me'])"
+/>
+
+<app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

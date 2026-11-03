@@ -579,7 +579,7 @@ export class InstitutionPortal implements OnInit {
   // =========================================================================
   // ACCIONES: GESTIONAR CONVENIO (PATCH /api/institution/agreements/{id}/status)
   // =========================================================================
-  updateAgreementStatus(agreement: CorporateAgreementItem, newStatus: 'ACTIVE' | 'REJECTED'): void {
+  updateAgreementStatus(agreement: CorporateAgreementItem, newStatus: 'APPROVED' | 'REJECTED'): void {
     this.processingAgreementId.set(agreement.id);
 
     this.http
@@ -595,7 +595,7 @@ export class InstitutionPortal implements OnInit {
             list.map((a) => (a.id === agreement.id ? { ...a, status: newStatus } : a))
           );
           this.showToast(
-            newStatus === 'ACTIVE' ? 'Convenio convalidado y activado.' : 'Convenio rechazado.',
+            newStatus === 'APPROVED' ? 'Convenio convalidado y aprobado.' : 'Convenio rechazado.',
             'success'
           );
         },

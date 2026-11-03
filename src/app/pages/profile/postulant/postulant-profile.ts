@@ -7,11 +7,11 @@ import { Toast, ToastData, ToastType } from '../../../shared/components/toast/to
 import { AlertModal } from '../../../shared/components/alert-modal/alert-modal';
 import { ProfileSkillsCard } from '../../../shared/components/profile-skills-card/profile-skills-card';
 import { ProfileCvCard } from '../../../shared/components/profile-cv-card/profile-cv-card';
-import { ProfileSidebar } from '../../../shared/components/profile-sidebar/profile-sidebar';
 import { ProfileService } from '../../../core/services/profile.service';
 import { ValidationService } from '../../../core/services/validation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DirectoryService } from '../../../core/services/directory.service';
+import { toDate } from '../../../core/utils/format';
 import {
   InstitutionSummary,
   PostulantProfileRequest,
@@ -39,8 +39,7 @@ import { FeedPostResponse } from '../../../core/models/feed.model';
     Toast,
     AlertModal,
     ProfileSkillsCard,
-    ProfileCvCard,
-    ProfileSidebar
+    ProfileCvCard
   ],
   templateUrl: './postulant-profile.html'
 })
@@ -56,13 +55,23 @@ export class PostulantProfile implements OnInit {
   readonly MAX_BANNER_TEXT = 35;
   readonly MAX_BIO = 1000;
   readonly MAX_TOP_SKILLS = 3;
+  readonly MAX_IMPORTANT_POSTS = 3;
 
   isLoading = signal(true);
   isSaving = signal(false);
   isFirstTimeOnboarding = signal(false);
 
-  // Señal
-  importantPosts = signal<FeedPostResponse[]>([]);
+  // Pestaña activa en la Card 5 de Publicaciones (Importantes vs Normales)
+  postsTab = signal<'IMPORTANT' | 'NORMAL'>('IMPORTANT');
+  allMyPosts = signal<FeedPostResponse[]>([]);
+
+  importantPosts = computed(() =>
+    this.allMyPosts().filter((p) => Boolean(p.isImportant))
+  );
+
+  normalPosts = computed(() =>
+    this.allMyPosts().filter((p) => !p.isImportant)
+  );
 
   // Modales
   isEditModalOpen = signal(false);
@@ -174,21 +183,9 @@ export class PostulantProfile implements OnInit {
     return h.length > 65 ? h.slice(0, 65) + '…' : h;
   });
 
-  publicProfileUrl = computed(() => {
-    const slug = `${this.profile().firstName || ''}-${this.profile().lastName || ''}`
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-    return `www.unext.pe/in/${slug || 'mi-perfil'}`;
-  });
-
+  // Límite de 6 usuarios de la comunidad que se actualizan cada día
   suggestedPeers = computed(() =>
-    this.directoryService
-      .contacts()
-      .filter((c) => c.kind === 'Postulante' && c.userId !== this.profile().userId)
-      .slice(0, 3)
+    this.directoryService.dailyCommunityPeers(this.profile().userId, 6)
   );
 
   ngOnInit(): void {
@@ -250,18 +247,21 @@ export class PostulantProfile implements OnInit {
                 })
               );
             }
-            localStorage.setItem('unext_last_academic_req', JSON.stringify({
-              studentCode: data.studentCode,
-              career: data.career,
-              currentCycle: data.currentCycle,
-              institutionalEmail: data.institutionalEmail,
-              academicStatus: data.academicStatus
-            }));
+            localStorage.setItem(
+              'unext_last_academic_req',
+              JSON.stringify({
+                studentCode: data.studentCode,
+                career: data.career,
+                currentCycle: data.currentCycle,
+                institutionalEmail: data.institutionalEmail,
+                academicStatus: data.academicStatus
+              })
+            );
           } catch {}
 
-          this.feedService.getImportantPostsByUser(data.userId).subscribe({
-            next: (posts) => this.importantPosts.set(posts),
-            error: () => this.importantPosts.set([])
+          this.feedService.getPostsByUser(data.userId).subscribe({
+            next: (posts) => this.allMyPosts.set(posts),
+            error: () => this.allMyPosts.set([])
           });
         }
       },
@@ -299,7 +299,6 @@ export class PostulantProfile implements OnInit {
     };
   }
 
-  // Verificación Académica
   openAcademicVerificationModal(): void {
     this.syncFormWithProfile(this.profile());
     this.academicError.set(null);
@@ -370,8 +369,8 @@ export class PostulantProfile implements OnInit {
         this.isAcademicModalOpen.set(false);
         this.loadMyProfile();
         this.showToast(
-          'Solicitud académica enviada.',
-          'info'
+          'Solicitud de verificación enviada. El sistema ha notificado a tu institución educativa.',
+          'success'
         );
       },
       error: (err) => {
@@ -381,7 +380,6 @@ export class PostulantProfile implements OnInit {
     });
   }
 
-  // Validación de Habilidades
   openSkillValidationFlow(skill?: StudentSkillResponse): void {
     if (!this.profile().isInstitutionVerified) {
       this.isUnverifiedWarningModalOpen.set(true);
@@ -433,8 +431,8 @@ export class PostulantProfile implements OnInit {
           this.validations.update((prev) => [created, ...prev]);
           this.isValidateSkillModalOpen.set(false);
           this.showToast(
-            'Solicitud enviada. Gatillo de notificación disparado en backend.',
-            'info'
+            'Solicitud enviada. El sistema notificará a tu institución para evaluar tu competencia.',
+            'success'
           );
         },
         error: (err) => {
@@ -444,7 +442,6 @@ export class PostulantProfile implements OnInit {
       });
   }
 
-  // Multimedia (Avatar, Banner y CV usando file-media.ts)
   onAvatarSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
@@ -683,14 +680,68 @@ export class PostulantProfile implements OnInit {
     });
   }
 
-  handleUnpinImportantPost(postId: string): void {
-  this.feedService.toggleImportant(postId).subscribe({
-    next: () => {
-      this.importantPosts.update((list) => list.filter((p) => p.id !== postId));
-      this.showToast('Publicación removida de importantes.', 'info');
-    }
-  });
-}
+  // Gestión de Publicaciones Importantes vs Normales
+  handleToggleImportantPost(post: FeedPostResponse): void {
+    this.feedService.toggleImportant(post.id).subscribe({
+      next: (updated) => {
+        this.allMyPosts.update((list) =>
+          list.map((p) =>
+            p.id === post.id
+              ? { ...p, isImportant: updated.isImportant, expiresAt: updated.expiresAt }
+              : p
+          )
+        );
+        this.showToast(
+          updated.isImportant
+            ? '📌 Publicación fijada en Importantes (permanente).'
+            : 'Publicación movida a Publicaciones Normales (expira en 7 días).',
+          'info'
+        );
+      },
+      error: (err) => {
+        this.showToast(
+          readApiError(
+            err,
+            `Solo puedes destacar hasta ${this.MAX_IMPORTANT_POSTS} publicaciones importantes.`
+          ),
+          'warning'
+        );
+      }
+    });
+  }
+
+  handleDeletePost(postId: string): void {
+    if (!confirm('¿Deseas eliminar esta publicación de tu perfil?')) return;
+
+    this.feedService.deletePost(postId).subscribe({
+      next: () => {
+        this.allMyPosts.update((list) => list.filter((p) => p.id !== postId));
+        this.showToast('Publicación eliminada.', 'info');
+      },
+      error: (err) => {
+        this.showToast(readApiError(err, 'No se pudo eliminar la publicación.'), 'error');
+      }
+    });
+  }
+
+  isVideo(url: string): boolean {
+    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+  }
+
+  formatPostDate(value: unknown): string {
+    const d = toDate(value);
+    if (!d) return 'Reciente';
+    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  formatExpirationRemaining(expiresAt: unknown): string {
+    const exp = toDate(expiresAt);
+    if (!exp) return '7 días restantes';
+    const diffMs = exp.getTime() - Date.now();
+    if (diffMs <= 0) return 'Por expirar';
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return `${diffDays} días restantes`;
+  }
 
   showToast(message: string, type: ToastType = 'info'): void {
     this.toast.set({ message, type });

@@ -5,7 +5,6 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
 import { AlertModal } from '../../../shared/components/alert-modal/alert-modal';
-import { ProfileSidebar } from '../../../shared/components/profile-sidebar/profile-sidebar';
 import { ProfileService } from '../../../core/services/profile.service';
 import { FeedService } from '../../../core/services/feed.service';
 import {
@@ -17,16 +16,17 @@ import { DirectoryService } from '../../../core/services/directory.service';
 import { PostulantProfileResponse } from '../../../core/models/profile.model';
 import { FeedPostResponse } from '../../../core/models/feed.model';
 import { readApiError } from '../../../core/utils/api-error';
+import { toDate } from '../../../core/utils/format';
 
 @Component({
   selector: 'app-public-pos-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink, Navbar, Toast, AlertModal, ProfileSidebar],
+  imports: [CommonModule, RouterLink, Navbar, Toast, AlertModal],
   templateUrl: './public-pos-profile.html'
 })
 export class PublicPosProfile implements OnInit {
   private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  readonly router = inject(Router);
   private profileService = inject(ProfileService);
   private feedService = inject(FeedService);
   private connectionService = inject(ConnectionService);
@@ -38,7 +38,18 @@ export class PublicPosProfile implements OnInit {
   isActionLoading = signal(false);
   viewedRole = signal<'POSTULANT' | 'RECRUITER' | 'INSTITUTION'>('POSTULANT');
 
-  // Estado de conexión con este usuario
+  // Pestaña activa en la Card 5 de Publicaciones (Importantes vs Recientes)
+  postsTab = signal<'IMPORTANT' | 'NORMAL'>('IMPORTANT');
+  allUserPosts = signal<FeedPostResponse[]>([]);
+
+  importantPosts = computed(() =>
+    this.allUserPosts().filter((p) => Boolean(p.isImportant))
+  );
+
+  normalPosts = computed(() =>
+    this.allUserPosts().filter((p) => !p.isImportant)
+  );
+
   connectionState = signal<ConnectionStatusResponse>({
     targetUserId: '',
     status: 'NONE',
@@ -46,12 +57,10 @@ export class PublicPosProfile implements OnInit {
     restrictionReason: null
   });
 
-  // Modal cuando existe restricción (ej. Postulante -> Empresa sin haber postulado)
   isRestrictionModalOpen = signal(false);
   restrictionModalMessage = signal('');
 
   toast = signal<ToastData | null>(null);
-  importantPosts = signal<FeedPostResponse[]>([]);
 
   profile = signal<PostulantProfileResponse>({
     id: '',
@@ -115,18 +124,9 @@ export class PublicPosProfile implements OnInit {
     );
   });
 
-  maxImportantForViewedRole = computed(() => {
-    const r = this.viewedRole();
-    if (r === 'INSTITUTION') return 6;
-    if (r === 'RECRUITER') return 5;
-    return 3;
-  });
-
+  // Límite de 6 usuarios de la comunidad que se actualizan cada día
   suggestedPeers = computed(() =>
-    this.directoryService
-      .contacts()
-      .filter((c) => c.userId !== this.profile().userId)
-      .slice(0, 3)
+    this.directoryService.dailyCommunityPeers(this.profile().userId, 6)
   );
 
   ngOnInit(): void {
@@ -165,7 +165,6 @@ export class PublicPosProfile implements OnInit {
     if (role === 'POSTULANT') {
       this.profileService.getPostulantPublicProfile(profileId).subscribe({
         next: (data) => {
-          // Si soy yo mismo viendo mi perfil público, redirijo a /profile/me
           if (data.userId && data.userId === this.authService.session()?.userId) {
             this.router.navigate(['/profile/me']);
             return;
@@ -187,10 +186,10 @@ export class PublicPosProfile implements OnInit {
             userId: r.userId,
             firstName: r.companyName || 'Empresa',
             lastName: '',
-            avatarUrl: r.companyLogoUrl || r.logoUrl || null,
+            avatarUrl: r.companyLogoUrl || null,
             headline: r.industry ? `${r.industry} · RUC ${r.ruc || ''}` : 'Empresa Reclutadora',
             bio: r.description || '',
-            isInstitutionVerified: Boolean(r.isValidated),
+            isInstitutionVerified: Boolean(r.isValidated || r.isVerified),
             institutionName: 'Empresa Verificada',
             skills: []
           });
@@ -225,26 +224,22 @@ export class PublicPosProfile implements OnInit {
   private loadAuxiliaryData(targetUserId: string): void {
     if (!targetUserId) return;
 
-    // 1. Cargar sus Publicaciones Importantes para el Sidebar derecho
-    this.feedService.getImportantPostsByUser(targetUserId).subscribe({
-      next: (posts) => this.importantPosts.set(posts),
-      error: () => this.importantPosts.set([])
+    this.feedService.getPostsByUser(targetUserId).subscribe({
+      next: (posts) => this.allUserPosts.set(posts),
+      error: () => this.allUserPosts.set([])
     });
 
-    // 2. Consultar el estado de conexión/amistad y si aplica alguna restricción
     this.connectionService.getStatusWithUser(targetUserId).subscribe({
       next: (state) => this.connectionState.set(state),
       error: () => {}
     });
   }
 
-  // Acción principal del botón "+ Conectar"
   handleConnectClick(): void {
     const state = this.connectionState();
     const targetUserId = this.profile().userId;
     if (!targetUserId) return;
 
-    // Si hay una restricción de negocio (ej. Postulante intentando agregar a Empresa sin haber postulado)
     if (!state.canConnect) {
       this.restrictionModalMessage.set(
         state.restrictionReason ||
@@ -310,6 +305,25 @@ export class PublicPosProfile implements OnInit {
     link.href = url;
     link.download = this.profile().cvFileName || `CV-${this.fullName()}.pdf`;
     link.click();
+  }
+
+  isVideo(url: string): boolean {
+    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+  }
+
+  formatPostDate(value: unknown): string {
+    const d = toDate(value);
+    if (!d) return 'Reciente';
+    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  formatExpirationRemaining(expiresAt: unknown): string {
+    const exp = toDate(expiresAt);
+    if (!exp) return 'Publicación temporal';
+    const diffMs = exp.getTime() - Date.now();
+    if (diffMs <= 0) return 'Por expirar';
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    return `${diffDays} d restantes`;
   }
 
   showToast(message: string, type: ToastType = 'info'): void {

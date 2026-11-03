@@ -88,6 +88,32 @@ export class DirectoryService {
     );
   }
 
+  dailyCommunityPeers(excludeUserId?: string | null, limit = 6): Contact[] {
+    const pool = this.contacts().filter(
+      (c) => c.userId && c.userId !== excludeUserId
+    );
+    if (pool.length <= limit) {
+      return pool;
+    }
+
+    const todayKey = new Date().toISOString().slice(0, 10);
+    let daySeed = 0;
+    for (let i = 0; i < todayKey.length; i++) {
+      daySeed = (daySeed * 31 + todayKey.charCodeAt(i)) >>> 0;
+    }
+
+    const scored = pool.map((contact, idx) => {
+      let hash = daySeed ^ ((idx + 1) * 2654435761);
+      for (let i = 0; i < contact.userId.length; i++) {
+        hash = Math.imul(hash ^ contact.userId.charCodeAt(i), 16777619) >>> 0;
+      }
+      return { contact, score: hash };
+    });
+
+    scored.sort((a, b) => a.score - b.score);
+    return scored.slice(0, limit).map((item) => item.contact);
+  }
+
   nameOf(userId: string): string {
     return this.names()[userId] ?? 'Usuario';
   }

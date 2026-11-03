@@ -42,10 +42,10 @@
               <!-- Avatar + Insignias Académicas -->
               <div class="flex flex-wrap justify-between items-end -mt-16 sm:-mt-20 mb-4 relative z-10 gap-3">
                 <div class="flex items-end gap-3 sm:gap-4 flex-wrap">
-                  <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-white p-1.5 shadow-md">
+                  <div class="w-32 h-32 sm:w-36 sm:h-36 min-w-[128px] max-w-[144px] rounded-full bg-white p-1.5 shadow-md">
                     <div class="w-full h-full rounded-full bg-gradient-to-br from-[#274DEA] to-[#1E3BB8] text-white font-extrabold text-4xl flex items-center justify-center relative overflow-hidden border-4 border-[#059669]">
                       @if (profile().avatarUrl) {
-                        <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover" />
+                        <img [src]="profile().avatarUrl" [alt]="fullName()" class="w-full h-full object-cover block" />
                       } @else {
                         <span>{{ initials() }}</span>
                       }
@@ -55,11 +55,11 @@
                   @if (profile().isInstitutionVerified) {
                     <div class="flex items-center gap-2 pb-2">
                       <div
-                        class="w-11 h-11 rounded-full bg-white border-2 border-[#059669] shadow-sm flex items-center justify-center overflow-hidden"
+                        class="w-11 h-11 min-w-[44px] max-w-[44px] rounded-full bg-white border-2 border-[#059669] shadow-sm flex items-center justify-center overflow-hidden"
                         [title]="'Verificado académicamente por ' + (profile().institutionName || 'Institución')"
                       >
                         @if (profile().institutionLogoUrl) {
-                          <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                          <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-11 h-11 object-cover block" />
                         } @else {
                           <span class="text-[11px] font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
                         }
@@ -92,11 +92,14 @@
                     {{ profile().headline || 'Miembro de la red profesional Unext' }}
                   </p>
 
-                  <!-- Datos Universitarios Públicos (Solo si es Estudiante Activo Verificado) -->
+                  <!-- Datos Universitarios Públicos -->
                   @if (profile().isInstitutionVerified && profile().hasUniversityBase) {
                     <div class="mt-3 p-3 rounded-xl bg-[#ECFDF5]/70 border border-[#059669]/25 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]">
                       <span class="font-bold text-[#059669]">Carrera: {{ profile().career }}</span>
                       <span class="text-gray-700 font-semibold">· Ciclo actual: {{ profile().currentCycle }}° Ciclo</span>
+                      @if (profile().studentCode) {
+                        <span class="text-gray-600 font-mono">· Código: {{ profile().studentCode }}</span>
+                      }
                     </div>
                   }
 
@@ -105,9 +108,9 @@
 
                 @if (profile().isInstitutionVerified && profile().institutionName) {
                   <div class="md:col-span-4 flex items-center gap-2.5 md:justify-end">
-                    <div class="w-10 h-10 rounded-xl bg-white border border-gray-200 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+                    <div class="w-10 h-10 min-w-[40px] max-w-[40px] rounded-xl bg-white border border-gray-200 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
                       @if (profile().institutionLogoUrl) {
-                        <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-full h-full object-cover" />
+                        <img [src]="profile().institutionLogoUrl" [alt]="profile().institutionName" class="w-10 h-10 object-cover block" />
                       } @else {
                         <span class="text-xs font-extrabold text-[#059669]">{{ institutionInitials() }}</span>
                       }
@@ -178,9 +181,10 @@
                   }
                 }
 
-                <!-- Botón Enviar Mensaje -->
+                <!-- Botón Enviar Mensaje directo a la conversación -->
                 <a
-                  routerLink="/messages"
+                  [routerLink]="['/messages']"
+                  [queryParams]="{ con: profile().userId }"
                   class="px-5 py-2 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 font-bold text-[14px] flex items-center gap-2 transition"
                 >
                   <span>💬 Enviar mensaje</span>
@@ -259,12 +263,12 @@
 
                       @if (skill.isValidatedByInstitution) {
                         <div class="mt-1 inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white border border-[#059669]/30 shadow-2xs w-fit">
-                          <div class="w-5 h-5 rounded-full bg-[#059669]/15 text-[#059669] font-extrabold text-[9px] flex items-center justify-center overflow-hidden shrink-0">
+                          <div class="w-5 h-5 min-w-[20px] max-w-[20px] rounded-full bg-[#059669]/15 text-[#059669] font-extrabold text-[9px] flex items-center justify-center overflow-hidden shrink-0">
                             @if (skill.validatedInstitutionLogoUrl || profile().institutionLogoUrl) {
                               <img
                                 [src]="skill.validatedInstitutionLogoUrl || profile().institutionLogoUrl"
                                 alt="Logo institución"
-                                class="w-full h-full object-cover"
+                                class="w-5 h-5 object-cover block"
                               />
                             } @else {
                               <span>{{ institutionInitials() }}</span>
@@ -286,7 +290,9 @@
             </section>
           }
 
-          <!-- CARD 4: CURRÍCULUM VITAE PÚBLICO (SOLO PARA VER / DESCARGAR, SIN ELIMINAR NI CAMBIAR) -->
+          <!-- ================================================================= -->
+          <!-- CARD 4: CURRÍCULUM VITAE PÚBLICO (VISTA PREVIA Y DESCARGA)        -->
+          <!-- ================================================================= -->
           @if (profile().cvUrl) {
             <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6">
               <div class="flex items-center justify-between mb-4">
@@ -347,18 +353,151 @@
             </section>
           }
 
+          <!-- ================================================================= -->
+          <!-- CARD 5: PUBLICACIONES DEL USUARIO (IMPORTANTES vs RECIENTES)      -->
+          <!-- ================================================================= -->
+          <section class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-6 space-y-5">
+            <div>
+              <h2 class="text-[18px] font-bold text-gray-900">
+                Publicaciones de {{ fullName() }}
+              </h2>
+              <p class="text-[12px] text-[#6B7280]">
+                Publicaciones importantes fijadas y actividad reciente en el muro.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                (click)="postsTab.set('IMPORTANT')"
+                [ngClass]="postsTab() === 'IMPORTANT'
+                  ? 'bg-[#FEF3C7] text-[#B45309] border-[#F59E0B]/50 font-extrabold shadow-2xs'
+                  : 'bg-[#F8FAFC] text-gray-600 border-gray-200 hover:bg-gray-100 font-semibold'"
+                class="px-4 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+              >
+                <span>📌 Publicaciones Importantes ({{ importantPosts().length }})</span>
+              </button>
+
+              <button
+                type="button"
+                (click)="postsTab.set('NORMAL')"
+                [ngClass]="postsTab() === 'NORMAL'
+                  ? 'bg-[#274DEA] text-white border-[#274DEA] font-extrabold shadow-2xs'
+                  : 'bg-[#F8FAFC] text-gray-600 border-gray-200 hover:bg-gray-100 font-semibold'"
+                class="px-4 py-2 rounded-xl border text-xs flex items-center gap-2 transition"
+              >
+                <span>🕒 Publicaciones Recientes ({{ normalPosts().length }})</span>
+              </button>
+            </div>
+
+            @if (postsTab() === 'IMPORTANT') {
+              <div class="space-y-3">
+                @for (post of importantPosts(); track post.id) {
+                  <article class="p-4 rounded-2xl border border-[#F59E0B]/40 bg-[#FEF3C7]/15 space-y-3">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2.5 py-0.5 rounded-full bg-[#FEF3C7] text-[#B45309] text-[11px] font-bold">
+                        📌 Destacada en el perfil
+                      </span>
+                      <span class="text-xs text-[#6B7280]">· {{ formatPostDate(post.createdAt) }}</span>
+                    </div>
+                    <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+                    @if (post.mediaUrls && post.mediaUrls.length > 0) {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                        @for (m of post.mediaUrls; track $index) {
+                          <div class="rounded-xl overflow-hidden border border-gray-200 max-h-64">
+                            @if (isVideo(m)) {
+                              <video [src]="m" controls class="w-full max-h-64 object-contain bg-black"></video>
+                            } @else {
+                              <img [src]="m" alt="Media" class="w-full max-h-64 object-cover block" />
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                    <div class="pt-2 border-t border-gray-200/70 flex items-center gap-4 text-xs text-[#6B7280]">
+                      <span>👍 {{ post.likesCount }} me gusta</span>
+                      <span>💬 {{ post.commentsCount }} comentarios</span>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="text-xs text-[#6B7280] py-4 text-center">
+                    Este perfil aún no tiene publicaciones importantes fijadas.
+                  </p>
+                }
+              </div>
+            }
+
+            @if (postsTab() === 'NORMAL') {
+              <div class="space-y-3">
+                @for (post of normalPosts(); track post.id) {
+                  <article class="p-4 rounded-2xl border border-gray-200 bg-[#F8FAFC]/70 space-y-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-[#6B7280]">Publicada el {{ formatPostDate(post.createdAt) }}</span>
+                      <span>·</span>
+                      <span class="text-[11px] text-[#6B7280]">⏳ {{ formatExpirationRemaining(post.expiresAt) }}</span>
+                    </div>
+                    <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line">{{ post.content }}</p>
+                    @if (post.mediaUrls && post.mediaUrls.length > 0) {
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl overflow-hidden">
+                        @for (m of post.mediaUrls; track $index) {
+                          <div class="rounded-xl overflow-hidden border border-gray-200 max-h-64">
+                            @if (isVideo(m)) {
+                              <video [src]="m" controls class="w-full max-h-64 object-contain bg-black"></video>
+                            } @else {
+                              <img [src]="m" alt="Media" class="w-full max-h-64 object-cover block" />
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                    <div class="pt-2 border-t border-gray-200/70 flex items-center gap-4 text-xs text-[#6B7280]">
+                      <span>👍 {{ post.likesCount }} me gusta</span>
+                      <span>💬 {{ post.commentsCount }} comentarios</span>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="text-xs text-[#6B7280] py-4 text-center">
+                    No hay publicaciones recientes activas.
+                  </p>
+                }
+              </div>
+            }
+          </section>
+
         </div>
 
         <!-- ================================================================= -->
-        <!-- COLUMNA LATERAL DERECHA: PUBLICACIONES IMPORTANTES (SOLO LECTURA) -->
+        <!-- COLUMNA LATERAL DERECHA: COMUNIDAD EN LA RED (6 USUARIOS DIARIOS) -->
         <!-- ================================================================= -->
-        <aside class="lg:col-span-3">
-          <app-profile-sidebar
-            [importantPosts]="importantPosts()"
-            [maxImportantPosts]="maxImportantForViewedRole()"
-            [isOwnProfile]="false"
-            [suggestedPeers]="suggestedPeers()"
-          />
+        <aside class="lg:col-span-3 space-y-4">
+          <div class="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5">
+            <h3 class="text-[15px] font-bold text-gray-900">Comunidad en la red</h3>
+            <p class="text-[12px] text-[#6B7280]">Sugerencias que se renuevan cada día</p>
+
+            <div class="mt-4 space-y-4">
+              @for (peer of suggestedPeers(); track peer.userId) {
+                <div class="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-none last:pb-0">
+                  <div class="w-10 h-10 min-w-[40px] max-w-[40px] rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center overflow-hidden shrink-0">
+                    @if (peer.avatarUrl) {
+                      <img [src]="peer.avatarUrl" [alt]="peer.name" class="w-10 h-10 object-cover block" />
+                    } @else {
+                      <span>{{ peer.name.charAt(0).toUpperCase() }}</span>
+                    }
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[13px] font-bold text-gray-900 truncate">{{ peer.name }}</p>
+                    <p class="text-[11px] text-[#6B7280] truncate">{{ peer.subtitle }}</p>
+                    <a
+                      routerLink="/directory"
+                      class="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full border border-gray-400 text-gray-700 hover:bg-gray-100 text-[11px] font-semibold transition"
+                    >
+                      <span>Ver en Mi Red</span>
+                    </a>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
         </aside>
 
       </div>

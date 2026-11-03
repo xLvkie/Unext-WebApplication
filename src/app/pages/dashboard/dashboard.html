@@ -242,7 +242,7 @@
 
             <div class="mt-4 w-full">
               <a [routerLink]="currentRole() === 'INSTITUTION' ? '/institution/services' : '/profile/me'" class="btn-secondary w-full text-[13px] py-2">
-                <span>{{ currentRole() === 'RECRUITER' ? 'Ver Perfil de Empresa' : (currentRole() === 'INSTITUTION' ? 'Servicios Institucionales' : 'Ver mi Perfil') }}</span>
+                <span>{{ currentRole() === 'RECRUITER' ? 'Ver Perfil de Empresa' : (currentRole() === 'INSTITUTION' ? 'Gestión Académica' : 'Ver mi Perfil') }}</span>
               </a>
             </div>
           </div>
@@ -315,7 +315,7 @@
                 routerLink="/institution/services"
                 class="w-full text-center text-[12px] font-bold text-[#274DEA] hover:underline flex items-center justify-center gap-1.5"
               >
-                <span>Ir a Servicios Institucionales →</span>
+                <span>Ir a Gestión Académica →</span>
               </a>
             </div>
           </div>
@@ -491,7 +491,7 @@
                 routerLink="/institution/services"
                 class="w-full text-center text-[12px] font-bold text-[#274DEA] hover:underline flex items-center justify-center gap-1.5"
               >
-                <span>Ir a Servicios Institucionales →</span>
+                <span>Ir a Gestión Académica →</span>
               </a>
             </div>
           </div>
@@ -949,7 +949,7 @@
               routerLink="/institution/services"
               class="block w-full py-2 rounded-xl border border-[#274DEA]/30 text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold text-center transition"
             >
-              Administrar en Servicios Institucionales →
+              Administrar en Gestión Académica →
             </a>
           </div>
 
@@ -990,7 +990,7 @@
               routerLink="/institution/services"
               class="btn-primary w-full text-[12px] py-2 text-center block font-bold"
             >
-              <span>Ir a Servicios Institucionales →</span>
+              <span>Ir a Gestión Académica →</span>
             </a>
           </div>
         } @else if (currentRole() === 'RECRUITER') {
@@ -1266,7 +1266,7 @@
             (click)="closeValidationModal()"
             class="btn-institutional text-[13px] py-2 px-5 w-full text-center"
           >
-            <span>Ir a Servicios Institucionales</span>
+            <span>Ir a Gestión Académica</span>
           </a>
         </div>
       } @else if (currentRole() === 'RECRUITER') {
