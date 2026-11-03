@@ -49,6 +49,29 @@ export interface CorporateAgreementItem {
   observations?: string;
 }
 
+export interface CareerDemandItem {
+  career: string;
+  applications: number;
+  accepted: number;
+}
+
+export interface DashboardSummaryData {
+  career?: string | null;
+  totalVerifiedStudents: number;
+  totalHiredStudents: number;
+  totalActiveAgreements: number;
+  totalEndorsedCompanies: number;
+  employabilityRate: number;
+  message?: string | null;
+}
+
+export interface TopCompanyItem {
+  recruiterId: string;
+  companyName: string;
+  hiredStudents: number;
+  isValidated: boolean;
+}
+
 @Component({
   selector: 'app-institution-portal',
   standalone: true,
@@ -56,6 +79,8 @@ export interface CorporateAgreementItem {
   templateUrl: './institution-portal.html'
 })
 export class InstitutionPortal implements OnInit {
+  Math = Math;
+
   private http = inject(HttpClient);
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
@@ -66,9 +91,10 @@ export class InstitutionPortal implements OnInit {
   isLoadingStudents = signal(false);
   isLoadingSkills = signal(false);
   isLoadingAgreements = signal(false);
+  isLoadingAnalytics = signal(false);
 
-  // Pestaña de servicio activa
-  activeTab = signal<'students' | 'skills' | 'agreements'>('students');
+  // Pestaña de servicio activa (alumnos, habilidades, convenios o métricas)
+  activeTab = signal<'students' | 'skills' | 'agreements' | 'analytics'>('students');
 
   // Datos reales de la institución desde /api/institution/me
   institution = signal<InstitutionProfileResponse | null>(null);
@@ -77,6 +103,19 @@ export class InstitutionPortal implements OnInit {
   students = signal<DetailedStudentItem[]>([]);
   skillValidations = signal<DetailedSkillValidation[]>([]);
   agreements = signal<CorporateAgreementItem[]>([]);
+
+  // Datos de Métricas y Estadísticas de Empleabilidad (DashboardController)
+  careerDemands = signal<CareerDemandItem[]>([]);
+  analyticsSummary = signal<DashboardSummaryData | null>(null);
+  topCompanies = signal<TopCompanyItem[]>([]);
+  selectedAnalyticsCareer = signal<string>('ALL');
+
+  maxDemandValue = computed(() => {
+    const list = this.careerDemands();
+    if (!list || list.length === 0) return 1;
+    const max = Math.max(...list.map((c) => Math.max(c.applications || 0, c.accepted || 0)));
+    return max > 0 ? max : 1;
+  });
 
   // Filtros de Alumnos
   searchTerm = signal('');
@@ -225,6 +264,7 @@ export class InstitutionPortal implements OnInit {
     this.loadStudentsData();
     this.loadSkillsData();
     this.loadAgreementsData();
+    this.loadAnalyticsData();
   }
 
   loadInstitutionData(): void {
@@ -419,6 +459,59 @@ export class InstitutionPortal implements OnInit {
         this.isLoadingAgreements.set(false);
       }
     });
+  }
+
+  // Carga de Métricas y Estadísticas de Empleabilidad (DashboardController)
+  loadAnalyticsData(): void {
+    this.isLoadingAnalytics.set(true);
+    const careerFilter = this.selectedAnalyticsCareer();
+    const queryParam = careerFilter !== 'ALL' ? `?career=${encodeURIComponent(careerFilter)}` : '';
+
+    // 1. Demanda laboral por carrera (gráfico de barras)
+    const demand$ = this.http
+      .get<{ careers: CareerDemandItem[]; message?: string }>(
+        `${environment.apiUrl}/institution/dashboard/demand-by-career`
+      )
+      .pipe(catchError(() => of({ careers: [] })));
+
+    // 2. Resumen y tasa de empleabilidad
+    const summary$ = this.http
+      .get<DashboardSummaryData>(`${environment.apiUrl}/institution/dashboard/summary${queryParam}`)
+      .pipe(catchError(() => of(null)));
+
+    // 3. Top empresas empleadoras
+    const companies$ = this.http
+      .get<{ companies: TopCompanyItem[]; message?: string }>(
+        `${environment.apiUrl}/institution/dashboard/top-companies${queryParam ? queryParam + '&limit=5' : '?limit=5'}`
+      )
+      .pipe(catchError(() => of({ companies: [] })));
+
+    forkJoin({
+      demand: demand$,
+      summary: summary$,
+      companies: companies$
+    }).subscribe({
+      next: ({ demand, summary, companies }) => {
+        let careerList = demand.careers || [];
+        if (careerFilter !== 'ALL') {
+          careerList = careerList.filter(
+            (c) => c.career?.trim().toLowerCase() === careerFilter.trim().toLowerCase()
+          );
+        }
+        this.careerDemands.set(careerList);
+        this.analyticsSummary.set(summary);
+        this.topCompanies.set(companies.companies || []);
+        this.isLoadingAnalytics.set(false);
+      },
+      error: () => {
+        this.isLoadingAnalytics.set(false);
+      }
+    });
+  }
+
+  onAnalyticsCareerChange(career: string): void {
+    this.selectedAnalyticsCareer.set(career);
+    this.loadAnalyticsData();
   }
 
   // =========================================================================

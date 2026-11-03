@@ -69,6 +69,21 @@
           {{ stats().activeAgreements }}
         </span>
       </button>
+
+      <button
+        type="button"
+        (click)="activeTab.set('analytics')"
+        [ngClass]="activeTab() === 'analytics' ? 'bg-primary text-white font-bold shadow-xs' : 'text-ink-muted hover:text-ink font-semibold'"
+        class="px-3.5 py-2 rounded-lg text-xs transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+      >
+        <span>Métricas de Empleabilidad</span>
+        <span
+          [ngClass]="activeTab() === 'analytics' ? 'bg-white/20 text-white' : 'bg-primary-soft text-primary'"
+          class="px-1.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+        >
+          {{ analyticsSummary()?.employabilityRate || 0 }}%
+        </span>
+      </button>
     </div>
   </div>
 
@@ -506,6 +521,248 @@
           }
         </div>
       }
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- SERVICIO 4: MÉTRICAS Y ESTADÍSTICAS DE EMPLEABILIDAD (DashboardController) -->
+  <!-- ========================================================================= -->
+  @if (activeTab() === 'analytics') {
+    <div class="space-y-5">
+
+      <!-- CABECERA DE ANALÍTICA Y FILTRO POR CARRERA -->
+      <div class="card p-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-ink">Estadísticas y Análisis de Empleabilidad</h2>
+            <p class="text-xs text-ink-muted mt-0.5">
+              Métricas en tiempo real sobre la inserción laboral de tus alumnos, demanda por carrera y empresas empleadoras.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+            <!-- Filtro dinámico por carrera -->
+            <div class="flex items-center gap-1.5 text-xs">
+              <span class="text-ink-muted font-medium">Carrera:</span>
+              <select
+                class="field py-1.5 px-3 text-xs cursor-pointer min-w-[190px]"
+                [ngModel]="selectedAnalyticsCareer()"
+                (ngModelChange)="onAnalyticsCareerChange($event)"
+              >
+                <option value="ALL">Todas las carreras</option>
+                @for (c of availableCareers(); track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+
+            <button
+              type="button"
+              (click)="loadAnalyticsData()"
+              class="text-xs font-semibold text-primary hover:underline cursor-pointer flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-line hover:bg-slate-50 transition"
+            >
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+              </svg>
+              <span>Actualizar</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TARJETAS DE INDICADORES CLAVE (KPIs de Empleabilidad) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-line">
+          <!-- KPI 1: Tasa de Empleabilidad -->
+          <div class="p-4 rounded-xl bg-slate-50/70 border border-line">
+            <p class="text-xs font-semibold text-ink-muted">Tasa de Empleabilidad</p>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-primary font-mono">{{ analyticsSummary()?.employabilityRate || 0 }}%</span>
+              <span class="text-[11px] text-ink-muted">inserción</span>
+            </div>
+            <div class="w-full bg-slate-200 h-1.5 rounded-full mt-2.5 overflow-hidden">
+              <div
+                class="bg-primary h-full rounded-full transition-all duration-500"
+                [style.width.%]="analyticsSummary()?.employabilityRate || 0"
+              ></div>
+            </div>
+          </div>
+
+          <!-- KPI 2: Alumnos Contratados -->
+          <div class="p-4 rounded-xl bg-slate-50/70 border border-line">
+            <p class="text-xs font-semibold text-ink-muted">Alumnos Contratados</p>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-emerald-600 font-mono">{{ analyticsSummary()?.totalHiredStudents || 0 }}</span>
+              <span class="text-[11px] text-ink-muted">de {{ analyticsSummary()?.totalVerifiedStudents || 0 }} acreditados</span>
+            </div>
+            <p class="text-[11px] text-ink-muted mt-2">Postulaciones aceptadas formalmente</p>
+          </div>
+
+          <!-- KPI 3: Convenios Activos -->
+          <div class="p-4 rounded-xl bg-slate-50/70 border border-line">
+            <p class="text-xs font-semibold text-ink-muted">Convenios Vigentes</p>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-ink font-mono">{{ analyticsSummary()?.totalActiveAgreements || 0 }}</span>
+              <span class="text-[11px] text-ink-muted">acuerdos</span>
+            </div>
+            <p class="text-[11px] text-ink-muted mt-2">Prácticas preprofesionales convalidables</p>
+          </div>
+
+          <!-- KPI 4: Empresas Avaladas -->
+          <div class="p-4 rounded-xl bg-slate-50/70 border border-line">
+            <p class="text-xs font-semibold text-ink-muted">Empresas Avaladas</p>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span class="text-2xl font-black text-ink font-mono">{{ analyticsSummary()?.totalEndorsedCompanies || 0 }}</span>
+              <span class="text-[11px] text-ink-muted">organizaciones</span>
+            </div>
+            <p class="text-[11px] text-ink-muted mt-2">Empresas con respaldo institucional</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN PRINCIPAL: GRÁFICO DE BARRAS DE DEMANDA + TOP EMPRESAS EMPLEADORAS -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <!-- GRÁFICO DE BARRAS EN TIEMPO REAL: DEMANDA LABORAL Y CONTRATACIONES POR CARRERA (2 cols) -->
+        <div class="lg:col-span-2 card p-5 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
+            <div>
+              <h3 class="text-base font-bold text-ink">Demanda Laboral por Carrera</h3>
+              <p class="text-xs text-ink-muted">Volumen de postulaciones totales vs. alumnos efectivamente contratados</p>
+            </div>
+
+            <!-- Leyenda del gráfico -->
+            <div class="flex items-center gap-4 text-xs shrink-0">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-sm bg-primary/25 border border-primary/40"></span>
+                <span class="text-ink-muted">Postulaciones</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-sm bg-primary"></span>
+                <span class="text-ink font-semibold">Contratados</span>
+              </div>
+            </div>
+          </div>
+
+          @if (isLoadingAnalytics()) {
+            <div class="p-12 text-center">
+              <div class="w-8 h-8 border-3 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-2"></div>
+              <p class="text-xs text-ink-muted">Cargando métricas de empleabilidad en tiempo real...</p>
+            </div>
+          } @else if (careerDemands().length === 0) {
+            <div class="p-12 text-center bg-slate-50 rounded-xl border border-dashed border-line">
+              <svg class="w-8 h-8 text-ink-muted mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3v18h18"/>
+                <path d="M18 17V9"/>
+                <path d="M13 17V5"/>
+                <path d="M8 17v-3"/>
+              </svg>
+              <p class="text-sm font-bold text-ink">No hay datos suficientes de postulaciones</p>
+              <p class="text-xs text-ink-muted mt-1 max-w-sm mx-auto">
+                {{ analyticsSummary()?.message || 'A medida que los alumnos de tu institución postulen a convocatorias y sean contratados, el gráfico se actualizará automáticamente.' }}
+              </p>
+            </div>
+          } @else {
+            <!-- LISTADO Y BARRAS DE PROGRESO POR CARRERA -->
+            <div class="space-y-4 pt-1">
+              @for (item of careerDemands(); track item.career) {
+                <div class="space-y-1.5 p-3 rounded-xl border border-line bg-white hover:bg-slate-50/50 transition">
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                    <span class="font-bold text-ink truncate">{{ item.career }}</span>
+                    <div class="flex items-center gap-3 text-[11px] shrink-0 font-mono">
+                      <span class="text-ink-muted">{{ item.applications }} post.</span>
+                      <span class="font-bold text-primary">{{ item.accepted }} contratados</span>
+                      <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-semibold text-[10px]">
+                        {{ item.applications > 0 ? (Math.round((item.accepted / item.applications) * 100)) : 0 }}% efectividad
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Barras comparativas -->
+                  <div class="space-y-1.5 pt-1">
+                    <!-- Barra 1: Postulaciones totales -->
+                    <div>
+                      <div class="flex items-center justify-between text-[10px] text-ink-muted mb-0.5">
+                        <span>Postulaciones totales</span>
+                        <span class="font-mono font-semibold">{{ item.applications }}</span>
+                      </div>
+                      <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          class="h-full bg-primary/30 rounded-full transition-all duration-700"
+                          [style.width.%]="(item.applications / maxDemandValue()) * 100"
+                        ></div>
+                      </div>
+                    </div>
+
+                    <!-- Barra 2: Alumnos contratados (efectividad real) -->
+                    <div>
+                      <div class="flex items-center justify-between text-[10px] text-ink-muted mb-0.5">
+                        <span class="text-primary font-medium">Alumnos contratados</span>
+                        <span class="font-mono font-bold text-primary">{{ item.accepted }}</span>
+                      </div>
+                      <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          class="h-full bg-primary rounded-full transition-all duration-700"
+                          [style.width.%]="(item.accepted / maxDemandValue()) * 100"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- PANEL DERECHO: TOP EMPRESAS QUE MÁS CONTRATAN -->
+        <div class="card p-5 space-y-4">
+          <div class="border-b border-line pb-3">
+            <h3 class="text-base font-bold text-ink">Empresas Contratantes</h3>
+            <p class="text-xs text-ink-muted">Organizaciones con mayor reclutamiento de tus alumnos</p>
+          </div>
+
+          @if (isLoadingAnalytics()) {
+            <div class="p-8 text-center text-xs text-ink-muted">Cargando empresas aliadas...</div>
+          } @else if (topCompanies().length === 0) {
+            <div class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-line">
+              <svg class="w-7 h-7 text-ink-muted mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+              </svg>
+              <p class="text-xs font-semibold text-ink">Aún no hay admisiones registradas</p>
+              <p class="text-[11px] text-ink-muted mt-1">El ranking se generará cuando las empresas acepten postulaciones de tus alumnos.</p>
+            </div>
+          } @else {
+            <div class="space-y-2.5">
+              @for (comp of topCompanies(); track comp.recruiterId; let idx = $index) {
+                <div class="flex items-center justify-between p-3 rounded-xl border border-line bg-slate-50/50 hover:bg-slate-50 transition">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="w-6 h-6 rounded-lg bg-primary-soft text-primary font-bold text-xs flex items-center justify-center shrink-0 font-mono">
+                      {{ idx + 1 }}
+                    </span>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1.5">
+                        <p class="text-xs font-bold text-ink truncate">{{ comp.companyName }}</p>
+                        @if (comp.isValidated) {
+                          <svg class="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                          </svg>
+                        }
+                      </div>
+                      <p class="text-[11px] text-ink-muted">Empresa empleadora</p>
+                    </div>
+                  </div>
+
+                  <div class="text-right shrink-0">
+                    <span class="text-xs font-bold text-primary font-mono">{{ comp.hiredStudents }}</span>
+                    <p class="text-[10px] text-ink-muted">contratados</p>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+
     </div>
   }
 
