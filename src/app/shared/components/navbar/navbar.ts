@@ -102,9 +102,9 @@ export class Navbar implements OnInit {
       roles: ['RECRUITER']
     },
     {
-      id: 'institution-profile',
-      label: 'Sede Institucional',
-      route: '/profile/me',
+      id: 'institution-services',
+      label: 'Servicios Institucionales',
+      route: '/institution/services',
       icon: 'dashboard',
       roles: ['INSTITUTION']
     },

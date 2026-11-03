@@ -18,12 +18,35 @@ import { JobSearch } from './pages/jobs/job-search';
 import { Messages } from './pages/messages/messages';
 import { Notifications } from './pages/notifications/notifications';
 import { Network } from './pages/network/network';
+import { InstitutionPortal } from './pages/institution/institution-portal';
 
 export const routes: Routes = [
   // Autenticación
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: Login },
   { path: 'register', component: Register },
+
+  // Servicios Institucionales (Panel de Gestión: Acreditación de Alumnos, Habilidades y Convenios)
+  {
+    path: 'institution/services',
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionPortal
+  },
+  {
+    path: 'institution/servicios',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
+  },
+  {
+    path: 'institution/sede',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
+  },
+  {
+    path: 'institution/portal',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
+  },
 
   // Perfil y Onboarding
   {

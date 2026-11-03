@@ -241,8 +241,8 @@
             }
 
             <div class="mt-4 w-full">
-              <a routerLink="/profile/me" class="btn-secondary w-full text-[13px] py-2">
-                <span>{{ currentRole() === 'RECRUITER' ? 'Ver Perfil de Empresa' : (currentRole() === 'INSTITUTION' ? 'Sede Institucional' : 'Ver mi Perfil') }}</span>
+              <a [routerLink]="currentRole() === 'INSTITUTION' ? '/institution/services' : '/profile/me'" class="btn-secondary w-full text-[13px] py-2">
+                <span>{{ currentRole() === 'RECRUITER' ? 'Ver Perfil de Empresa' : (currentRole() === 'INSTITUTION' ? 'Servicios Institucionales' : 'Ver mi Perfil') }}</span>
               </a>
             </div>
           </div>
@@ -312,10 +312,10 @@
 
             <div class="mt-4 pt-3 border-t border-gray-100">
               <a
-                routerLink="/profile/me"
+                routerLink="/institution/services"
                 class="w-full text-center text-[12px] font-bold text-[#274DEA] hover:underline flex items-center justify-center gap-1.5"
               >
-                <span>Gestionar todos los alumnos en el perfil →</span>
+                <span>Ir a Servicios Institucionales →</span>
               </a>
             </div>
           </div>
@@ -488,10 +488,10 @@
 
             <div class="pt-2 border-t border-gray-100">
               <a
-                routerLink="/profile/me"
+                routerLink="/institution/services"
                 class="w-full text-center text-[12px] font-bold text-[#274DEA] hover:underline flex items-center justify-center gap-1.5"
               >
-                <span>Ver bandeja de validaciones completa →</span>
+                <span>Ir a Servicios Institucionales →</span>
               </a>
             </div>
           </div>
@@ -946,10 +946,10 @@
             }
 
             <a
-              routerLink="/profile/me"
+              routerLink="/institution/services"
               class="block w-full py-2 rounded-xl border border-[#274DEA]/30 text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold text-center transition"
             >
-              Administrar convenios institucionales →
+              Administrar en Servicios Institucionales →
             </a>
           </div>
 
@@ -987,10 +987,10 @@
             </div>
 
             <a
-              routerLink="/profile/me"
+              routerLink="/institution/services"
               class="btn-primary w-full text-[12px] py-2 text-center block font-bold"
             >
-              <span>Ir al Portal de la Sede →</span>
+              <span>Ir a Servicios Institucionales →</span>
             </a>
           </div>
         } @else if (currentRole() === 'RECRUITER') {
@@ -1262,11 +1262,11 @@
 
         <div class="mt-6 flex justify-end gap-2">
           <a
-            routerLink="/profile/me"
+            routerLink="/institution/services"
             (click)="closeValidationModal()"
             class="btn-institutional text-[13px] py-2 px-5 w-full text-center"
           >
-            <span>{{ institutionData()?.isVerified ? '✓ Ver Sede y Perfil Institucional' : '🔐 Validar Dominio Académico (Código OTP)' }}</span>
+            <span>Ir a Servicios Institucionales</span>
           </a>
         </div>
       } @else if (currentRole() === 'RECRUITER') {
