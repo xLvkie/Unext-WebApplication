@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { 
+  AgreementCreateRequest,
+  AgreementResponse,
   ApplicationStatus, JobApplication, JobOffer, 
   JobOfferRequest, JobOfferUpdate, JobRecommendationResponse, 
   RecruiterApplicantFilters, RecruiterApplicationItem 
@@ -11,10 +13,14 @@ import {
 @Injectable({ providedIn: 'root' })
 export class JobService {
   private readonly http = inject(HttpClient);
-  private readonly API_URL = `${environment.apiUrl}/jobs`;
-  private readonly recruiterApi = `${environment.apiUrl}/recruiter`;
+  // Api de uso general para postulantes, reclutadores e instituciones
+  private readonly JOBS_URL = `${environment.apiUrl}/jobs`;
+  // Api de uso privado para reclutadores
+  private readonly RECRUITER_URL = `${environment.apiUrl}/recruiter`;
 
-  // Métodos usados en la vista /jobs
+  /* =============================================================
+     SEARCH AND APPLICATIONS - USO DE API PÚBLICA PARA POSTULANTES
+     ============================================================= */
   search(keyword: string, JobModality: string, experience: string): Observable<JobOffer[]> {
     let params = new HttpParams();
     if (keyword.trim()) {
@@ -26,56 +32,59 @@ export class JobService {
     if (experience) {
       params = params.set('experience', experience);
     }
-    return this.http.get<JobOffer[]>(this.API_URL, { params });
+    return this.http.get<JobOffer[]>(this.JOBS_URL, { params });
   }
 
   recommendations(): Observable<JobOffer[]> {
-    return this.http.get<JobOffer[]>(`${this.API_URL}/recommendations`);
+    return this.http.get<JobOffer[]>(`${this.JOBS_URL}/recommendations`);
   }
 
   dismiss(jobId: string): Observable<string> {
-    return this.http.post(`${this.API_URL}/${jobId}/not-interested`, {}, { responseType: 'text' });
+    return this.http.post(`${this.JOBS_URL}/${jobId}/not-interested`, {}, { responseType: 'text' });
   }
 
   apply(jobId: string): Observable<JobApplication> {
-    return this.http.post<JobApplication>(`${this.API_URL}/${jobId}/apply`, {});
+    return this.http.post<JobApplication>(`${this.JOBS_URL}/${jobId}/apply`, {});
   }
 
   myApplications(): Observable<JobApplication[]> {
-    return this.http.get<JobApplication[]>(`${this.API_URL}/applications/me`);
+    return this.http.get<JobApplication[]>(`${this.JOBS_URL}/applications/me`);
   }
 
-  // Métodos usados en el Dashboard (/feed)
+  // Métodos usados en el Dashboard (/feed) falta desarrollar la paginación y filtros
   getRecommendations(): Observable<JobRecommendationResponse[]> {
-    return this.http.get<JobRecommendationResponse[]>(`${this.API_URL}/recommendations`);
+    return this.http.get<JobRecommendationResponse[]>(`${this.JOBS_URL}/recommendations`);
   }
 
   applyToJob(jobId: string): Observable<boolean> {
-    return this.http.post<JobApplication>(`${this.API_URL}/${jobId}/apply`, {}).pipe(
+    return this.http.post<JobApplication>(`${this.JOBS_URL}/${jobId}/apply`, {}).pipe(
       map(() => true)
     );
   }
 
   dismissRecommendation(jobId: string): Observable<boolean> {
-    return this.http.post(`${this.API_URL}/${jobId}/not-interested`, {}, { responseType: 'text' }).pipe(
+    return this.http.post(`${this.JOBS_URL}/${jobId}/not-interested`, {}, { responseType: 'text' }).pipe(
       map(() => true)
     );
   }
 
+  /* ================================================================
+     RECRUITER JOBS MANAGEMENT - USO DE API PRIVADA PARA RECLUTADORES
+     ================================================================ */
   getMyRecruiterJobs(): Observable<JobOffer[]> {
-    return this.http.get<JobOffer[]>(`${this.recruiterApi}/jobs`);
+    return this.http.get<JobOffer[]>(`${this.RECRUITER_URL}/jobs`);
   }
 
   createRecruiterJob(payload: JobOfferRequest): Observable<JobOffer> {
-    return this.http.post<JobOffer>(`${this.recruiterApi}/jobs`, payload);
+    return this.http.post<JobOffer>(`${this.RECRUITER_URL}/jobs`, payload);
   }
 
   updateRecruiterJob(jobId: string, payload: JobOfferUpdate): Observable<JobOffer> {
-    return this.http.put<JobOffer>(`${this.recruiterApi}/jobs/${jobId}`, payload);
+    return this.http.put<JobOffer>(`${this.RECRUITER_URL}/jobs/${jobId}`, payload);
   }
 
   closeRecruiterJob(jobId: string): Observable<JobOffer> {
-    return this.http.delete<JobOffer>(`${this.recruiterApi}/jobs/${jobId}`);
+    return this.http.delete<JobOffer>(`${this.RECRUITER_URL}/jobs/${jobId}`);
   }
 
   getJobApplicationsForRecruiter(
@@ -90,7 +99,7 @@ export class JobService {
     if (filters?.minReviews) params = params.set('minReviews', String(filters.minReviews));
 
     return this.http.get<RecruiterApplicationItem[]>(
-      `${this.recruiterApi}/jobs/${jobId}/applications`,
+      `${this.RECRUITER_URL}/jobs/${jobId}/applications`,
       { params }
     );
   }
@@ -101,7 +110,7 @@ export class JobService {
   ): Observable<string> {
     const params = new HttpParams().set('status', status);
     return this.http.patch(
-      `${this.recruiterApi}/applications/${applicationId}/status`,
+      `${this.RECRUITER_URL}/applications/${applicationId}/status`,
       {},
       { params, responseType: 'text' }
     );
@@ -110,7 +119,18 @@ export class JobService {
   suggestSkills(query: string): Observable<string[]> {
     const params = new HttpParams().set('query', query.trim());
     return this.http
-      .get<string[]>(`${this.recruiterApi}/skills/suggestions`, { params })
+      .get<string[]>(`${this.RECRUITER_URL}/skills/suggestions`, { params })
       .pipe(catchError(() => of([])));
   }
+
+  getMyRecruiterAgreements(): Observable<AgreementResponse[]> {
+    return this.http
+      .get<AgreementResponse[]>(`${this.RECRUITER_URL}/agreements`)
+      .pipe(catchError(() => of([])));
+  }
+
+  createRecruiterAgreement(payload: AgreementCreateRequest): Observable<AgreementResponse> {
+    return this.http.post<AgreementResponse>(`${this.RECRUITER_URL}/agreements`, payload);
+  }
 }
+

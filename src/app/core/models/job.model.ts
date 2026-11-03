@@ -2,6 +2,7 @@ export type JobModality = 'REMOTE' | 'HYBRID' | 'ON_SITE' | 'ONSITE';
 export type ExperienceLevel = 'INTERNSHIP' | 'TRAINEE' | 'ENTRY_LEVEL' | 'JUNIOR' | 'SEMI_SENIOR' | 'MID' | 'SENIOR';
 export type ApplicationStatus = 'RECEIVED' | 'UNDER_REVIEW' | 'ACCEPTED' | 'REJECTED';
 export type CompatibilityLabel = 'LOW' | 'MEDIUM' | 'HIGH' | 'VERY_HIGH';
+export type AgreementStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 // Usado por la página de Vacantes (/jobs)
 export interface JobOffer {
@@ -97,3 +98,30 @@ export interface RecruiterApplicantFilters {
   minRating?: number | null;
   minReviews?: number | null;
 } 
+
+export interface AgreementCreateRequest {
+  postulantId: string;
+  jobApplicationId?: string | null;
+  title: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  weeklyHours: number;
+  documentUrl: string;
+  observations?: string;
+}
+
+export interface AgreementResponse {
+  id: string;
+  jobApplicationId?: string | null;
+  title: string;
+  companyName: string;
+  studentName: string;
+  startDate: string;
+  endDate: string;
+  weeklyHours: number;
+  documentUrl: string;
+  status: AgreementStatus;
+  observations?: string | null;
+  reviewedAt?: string | number[] | Date | null;
+  createdAt?: string | number[] | Date | null;
+}

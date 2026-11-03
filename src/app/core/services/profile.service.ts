@@ -79,6 +79,12 @@ export class ProfileService {
     return this.http.put<RecruiterProfileResponse>(`${this.API_URL}/recruiter/me`, request);
   }
 
+  getRecruiterPublicJobs(recruiterId: string): Observable<any[]> {
+    return this.http
+      .get<any[]>(`${this.API_URL}/recruiters/directory/${recruiterId}/jobs`)
+      .pipe(catchError(() => of([])));
+  }
+
   /* ==============================
      INSTITUTION PROFILE
      ============================== */

@@ -11,9 +11,14 @@
       <header class="flex items-center justify-between px-4 py-3">
         <div>
           <h1 class="text-lg font-extrabold">Mensajes</h1>
-          <p class="text-xs text-ink-muted">Conversaciones directas</p>
+          <p class="text-xs text-ink-muted">Conversaciones con tu red</p>
         </div>
-        <button class="grid h-10 w-10 place-items-center rounded-full bg-primary text-white" type="button" title="Nuevo chat" (click)="showPeople.set(!showPeople())">
+        <button
+          class="grid h-10 w-10 place-items-center rounded-full bg-primary text-white"
+          type="button"
+          title="Nuevo chat con mis conexiones"
+          (click)="togglePeoplePicker()"
+        >
           <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 20h9"></path>
             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>
@@ -25,20 +30,50 @@
         <input class="field" type="search" placeholder="Buscar un chat" [value]="query()" (input)="onQuery($event)" />
       </div>
 
+      <!-- Desplegable del botón del lápiz: SOLO conexiones confirmadas de Mi Red -->
       @if (showPeople()) {
         <div class="border-y border-line bg-primary-soft/40 px-3 py-3">
-          <input class="field" type="search" placeholder="Buscar persona, empresa o institución" [value]="peopleQuery()" (input)="onPeopleQuery($event)" />
+          <p class="mb-1.5 text-[11px] font-bold text-primary">
+            Mis conexiones en Mi Red ({{ people().length }})
+          </p>
+          <input
+            class="field"
+            type="search"
+            placeholder="Buscar entre mis conexiones..."
+            [value]="peopleQuery()"
+            (input)="onPeopleQuery($event)"
+          />
           <div class="mt-2 max-h-56 space-y-1 overflow-y-auto">
             @for (person of people(); track person.userId) {
-              <button class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-white" type="button" (click)="openConversation(person.userId)">
-                <span class="grid h-9 w-9 place-items-center rounded-full bg-primary text-xs font-bold text-white">{{ initialsOf(person.name) }}</span>
+              <button
+                class="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left hover:bg-white transition"
+                type="button"
+                (click)="openConversation(person.userId)"
+              >
+                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-white overflow-hidden border border-line">
+                  @if (person.avatarUrl) {
+                    <img [src]="person.avatarUrl" [alt]="person.name" class="h-full w-full object-cover" />
+                  } @else {
+                    {{ initialsOf(person.name) }}
+                  }
+                </span>
                 <span class="min-w-0">
                   <span class="block truncate text-sm font-semibold">{{ person.name }}</span>
-                  <span class="block text-xs text-ink-muted">{{ person.kind }} · {{ person.subtitle }}</span>
+                  <span class="block truncate text-xs text-ink-muted">{{ person.kind }} · {{ person.subtitle }}</span>
                 </span>
               </button>
             } @empty {
-              <p class="px-2 py-3 text-xs text-ink-muted">No hay contactos para mostrar.</p>
+              <div class="px-2 py-3 text-center space-y-1.5">
+                <p class="text-xs text-ink-muted">
+                  Aún no tienes conexiones en tu red que coincidan.
+                </p>
+                <a
+                  routerLink="/directory"
+                  class="inline-block text-xs font-bold text-primary hover:underline"
+                >
+                  Ir a Mi Red para conectar →
+                </a>
+              </div>
             }
           </div>
         </div>
@@ -52,7 +87,7 @@
         } @else if (loading() && visibleConversations().length === 0) {
           <p class="px-4 py-8 text-center text-sm text-ink-muted">Cargando conversaciones…</p>
         } @else if (visibleConversations().length === 0) {
-          <p class="px-4 py-8 text-center text-sm text-ink-muted">Todavía no tienes chats. Empieza uno con el botón de arriba.</p>
+          <p class="px-4 py-8 text-center text-sm text-ink-muted">Todavía no tienes chats. Empieza uno con el botón del lápiz arriba.</p>
         } @else {
           @for (conversation of visibleConversations(); track conversation.userId) {
             <button
@@ -61,8 +96,13 @@
               type="button"
               (click)="openConversation(conversation.userId)"
             >
-              <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-white">
-                {{ initialsOf(conversation.name) }}
+              <!-- Avatar de la conversación con Foto Real o Iniciales -->
+              <span class="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-white overflow-hidden border border-line">
+                @if (conversation.avatarUrl) {
+                  <img [src]="conversation.avatarUrl" [alt]="conversation.name" class="h-full w-full object-cover" />
+                } @else {
+                  {{ initialsOf(conversation.name) }}
+                }
               </span>
               <span class="min-w-0 flex-1">
                 <span class="flex items-baseline justify-between gap-2">
@@ -86,7 +126,14 @@
       @if (selected(); as conversation) {
         <header class="flex items-center gap-3 border-b border-line bg-white px-4 py-3">
           <button class="text-sm font-semibold text-primary md:hidden" type="button" (click)="selectedId.set(null)">←</button>
-          <span class="grid h-10 w-10 place-items-center rounded-full bg-primary text-sm font-bold text-white">{{ initialsOf(conversation.name) }}</span>
+          <!-- Avatar en la cabecera del chat activo con Foto Real o Iniciales -->
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-white overflow-hidden border border-line">
+            @if (conversation.avatarUrl) {
+              <img [src]="conversation.avatarUrl" [alt]="conversation.name" class="h-full w-full object-cover" />
+            } @else {
+              {{ initialsOf(conversation.name) }}
+            }
+          </span>
           <div class="min-w-0">
             <h2 class="truncate text-sm font-bold">{{ conversation.name }}</h2>
             <p class="text-xs text-ink-muted">{{ context(conversation.contextType) || 'Chat directo' }}</p>
@@ -148,7 +195,7 @@
             </svg>
           </div>
           <h2 class="mt-4 text-xl font-extrabold">Tus mensajes</h2>
-          <p class="mt-2 max-w-sm text-sm text-ink-muted">Elige una conversación o empieza un chat nuevo. El hilo queda a la derecha, como en WhatsApp.</p>
+          <p class="mt-2 max-w-sm text-sm text-ink-muted">Elige una conversación o empieza un chat nuevo con tus conexiones de Mi Red.</p>
         </div>
       }
     </section>

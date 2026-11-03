@@ -11,6 +11,7 @@ import { PostulantProfile } from './pages/profile/postulant/postulant-profile';
 import { PublicPosProfile } from './pages/profile/postulant/public-pos-profile';
 import { RecruiterProfile } from './pages/profile/recruiter/recruiter-profile';
 import { InstitutionProfile } from './pages/profile/institution/institution-profile';
+import { PublicRecProfile } from './pages/profile/recruiter/public-rec-profile';
 
 // Funcionalidades principales
 import { RecruiterJobs } from './pages/jobs/recruiter/recruiter-jobs';
@@ -80,7 +81,8 @@ export const routes: Routes = [
   },
 
   // Vista pública de perfiles
-  { path: 'profile/view/:role/:id', component: PublicPosProfile },
+  { path: 'profile/view/postulant/:id', component: PublicPosProfile },
+  { path: 'profile/view/recruiter/:id', component: PublicRecProfile },
 
   // Feed / Dashboard Principal
   { path: 'feed', component: Dashboard },
@@ -93,6 +95,7 @@ export const routes: Routes = [
 
   // Vacantes
   { path: 'recruiter/jobs', component: RecruiterJobs },
+  { path: 'agreements', redirectTo: 'recruiter/jobs?tab=agreements', pathMatch: 'full' },
 
   {
     path: 'jobs',

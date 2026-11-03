@@ -31,6 +31,7 @@ export class Network implements OnInit {
   private route = inject(ActivatedRoute);
   readonly router = inject(Router);
 
+  currentRole = computed(() => this.authService.getStoredRole() || 'POSTULANT');
   isLoading = signal(true);
   searchQuery = signal('');
 
