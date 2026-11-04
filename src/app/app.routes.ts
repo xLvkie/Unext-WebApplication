@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from './core/services/auth.service';
+import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 import { Login } from './pages/auth/login/login';
 import { Register } from './pages/auth/register/register';
@@ -10,8 +12,9 @@ import { Dashboard } from './pages/dashboard/dashboard';
 import { PostulantProfile } from './pages/profile/postulant/postulant-profile';
 import { PublicPosProfile } from './pages/profile/postulant/public-pos-profile';
 import { RecruiterProfile } from './pages/profile/recruiter/recruiter-profile';
-import { InstitutionProfile } from './pages/profile/institution/institution-profile';
 import { PublicRecProfile } from './pages/profile/recruiter/public-rec-profile';
+import { InstitutionProfile } from './pages/profile/institution/institution-profile';
+import { PublicInstProfile } from './pages/profile/institution/public-inst-profile';
 
 // Funcionalidades principales
 import { RecruiterJobs } from './pages/jobs/recruiter/recruiter-jobs';
@@ -22,16 +25,23 @@ import { Network } from './pages/network/network';
 import { InstitutionPortal } from './pages/institution/institution-portal';
 
 export const routes: Routes = [
-  // Autenticación
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
-  { path: 'login', component: Login },
-  { path: 'register', component: Register },
+  // Redirección inicial
+  { path: '', redirectTo: 'feed', pathMatch: 'full' },
 
-  // Servicios Institucionales (Panel de Gestión: Acreditación de Alumnos, Habilidades y Convenios)
+  // Autenticación (Solo accesibles si NO ha iniciado sesión)
+  { path: 'login', canActivate: [guestGuard], component: Login },
+  { path: 'register', canActivate: [guestGuard], component: Register },
+
+  // Gestión Académica (Exclusivo para el rol INSTITUTION)
   {
     path: 'institution/services',
-    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    canActivate: [authGuard, roleGuard('INSTITUTION')],
     component: InstitutionPortal
+  },
+  {
+    path: 'institution/validations',
+    redirectTo: 'institution/services',
+    pathMatch: 'full'
   },
   {
     path: 'institution/servicios',
@@ -49,66 +59,100 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
 
-  // Perfil y Onboarding
+  // Perfil propio protegido y enrutado según el segmento autenticado
   {
     path: 'profile/me',
+    canActivate: [authGuard],
     canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
     component: InstitutionProfile
   },
   {
     path: 'profile/me',
+    canActivate: [authGuard],
     canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
     component: RecruiterProfile
   },
   {
     path: 'profile/me',
-    component: PostulantProfile // Por defecto carga Postulante
-  },
-
-  {
-    path: 'onboarding/complete-profile',
-    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
-    component: InstitutionProfile
-  },
-  {
-    path: 'onboarding/complete-profile',
-    canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
-    component: RecruiterProfile
-  },
-  {
-    path: 'onboarding/complete-profile',
+    canActivate: [authGuard, roleGuard('POSTULANT')],
     component: PostulantProfile
   },
 
-  // Vista pública de perfiles
-  { path: 'profile/view/postulant/:id', component: PublicPosProfile },
-  { path: 'profile/view/recruiter/:id', component: PublicRecProfile },
+  // Onboarding según el segmento autenticado
+  {
+    path: 'onboarding/complete-profile',
+    canActivate: [authGuard],
+    canMatch: [() => inject(AuthService).getStoredRole() === 'INSTITUTION'],
+    component: InstitutionProfile
+  },
+  {
+    path: 'onboarding/complete-profile',
+    canActivate: [authGuard],
+    canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
+    component: RecruiterProfile
+  },
+  {
+    path: 'onboarding/complete-profile',
+    canActivate: [authGuard, roleGuard('POSTULANT')],
+    component: PostulantProfile
+  },
 
-  // Feed / Dashboard Principal
-  { path: 'feed', component: Dashboard },
+  // Vistas públicas de los 3 segmentos
+  {
+    path: 'profile/view/postulant/:id',
+    canActivate: [authGuard],
+    component: PublicPosProfile
+  },
+  {
+    path: 'profile/view/recruiter/:id',
+    canActivate: [authGuard],
+    component: PublicRecProfile
+  },
+  {
+    path: 'profile/view/institution/:id',
+    canActivate: [authGuard],
+    component: PublicInstProfile
+  },
+  {
+    path: 'profile/view/:role/:id',
+    canActivate: [authGuard],
+    component: PublicPosProfile
+  },
+
+  // Feed / Dashboard Principal (Para los 3 segmentos)
+  { path: 'feed', canActivate: [authGuard], component: Dashboard },
   { path: 'dashboard', redirectTo: 'feed', pathMatch: 'full' },
 
-  // Mi Red (Directorio y Conexiones)
-  { path: 'directory', component: Network },
+  // Mi Red (Directorio y Conexiones para los 3 segmentos)
+  { path: 'directory', canActivate: [authGuard], component: Network },
   { path: 'network', redirectTo: 'directory', pathMatch: 'full' },
   { path: 'red', redirectTo: 'directory', pathMatch: 'full' },
 
-  // Vacantes
-  { path: 'recruiter/jobs', component: RecruiterJobs },
+  // Centro de Vacantes del Reclutador (Exclusivo para RECRUITER)
+  {
+    path: 'recruiter/jobs',
+    canActivate: [authGuard, roleGuard('RECRUITER')],
+    component: RecruiterJobs
+  },
   { path: 'agreements', redirectTo: 'recruiter/jobs?tab=agreements', pathMatch: 'full' },
 
+  // Buscador de Empleos (Si es RECRUITER abre su panel; si es POSTULANT abre JobSearch; bloqueado para INSTITUTION)
   {
     path: 'jobs',
+    canActivate: [authGuard],
     canMatch: [() => inject(AuthService).getStoredRole() === 'RECRUITER'],
     component: RecruiterJobs
   },
-  { path: 'jobs', component: JobSearch },
+  {
+    path: 'jobs',
+    canActivate: [authGuard, roleGuard('POSTULANT')],
+    component: JobSearch
+  },
 
-  // Mensajeria
-  { path: 'messages', component: Messages },
+  // Mensajería y Notificaciones
+  { path: 'messages', canActivate: [authGuard], component: Messages },
+  { path: 'notifications', canActivate: [authGuard], component: Notifications },
 
-  // Notificaciones
-  { path: 'notifications', component: Notifications },
-
-  { path: '**', redirectTo: 'login' }
+  // ruta desconicida
+  { path: '**', redirectTo: 'feed' }
 ];

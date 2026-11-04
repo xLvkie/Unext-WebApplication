@@ -288,7 +288,8 @@
                         }
                         @case ('CONNECTIONS') {
                           <a
-                            routerLink="/messages"
+                            [routerLink]="['/messages']"
+                            [queryParams]="{ con: item.userId }"
                             class="px-3.5 py-1.5 rounded-full border border-[#274DEA] text-[#274DEA] hover:bg-[#274DEA]/5 text-xs font-bold transition"
                           >
                             💬 Mensaje
@@ -549,7 +550,13 @@
                 <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200/80 space-y-2">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
-                      <span class="font-bold text-[13px] text-gray-900">{{ post.authorName }}</span>
+                      <button
+                        type="button"
+                        (click)="openPostAuthorProfile(post)"
+                        class="font-bold text-[13px] text-gray-900 hover:text-[#274DEA] hover:underline text-left"
+                      >
+                        {{ post.authorName }}
+                      </button>
                       <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#274DEA]/10 text-[#274DEA]">
                         {{ roleBadgeLabel(post.authorRole) }}
                       </span>

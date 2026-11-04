@@ -292,7 +292,39 @@ export class Network implements OnInit {
   }
 
   openPublicProfile(person: NetworkPersonCard): void {
-    this.router.navigate(['/profile/view', person.role.toLowerCase(), person.profileId]);
+    const myUserId = this.authService.session()?.userId;
+    if (person.userId && person.userId === myUserId) {
+      this.router.navigate(['/profile/me']);
+      return;
+    }
+
+    const roleSlug = (person.role || 'POSTULANT').toLowerCase();
+    const targetId = person.profileId || person.userId;
+    this.router.navigate(['/profile/view', roleSlug, targetId]);
+  }
+
+  openPostAuthorProfile(post: FeedPostResponse): void {
+    const myUserId = this.authService.session()?.userId;
+    if (post.authorUserId && post.authorUserId === myUserId) {
+      this.router.navigate(['/profile/me']);
+      return;
+    }
+
+    const roleSlug = (post.authorRole || 'POSTULANT').toLowerCase();
+    const targetId = post.authorProfileId || post.authorUserId;
+    this.router.navigate(['/profile/view', roleSlug, targetId]);
+  }
+
+  confirmRestrictionAction(): void {
+    this.isRestrictionModalOpen.set(false);
+    const role = this.currentRole();
+    if (role === 'RECRUITER') {
+      this.router.navigate(['/recruiter/jobs']);
+    } else if (role === 'INSTITUTION') {
+      this.router.navigate(['/institution/services']);
+    } else {
+      this.router.navigate(['/jobs']);
+    }
   }
 
   initialsFor(name: string): string {
