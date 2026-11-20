@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ProfileService } from '../../../core/services/profile.service';
+import { readApiError } from '../../../core/utils/api-error';
 
 @Component({
   selector: 'app-login',
@@ -111,11 +112,22 @@ export class Login {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(
-          err?.error?.error ||
-            err?.error?.message ||
-            'Credenciales incorrectas. Verifica tu correo y contraseña.'
-        );
+        const backendError =
+          typeof err?.error?.error === 'string' && err.error.error.trim()
+            ? err.error.error.trim()
+            : null;
+        const fallback = 'Credenciales incorrectas. Verifica tu correo y contraseña.';
+        if (err?.status === 401) {
+          const backendMsg =
+            typeof err?.error?.message === 'string' &&
+            err.error.message.trim() &&
+            err.error.message !== 'No message available'
+              ? err.error.message.trim()
+              : null;
+          this.errorMessage.set(backendError || backendMsg || fallback);
+        } else {
+          this.errorMessage.set(backendError || readApiError(err, fallback));
+        }
       }
     });
   }

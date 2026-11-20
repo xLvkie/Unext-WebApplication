@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -17,8 +17,12 @@ import {
 } from '../../../core/models/profile.model';
 import { FeedPostResponse } from '../../../core/models/feed.model';
 import { readApiError } from '../../../core/utils/api-error';
-import { resizeImageFile } from '../../../core/utils/file-media';
-import { toDate } from '../../../core/utils/format';
+import { isVideoUrl, resizeImageFile } from '../../../core/utils/file-media';
+import {
+  formatExpirationRemaining as formatExpirationRemainingUtil,
+  formatShortDate,
+  institutionInitials as computeInstitutionInitials
+} from '../../../core/utils/format';
 
 export interface EndorsedCompanyItem {
   recruiterId: string;
@@ -38,7 +42,17 @@ export class InstitutionProfile implements OnInit {
   private authService = inject(AuthService);
   private http = inject(HttpClient);
   readonly directoryService = inject(DirectoryService);
+  private destroyRef = inject(DestroyRef);
   private router = inject(Router);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   readonly MAX_BANNER_TEXT = 35;
   readonly MAX_DESCRIPTION = 1500;
@@ -108,17 +122,9 @@ export class InstitutionProfile implements OnInit {
     this.allInstitutionPosts().filter((p) => !p.isImportant)
   );
 
-  institutionInitials = computed(() => {
-    const name = this.profile().name?.trim() || 'Institución';
-    return (
-      name
-        .split(/\s+/)
-        .filter((w) => w.length > 2)
-        .slice(0, 3)
-        .map((w) => w.charAt(0).toUpperCase())
-        .join('') || 'UNI'
-    );
-  });
+  institutionInitials = computed(() =>
+    computeInstitutionInitials(this.profile().name?.trim() || 'Institución')
+  );
 
   safeDomain = computed(() => {
     const d = this.profile().domain?.trim();
@@ -249,28 +255,36 @@ export class InstitutionProfile implements OnInit {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
 
-    resizeImageFile(file, 400, 400).then((dataUrl) => {
-      this.form.logoUrl = dataUrl;
-      if (!this.isFirstTimeOnboarding()) {
-        this.quickSavePatch({ logoUrl: dataUrl }, 'Escudo institucional actualizado.');
-      }
-    });
+    resizeImageFile(file, 400, 400)
+      .then((dataUrl) => {
+        this.form.logoUrl = dataUrl;
+        if (!this.isFirstTimeOnboarding()) {
+          this.quickSavePatch({ logoUrl: dataUrl }, 'Escudo institucional actualizado.');
+        }
+      })
+      .catch(() => {
+        this.showToast('No se pudo procesar la imagen seleccionada.', 'error');
+      });
   }
 
   onBannerSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
 
-    resizeImageFile(file, 1584, 396).then((dataUrl) => {
-      this.form.bannerUrl = dataUrl;
-      if (!this.isFirstTimeOnboarding()) {
-        this.quickSavePatch(
-          { bannerUrl: dataUrl },
-          'Portada institucional redimensionada (1584×396 px) y guardada.'
-        );
-        this.isBannerModalOpen.set(false);
-      }
-    });
+    resizeImageFile(file, 1584, 396)
+      .then((dataUrl) => {
+        this.form.bannerUrl = dataUrl;
+        if (!this.isFirstTimeOnboarding()) {
+          this.quickSavePatch(
+            { bannerUrl: dataUrl },
+            'Portada institucional redimensionada (1584×396 px) y guardada.'
+          );
+          this.isBannerModalOpen.set(false);
+        }
+      })
+      .catch(() => {
+        this.showToast('No se pudo procesar la imagen seleccionada.', 'error');
+      });
   }
 
   removeCustomBanner(): void {
@@ -567,26 +581,25 @@ export class InstitutionProfile implements OnInit {
   }
 
   isVideo(url: string): boolean {
-    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+    return isVideoUrl(url);
   }
 
   formatPostDate(value: unknown): string {
-    const d = toDate(value);
-    if (!d) return 'Reciente';
-    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatShortDate(value);
   }
 
   formatExpirationRemaining(expiresAt: unknown): string {
-    const exp = toDate(expiresAt);
-    if (!exp) return '7 días restantes';
-    const diffMs = exp.getTime() - Date.now();
-    if (diffMs <= 0) return 'Por expirar';
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return `${diffDays} días restantes`;
+    return formatExpirationRemainingUtil(expiresAt, { fallback: '7 días restantes' });
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 4500);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 4500);
   }
 }

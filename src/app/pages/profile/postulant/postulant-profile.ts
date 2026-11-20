@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -11,7 +11,11 @@ import { ProfileService } from '../../../core/services/profile.service';
 import { ValidationService } from '../../../core/services/validation.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { DirectoryService } from '../../../core/services/directory.service';
-import { toDate } from '../../../core/utils/format';
+import {
+  formatExpirationRemaining as formatExpirationRemainingUtil,
+  formatShortDate,
+  institutionInitials as computeInstitutionInitials
+} from '../../../core/utils/format';
 import {
   InstitutionSummary,
   PostulantProfileRequest,
@@ -24,7 +28,7 @@ import {
   SkillValidationResponse
 } from '../../../core/models/validation.model';
 import { readApiError } from '../../../core/utils/api-error';
-import { readFileAsDataUrl, resizeImageFile } from '../../../core/utils/file-media';
+import { isVideoUrl, readFileAsDataUrl, resizeImageFile } from '../../../core/utils/file-media';
 import { FeedService } from '../../../core/services/feed.service';
 import { FeedPostResponse } from '../../../core/models/feed.model';
 
@@ -50,6 +54,16 @@ export class PostulantProfile implements OnInit {
   readonly directoryService = inject(DirectoryService);
   private router = inject(Router);
   private feedService = inject(FeedService);
+  private destroyRef = inject(DestroyRef);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   readonly MAX_HEADLINE = 120;
   readonly MAX_BANNER_TEXT = 35;
@@ -145,17 +159,9 @@ export class PostulantProfile implements OnInit {
     return (f + l).toUpperCase() || 'U';
   });
 
-  institutionInitials = computed(() => {
-    const name = this.profile().institutionName || 'Universidad';
-    return (
-      name
-        .split(/\s+/)
-        .filter((w) => w.length > 2)
-        .slice(0, 3)
-        .map((w) => w[0].toUpperCase())
-        .join('') || 'UNI'
-    );
-  });
+  institutionInitials = computed(() =>
+    computeInstitutionInitials(this.profile().institutionName || 'Universidad')
+  );
 
   hasPendingAcademicRequest = computed(
     () => !!this.profile().institutionProfile && !this.profile().isInstitutionVerified
@@ -314,10 +320,14 @@ export class PostulantProfile implements OnInit {
       return;
     }
 
-    readFileAsDataUrl(file).then(({ dataUrl, fileName }) => {
-      this.academicForm.academicEvidenceUrl = dataUrl;
-      this.academicForm.academicEvidenceName = fileName;
-    });
+    readFileAsDataUrl(file)
+      .then(({ dataUrl, fileName }) => {
+        this.academicForm.academicEvidenceUrl = dataUrl;
+        this.academicForm.academicEvidenceName = fileName;
+      })
+      .catch(() => {
+        this.academicError.set('No se pudo leer el documento adjuntado.');
+      });
   }
 
   submitAcademicVerification(): void {
@@ -399,10 +409,14 @@ export class PostulantProfile implements OnInit {
   onSkillEvidenceFileSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    readFileAsDataUrl(file).then(({ dataUrl, fileName }) => {
-      this.skillValidationForm.evidenceUrl = dataUrl;
-      this.skillValidationForm.evidenceFileName = fileName;
-    });
+    readFileAsDataUrl(file)
+      .then(({ dataUrl, fileName }) => {
+        this.skillValidationForm.evidenceUrl = dataUrl;
+        this.skillValidationForm.evidenceFileName = fileName;
+      })
+      .catch(() => {
+        this.skillValidationError.set('No se pudo leer el archivo de evidencia.');
+      });
   }
 
   submitSkillValidationRequest(): void {
@@ -446,28 +460,36 @@ export class PostulantProfile implements OnInit {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
 
-    resizeImageFile(file, 400, 400).then((dataUrl) => {
-      this.form.avatarUrl = dataUrl;
-      if (!this.isFirstTimeOnboarding()) {
-        this.quickSavePatch({ avatarUrl: dataUrl }, 'Foto de perfil actualizada.');
-      }
-    });
+    resizeImageFile(file, 400, 400)
+      .then((dataUrl) => {
+        this.form.avatarUrl = dataUrl;
+        if (!this.isFirstTimeOnboarding()) {
+          this.quickSavePatch({ avatarUrl: dataUrl }, 'Foto de perfil actualizada.');
+        }
+      })
+      .catch(() => {
+        this.showToast('No se pudo procesar la imagen seleccionada.', 'error');
+      });
   }
 
   onBannerSelected(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
 
-    resizeImageFile(file, 1584, 396).then((dataUrl) => {
-      this.form.bannerUrl = dataUrl;
-      if (!this.isFirstTimeOnboarding()) {
-        this.quickSavePatch(
-          { bannerUrl: dataUrl },
-          'Banner redimensionado (1584×396 px) y guardado.'
-        );
-        this.isBannerModalOpen.set(false);
-      }
-    });
+    resizeImageFile(file, 1584, 396)
+      .then((dataUrl) => {
+        this.form.bannerUrl = dataUrl;
+        if (!this.isFirstTimeOnboarding()) {
+          this.quickSavePatch(
+            { bannerUrl: dataUrl },
+            'Banner redimensionado (1584×396 px) y guardado.'
+          );
+          this.isBannerModalOpen.set(false);
+        }
+      })
+      .catch(() => {
+        this.showToast('No se pudo procesar la imagen de portada.', 'error');
+      });
   }
 
   removeCustomBanner(): void {
@@ -501,18 +523,22 @@ export class PostulantProfile implements OnInit {
       return;
     }
 
-    readFileAsDataUrl(file).then(({ dataUrl, fileName, fileSizeLabel }) => {
-      this.form.cvUrl = dataUrl;
-      this.form.cvFileName = fileName;
-      this.form.cvFileSize = fileSizeLabel;
+    readFileAsDataUrl(file)
+      .then(({ dataUrl, fileName, fileSizeLabel }) => {
+        this.form.cvUrl = dataUrl;
+        this.form.cvFileName = fileName;
+        this.form.cvFileSize = fileSizeLabel;
 
-      if (!this.isFirstTimeOnboarding()) {
-        this.quickSavePatch(
-          { cvUrl: dataUrl, cvFileName: fileName, cvFileSize: fileSizeLabel },
-          'Currículum actualizado correctamente.'
-        );
-      }
-    });
+        if (!this.isFirstTimeOnboarding()) {
+          this.quickSavePatch(
+            { cvUrl: dataUrl, cvFileName: fileName, cvFileSize: fileSizeLabel },
+            'Currículum actualizado correctamente.'
+          );
+        }
+      })
+      .catch(() => {
+        this.showToast('No se pudo leer el archivo de CV.', 'error');
+      });
   }
 
   downloadOrOpenCv(): void {
@@ -542,6 +568,12 @@ export class PostulantProfile implements OnInit {
         this.profile.set({ ...saved, skills: saved.skills || this.profile().skills || [] });
         this.syncFormWithProfile(this.profile());
         this.showToast(successMsg, 'success');
+      },
+      error: (err) => {
+        this.showToast(
+          readApiError(err, 'No se pudieron guardar los cambios en tu perfil.'),
+          'error'
+        );
       }
     });
   }
@@ -676,6 +708,9 @@ export class PostulantProfile implements OnInit {
           skills: (p.skills || []).filter((s) => s.id !== skillId)
         }));
         this.showToast('Habilidad eliminada.', 'info');
+      },
+      error: (err) => {
+        this.showToast(readApiError(err, 'No se pudo eliminar la habilidad.'), 'error');
       }
     });
   }
@@ -725,26 +760,25 @@ export class PostulantProfile implements OnInit {
   }
 
   isVideo(url: string): boolean {
-    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+    return isVideoUrl(url);
   }
 
   formatPostDate(value: unknown): string {
-    const d = toDate(value);
-    if (!d) return 'Reciente';
-    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatShortDate(value);
   }
 
   formatExpirationRemaining(expiresAt: unknown): string {
-    const exp = toDate(expiresAt);
-    if (!exp) return '7 días restantes';
-    const diffMs = exp.getTime() - Date.now();
-    if (diffMs <= 0) return 'Por expirar';
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return `${diffDays} días restantes`;
+    return formatExpirationRemainingUtil(expiresAt, { fallback: '7 días restantes' });
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 4500);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 4500);
   }
 }

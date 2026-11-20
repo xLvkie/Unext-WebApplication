@@ -96,3 +96,8 @@ export function processFeedMediaFile(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
+
+export function isVideoUrl(url?: string | null): boolean {
+  if (!url) return false;
+  return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+}

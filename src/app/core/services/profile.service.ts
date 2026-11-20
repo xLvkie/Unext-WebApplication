@@ -24,7 +24,6 @@ import {
 export class ProfileService {
   private readonly http = inject(HttpClient);
   private readonly API_URL = `${environment.apiUrl}/profiles`;
-  private readonly recruiterApi = `${environment.apiUrl}/recruiter`;
 
   /* ==============================
      POSTULANT PROFILE

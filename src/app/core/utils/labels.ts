@@ -2,12 +2,16 @@ const MODALITY: Record<string, string> = {
   REMOTE: 'Remoto',
   HYBRID: 'Híbrido',
   ONSITE: 'Presencial',
+  ON_SITE: 'Presencial',
 };
 
 const EXPERIENCE: Record<string, string> = {
+  INTERNSHIP: 'Prácticas',
   TRAINEE: 'Practicante',
+  ENTRY_LEVEL: 'Nivel inicial',
   JUNIOR: 'Junior',
   SEMI_SENIOR: 'Semi senior',
+  MID: 'Semi senior',
   SENIOR: 'Senior',
 };
 
@@ -26,6 +30,10 @@ const CONTEXT: Record<string, string> = {
 };
 
 const COMPATIBILITY: Record<string, string> = {
+  VERY_HIGH: 'Muy alta',
+  HIGH: 'Alta',
+  MEDIUM: 'Media',
+  LOW: 'Baja',
   ALTA: 'Alta',
   MEDIA: 'Media',
   BAJA: 'Baja',

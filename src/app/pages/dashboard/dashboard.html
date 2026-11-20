@@ -719,7 +719,7 @@
                       />
                     } @else {
                       <div class="w-11 h-11 rounded-full bg-[#274DEA]/15 text-[#274DEA] font-bold text-sm flex items-center justify-center group-hover:ring-2 group-hover:ring-[#274DEA] transition">
-                        {{ post.authorName.charAt(0) }}
+                        {{ (post.authorName || 'U').charAt(0).toUpperCase() }}
                       </div>
                     }
                   </button>

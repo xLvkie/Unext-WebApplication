@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Contact } from '../../../core/models/chat.model';
 import { FeedPostResponse } from '../../../core/models/feed.model';
-import { toDate } from '../../../core/utils/format';
+import { formatShortDate as formatShortDateUtil } from '../../../core/utils/format';
+import { isVideoUrl } from '../../../core/utils/file-media';
 
 @Component({
   selector: 'app-profile-sidebar',
@@ -20,12 +21,10 @@ export class ProfileSidebar {
   unpinPost = output<string>();
 
   isVideo(url: string): boolean {
-    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+    return isVideoUrl(url);
   }
 
   formatShortDate(value: unknown): string {
-    const d = toDate(value);
-    if (!d) return 'Destacado';
-    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+    return formatShortDateUtil(value, { fallback: 'Destacado', includeYear: false });
   }
 }

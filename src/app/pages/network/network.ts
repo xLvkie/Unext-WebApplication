@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -14,6 +15,8 @@ import { FeedService } from '../../core/services/feed.service';
 import { AuthService } from '../../core/services/auth.service';
 import { FeedPostResponse } from '../../core/models/feed.model';
 import { readApiError } from '../../core/utils/api-error';
+import { initials } from '../../core/utils/format';
+import { roleLabel } from '../../core/utils/labels';
 
 export type ManagementTab = 'RECEIVED' | 'SENT' | 'CONNECTIONS' | 'FOLLOWING' | 'GROUPS';
 export type SegmentFilter = 'ALL' | 'POSTULANT' | 'RECRUITER' | 'INSTITUTION';
@@ -29,7 +32,17 @@ export class Network implements OnInit {
   private feedService = inject(FeedService);
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
   readonly router = inject(Router);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   currentRole = computed(() => this.authService.getStoredRole() || 'POSTULANT');
   isLoading = signal(true);
@@ -157,7 +170,7 @@ export class Network implements OnInit {
       return;
     }
 
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const search = params.get('search');
       if (search) {
         this.searchQuery.set(search);
@@ -328,24 +341,24 @@ export class Network implements OnInit {
   }
 
   initialsFor(name: string): string {
-    return (
-      name
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((w) => w.charAt(0).toUpperCase())
-        .join('') || 'U'
-    );
+    return initials(name, 'U');
   }
 
   roleBadgeLabel(role: string): string {
-    if (role === 'RECRUITER') return 'Empresa';
-    if (role === 'INSTITUTION') return 'Institución';
+    if (role === 'RECRUITER' || role === 'INSTITUTION' || role === 'POSTULANT') {
+      return roleLabel(role);
+    }
     return 'Postulante';
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 4000);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 4000);
   }
 }

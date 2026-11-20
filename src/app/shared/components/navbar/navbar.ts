@@ -7,6 +7,8 @@ import { ProfileService } from '../../../core/services/profile.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { UserRole } from '../../../core/models/auth.model';
 import { JobService } from '../../../core/services/job.service';
+import { initials } from '../../../core/utils/format';
+import { roleLabel } from '../../../core/utils/labels';
 
 export interface NavItem {
   id: string;
@@ -67,10 +69,7 @@ export class Navbar implements OnInit {
     return manual !== null ? manual : this.notificationService.unreadCount();
   });
 
-  userInitials = computed(() => {
-    const parts = this.displayName().trim().split(/\s+/).filter(Boolean).slice(0, 2);
-    return parts.map((p) => p.charAt(0).toUpperCase()).join('') || 'U';
-  });
+  userInitials = computed(() => initials(this.displayName(), 'U'));
 
   // Configuración centralizada de opciones para los 3 segmentos
   private readonly allNavItems: NavItem[] = [
@@ -128,16 +127,7 @@ export class Navbar implements OnInit {
     );
   });
 
-  roleBadgeLabel = computed(() => {
-    switch (this.currentRole()) {
-      case 'RECRUITER':
-        return 'Empresa';
-      case 'INSTITUTION':
-        return 'Institución';
-      default:
-        return 'Postulante';
-    }
-  });
+  roleBadgeLabel = computed(() => roleLabel(this.currentRole() || 'POSTULANT'));
 
   ngOnInit(): void {
     if (!this.isLoggedIn()) return;
@@ -209,15 +199,18 @@ export class Navbar implements OnInit {
   }
 
   toggleProfileMenu(): void {
+    this.isMobileMenuOpen.set(false);
     this.isProfileMenuOpen.update((v) => !v);
   }
 
   toggleMobileMenu(): void {
+    this.isProfileMenuOpen.set(false);
     this.isMobileMenuOpen.update((v) => !v);
   }
 
   logout(): void {
     this.isProfileMenuOpen.set(false);
+    this.isMobileMenuOpen.set(false);
     this.notificationService.stopPolling();
     this.authService.logout();
     this.router.navigate(['/login']);

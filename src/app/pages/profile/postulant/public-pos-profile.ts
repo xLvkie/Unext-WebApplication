@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -16,7 +17,12 @@ import { DirectoryService } from '../../../core/services/directory.service';
 import { PostulantProfileResponse } from '../../../core/models/profile.model';
 import { FeedPostResponse } from '../../../core/models/feed.model';
 import { readApiError } from '../../../core/utils/api-error';
-import { toDate } from '../../../core/utils/format';
+import {
+  formatExpirationRemaining as formatExpirationRemainingUtil,
+  formatShortDate,
+  institutionInitials as computeInstitutionInitials
+} from '../../../core/utils/format';
+import { isVideoUrl } from '../../../core/utils/file-media';
 
 @Component({
   selector: 'app-public-pos-profile',
@@ -32,7 +38,17 @@ export class PublicPosProfile implements OnInit {
   private connectionService = inject(ConnectionService);
   private authService = inject(AuthService);
   private sanitizer = inject(DomSanitizer);
+  private destroyRef = inject(DestroyRef);
   readonly directoryService = inject(DirectoryService);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   isLoading = signal(true);
   isActionLoading = signal(false);
@@ -82,17 +98,9 @@ export class PublicPosProfile implements OnInit {
     return (f + l).toUpperCase() || 'U';
   });
 
-  institutionInitials = computed(() => {
-    const name = this.profile().institutionName || 'Universidad';
-    return (
-      name
-        .split(/\s+/)
-        .filter((w) => w.length > 2)
-        .slice(0, 3)
-        .map((w) => w[0].toUpperCase())
-        .join('') || 'UNI'
-    );
-  });
+  institutionInitials = computed(() =>
+    computeInstitutionInitials(this.profile().institutionName || 'Universidad')
+  );
 
   safeBannerTitle = computed(() => {
     const custom = this.profile().bannerText?.trim();
@@ -137,7 +145,7 @@ export class PublicPosProfile implements OnInit {
 
     this.directoryService.load().subscribe();
 
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const roleParam = (params.get('role') || 'postulant').toUpperCase();
       const idParam = params.get('id') || '';
 
@@ -147,12 +155,14 @@ export class PublicPosProfile implements OnInit {
       }
 
       if (roleParam === 'RECRUITER') {
-        this.viewedRole.set('RECRUITER');
-      } else if (roleParam === 'INSTITUTION') {
-        this.viewedRole.set('INSTITUTION');
-      } else {
-        this.viewedRole.set('POSTULANT');
+        this.router.navigate(['/profile/view/recruiter', idParam], { replaceUrl: true });
+        return;
       }
+      if (roleParam === 'INSTITUTION') {
+        this.router.navigate(['/profile/view/institution', idParam], { replaceUrl: true });
+        return;
+      }
+      this.viewedRole.set('POSTULANT');
 
       this.loadPublicProfile(idParam);
     });
@@ -308,26 +318,28 @@ export class PublicPosProfile implements OnInit {
   }
 
   isVideo(url: string): boolean {
-    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+    return isVideoUrl(url);
   }
 
   formatPostDate(value: unknown): string {
-    const d = toDate(value);
-    if (!d) return 'Reciente';
-    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatShortDate(value);
   }
 
   formatExpirationRemaining(expiresAt: unknown): string {
-    const exp = toDate(expiresAt);
-    if (!exp) return 'Publicación temporal';
-    const diffMs = exp.getTime() - Date.now();
-    if (diffMs <= 0) return 'Por expirar';
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-    return `${diffDays} d restantes`;
+    return formatExpirationRemainingUtil(expiresAt, {
+      fallback: 'Publicación temporal',
+      compact: true
+    });
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 4000);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 4000);
   }
 }

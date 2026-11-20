@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Navbar } from '../../shared/components/navbar/navbar';
@@ -7,7 +7,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationCategory, NotificationItem } from '../../core/models/notification.model';
 import { readApiError } from '../../core/utils/api-error';
-import { toDate } from '../../core/utils/format';
+import { formatRelativeTime as formatRelativeTimeUtil } from '../../core/utils/format';
 
 export interface QuickLinkItem {
   label: string;
@@ -25,6 +25,16 @@ export class Notifications implements OnInit {
   readonly notificationService = inject(NotificationService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   isLoading = signal(true);
   selectedCategory = signal<NotificationCategory>('ALL');
@@ -257,20 +267,17 @@ export class Notifications implements OnInit {
   }
 
   formatRelativeTime(value: unknown): string {
-    const date = toDate(value);
-    if (!date) return 'Reciente';
-    const diffMinutes = Math.floor((Date.now() - date.getTime()) / 60000);
-    if (diffMinutes < 1) return 'Hace un momento';
-    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `Hace ${diffHours} h`;
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 30) return `Hace ${diffDays} d`;
-    return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+    return formatRelativeTimeUtil(value);
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 3500);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 3500);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -10,7 +10,7 @@ import { Navbar } from '../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../shared/components/toast/toast';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
-import { InstitutionProfileResponse, PostulantProfileResponse } from '../../core/models/profile.model';
+import { InstitutionProfileResponse } from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
 
 export interface DetailedStudentItem {
@@ -84,7 +84,17 @@ export class InstitutionPortal implements OnInit {
   private http = inject(HttpClient);
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
+  private destroyRef = inject(DestroyRef);
   private router = inject(Router);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   // Estados de carga
   isLoading = signal(true);
@@ -615,7 +625,13 @@ export class InstitutionPortal implements OnInit {
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 4500);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 4500);
   }
 }

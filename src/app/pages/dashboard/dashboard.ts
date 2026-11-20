@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -23,8 +23,11 @@ import {
 } from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
 import { applicationLabel } from '../../core/utils/labels';
-import { toDate } from '../../core/utils/format';
-import { processFeedMediaFile } from '../../core/utils/file-media';
+import {
+  formatExpirationRemaining as formatExpirationRemainingUtil,
+  formatRelativeTime
+} from '../../core/utils/format';
+import { isVideoUrl, processFeedMediaFile } from '../../core/utils/file-media';
 
 export interface MediaAttachmentPreview {
   dataUrl: string;
@@ -79,7 +82,17 @@ export class Dashboard implements OnInit {
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
   private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
   readonly router = inject(Router);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   posts = signal<FeedPostResponse[]>([]);
   recommendations = signal<JobRecommendationResponse[]>([]);
@@ -500,7 +513,7 @@ export class Dashboard implements OnInit {
   }
 
   isVideoMedia(url: string): boolean {
-    return url.startsWith('data:video/') || /\.(mp4|webm|ogg)$/i.test(url);
+    return isVideoUrl(url);
   }
 
   handleCreatePost(): void {
@@ -737,34 +750,21 @@ export class Dashboard implements OnInit {
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => {
+    this.toastTimer = setTimeout(() => {
       this.toast.set(null);
+      this.toastTimer = null;
     }, 4000);
   }
 
   formatDate(value: unknown): string {
-    const d = toDate(value);
-    if (!d) return 'Reciente';
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - d.getTime()) / (1000 * 60));
-
-    if (diffMinutes < 1) return 'Hace un momento';
-    if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `Hace ${diffHours} h`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `Hace ${diffDays} d`;
+    return formatRelativeTime(value);
   }
 
   formatExpirationRemaining(expiresAt: unknown): string {
-    const exp = toDate(expiresAt);
-    if (!exp) return '7 días';
-    const diffMs = exp.getTime() - Date.now();
-    if (diffMs <= 0) return 'Por expirar';
-    const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
-    if (diffHours < 24) return `${diffHours} h restantes`;
-    const diffDays = Math.ceil(diffHours / 24);
-    return `${diffDays} d restantes`;
+    return formatExpirationRemainingUtil(expiresAt, { fallback: '7 días', compact: true });
   }
 }

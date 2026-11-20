@@ -1,5 +1,4 @@
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { readApiError } from '../../core/utils/api-error';
 import { AuthService } from '../../core/services/auth.service';
 import { formatPosted, formatSalaryRange, initials } from '../../core/utils/format';
@@ -12,7 +11,6 @@ import {
 import { JobApplication, JobOffer } from '../../core/models/job.model';
 import { JobService } from '../../core/services/job.service';
 import { Navbar } from '../../shared/components/navbar/navbar';
-import { PostulantProfileResponse } from '../../core/models/profile.model';
 
 @Component({ 
   selector: 'app-job-search',
@@ -23,6 +21,7 @@ import { PostulantProfileResponse } from '../../core/models/profile.model';
 
 export class JobSearch {
   private readonly jobsApi = inject(JobService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
 
   readonly pageSize = 10;
@@ -71,8 +70,12 @@ export class JobSearch {
   readonly canLoadMore = computed(() => this.visibleCount() < this.filtered().length);
 
   constructor() {
-    const query = window.matchMedia('(min-width: 1280px)');
-    query.addEventListener('change', (event) => this.isWide.set(event.matches));
+    if (typeof window !== 'undefined') {
+      const query = window.matchMedia('(min-width: 1280px)');
+      const onMediaChange = (event: MediaQueryListEvent) => this.isWide.set(event.matches);
+      query.addEventListener('change', onMediaChange);
+      this.destroyRef.onDestroy(() => query.removeEventListener('change', onMediaChange));
+    }
 
     effect(() => {
       const session = this.auth.session();

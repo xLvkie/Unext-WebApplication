@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -25,7 +26,11 @@ import {
   StudentSkillResponse
 } from '../../../core/models/profile.model';
 import { readApiError } from '../../../core/utils/api-error';
-import { formatMoney, toDate } from '../../../core/utils/format';
+import {
+  formatMoney,
+  formatShortDate,
+  institutionInitials as computeInstitutionInitials
+} from '../../../core/utils/format';
 import { readFileAsDataUrl } from '../../../core/utils/file-media';
 import {
   applicationLabel,
@@ -47,7 +52,17 @@ export class RecruiterJobs implements OnInit {
   private connectionService = inject(ConnectionService);
   private authService = inject(AuthService);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
   readonly router = inject(Router);
+  private toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      if (this.toastTimer) {
+        clearTimeout(this.toastTimer);
+      }
+    });
+  }
 
   activeTab = signal<RecruiterJobsTab>('MY_JOBS');
 
@@ -211,7 +226,7 @@ export class RecruiterJobs implements OnInit {
       return;
     }
 
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const tabParam = params.get('tab');
       const qParam = params.get('q');
       if (tabParam === 'agreements') {
@@ -707,15 +722,7 @@ export class RecruiterJobs implements OnInit {
   }
 
   institutionInitials(name?: string | null): string {
-    if (!name) return 'UNI';
-    return (
-      name
-        .split(/\s+/)
-        .filter((w) => w.length > 2)
-        .slice(0, 3)
-        .map((w) => w[0].toUpperCase())
-        .join('') || 'UNI'
-    );
+    return computeInstitutionInitials(name);
   }
 
   // =========================================================================
@@ -774,13 +781,17 @@ export class RecruiterJobs implements OnInit {
   }
 
   formatRelativeDate(value: unknown): string {
-    const d = toDate(value);
-    if (!d) return 'Reciente';
-    return d.toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatShortDate(value);
   }
 
   showToast(message: string, type: ToastType = 'info'): void {
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
     this.toast.set({ message, type });
-    setTimeout(() => this.toast.set(null), 4200);
+    this.toastTimer = setTimeout(() => {
+      this.toast.set(null);
+      this.toastTimer = null;
+    }, 4200);
   }
 }

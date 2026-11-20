@@ -589,7 +589,7 @@
   confirmText="Ir a vacantes"
   cancelText="Entendido"
   (close)="isRestrictionModalOpen.set(false)"
-  (confirm)="isRestrictionModalOpen.set(false); router.navigate(['/jobs'])"
+  (confirm)="confirmRestrictionAction()"
 />
 
 <app-toast [toast]="toast()" (dismiss)="toast.set(null)" />

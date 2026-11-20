@@ -483,7 +483,7 @@
                   @if (peer.avatarUrl) {
                     <img [src]="peer.avatarUrl" [alt]="peer.name" class="w-10 h-10 object-cover block" />
                   } @else {
-                    <span>{{ peer.name.charAt(0).toUpperCase() }}</span>
+                    <span>{{ (peer.name || 'U').charAt(0).toUpperCase() }}</span>
                   }
                 </div>
                 <div class="min-w-0 flex-1">

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserRole } from '../../../core/models/auth.model';
+import { readApiError } from '../../../core/utils/api-error';
 
 @Component({
   selector: 'app-register',
@@ -78,10 +79,12 @@ export class Register {
         },
         error: (err) => {
           this.isLoading.set(false);
+          const backendError =
+            typeof err?.error?.error === 'string' && err.error.error.trim()
+              ? err.error.error.trim()
+              : null;
           this.errorMessage.set(
-            err?.error?.error ||
-              err?.error?.message ||
-              'No se pudo completar el registro. Verifica tus datos.'
+            backendError || readApiError(err, 'No se pudo completar el registro. Verifica tus datos.')
           );
         }
       });

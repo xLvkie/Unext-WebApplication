@@ -93,8 +93,64 @@ export function formatDayLabel(value: unknown): string {
   return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
 }
 
-export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+export function initials(name?: string | null, fallback = '?'): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
   const letters = parts.map((part) => part.charAt(0).toUpperCase()).join('');
-  return letters || '?';
+  return letters || fallback;
+}
+
+export function institutionInitials(name?: string | null): string {
+  if (!name || !name.trim()) return 'UNI';
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+      .slice(0, 3)
+      .map((w) => w.charAt(0).toUpperCase())
+      .join('') || 'UNI'
+  );
+}
+
+export function formatRelativeTime(value: unknown): string {
+  const date = toDate(value);
+  if (!date) return 'Reciente';
+  const diffMinutes = Math.floor((Date.now() - date.getTime()) / 60000);
+  if (diffMinutes < 1) return 'Hace un momento';
+  if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `Hace ${diffHours} h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `Hace ${diffDays} d`;
+  return date.toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
+}
+
+export function formatShortDate(
+  value: unknown,
+  options: { fallback?: string; includeYear?: boolean } = {}
+): string {
+  const { fallback = 'Reciente', includeYear = true } = options;
+  const date = toDate(value);
+  if (!date) return fallback;
+  return date.toLocaleDateString(
+    'es-PE',
+    includeYear
+      ? { day: 'numeric', month: 'short', year: 'numeric' }
+      : { day: 'numeric', month: 'short' }
+  );
+}
+
+export function formatExpirationRemaining(
+  expiresAt: unknown,
+  options: { fallback?: string; compact?: boolean } = {}
+): string {
+  const { fallback = '7 días restantes', compact = false } = options;
+  const exp = toDate(expiresAt);
+  if (!exp) return fallback;
+  const diffMs = exp.getTime() - Date.now();
+  if (diffMs <= 0) return 'Por expirar';
+  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+  if (diffHours < 24) return `${diffHours} h restantes`;
+  const diffDays = Math.ceil(diffHours / 24);
+  return compact ? `${diffDays} d restantes` : `${diffDays} días restantes`;
 }

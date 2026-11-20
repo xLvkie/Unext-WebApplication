@@ -75,7 +75,7 @@
       @for (peer of suggestedPeers(); track peer.userId) {
         <div class="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-none last:pb-0">
           <div class="w-10 h-10 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-xs flex items-center justify-center shrink-0">
-            {{ peer.name.charAt(0).toUpperCase() }}
+            {{ (peer.name || 'U').charAt(0).toUpperCase() }}
           </div>
           <div class="min-w-0 flex-1">
             <p class="text-[13px] font-bold text-gray-900 truncate">{{ peer.name }}</p>
