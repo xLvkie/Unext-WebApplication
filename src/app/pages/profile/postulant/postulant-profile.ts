@@ -7,6 +7,7 @@ import { Toast, ToastData, ToastType } from '../../../shared/components/toast/to
 import { AlertModal } from '../../../shared/components/alert-modal/alert-modal';
 import { ProfileSkillsCard } from '../../../shared/components/profile-skills-card/profile-skills-card';
 import { ProfileCvCard } from '../../../shared/components/profile-cv-card/profile-cv-card';
+import { BioOptimizerButton } from '../../../shared/components/bio-optimizer-button/bio-optimizer-button';
 import { ProfileService } from '../../../core/services/profile.service';
 import { ValidationService } from '../../../core/services/validation.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -43,7 +44,8 @@ import { FeedPostResponse } from '../../../core/models/feed.model';
     Toast,
     AlertModal,
     ProfileSkillsCard,
-    ProfileCvCard
+    ProfileCvCard,
+    BioOptimizerButton
   ],
   templateUrl: './postulant-profile.html'
 })

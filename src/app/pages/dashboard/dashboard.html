@@ -1378,11 +1378,13 @@
 <!-- ========================================================================= -->
 @if (showRecruiterOptimizerModal()) {
   <div class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-fade-in space-y-4">
-      <div class="flex items-center justify-between">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 shadow-2xl border border-gray-100 animate-fade-in space-y-4">
+      <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-[#C3A7FF] text-[#2E1065] flex items-center justify-center font-extrabold">
-            IA
+          <div class="w-10 h-10 rounded-xl bg-[#C3A7FF] text-[#2E1065] flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
           </div>
           <div>
             <span class="text-[10px] font-bold uppercase tracking-wider text-[#2E1065] bg-[#C3A7FF]/30 px-2 py-0.5 rounded-full">
@@ -1393,56 +1395,115 @@
             </h3>
           </div>
         </div>
-        <button type="button" (click)="showRecruiterOptimizerModal.set(false)" class="text-gray-400 hover:text-gray-800">✕</button>
+        <button
+          type="button"
+          (click)="showRecruiterOptimizerModal.set(false)"
+          class="text-gray-400 hover:text-gray-800 p-1.5 rounded-lg"
+          aria-label="Cerrar diseñador IA"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
 
       <div>
         <label class="block text-xs font-bold text-gray-700 mb-1">
           ¿Qué puesto o perfil deseas publicar?
         </label>
-        <div class="flex gap-2">
+        <div class="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
+            name="aiRolePrompt"
             [(ngModel)]="aiRolePrompt"
+            maxlength="1000"
             (keyup.enter)="generateBlueprintFromPrompt()"
             placeholder="Ej. Practicante de Ingeniería de Software, Analista de Datos, UX/UI..."
-            class="flex-1 px-3.5 py-2 border border-gray-300 rounded-xl text-xs focus:outline-none focus:border-[#274DEA]"
+            class="field flex-1 text-xs"
           />
           <button
             type="button"
             (click)="generateBlueprintFromPrompt()"
-            class="px-3.5 py-2 rounded-xl bg-[#C3A7FF] text-[#2E1065] font-bold text-xs shrink-0"
+            [disabled]="isDesigningJob()"
+            class="btn-match text-xs py-2.5 px-4 shrink-0"
           >
-            Generar
+            @if (isDesigningJob()) {
+              <span class="w-3.5 h-3.5 border-2 border-[#2E1065]/30 border-t-[#2E1065] rounded-full animate-spin"></span>
+              <span>Diseñando...</span>
+            } @else {
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span>Generar con IA</span>
+            }
           </button>
         </div>
+
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          @for (sample of ['Practicante Full Stack Angular + Java', 'Analista de Datos Junior SQL y Python', 'Diseñador UX/UI Practicante']; track sample) {
+            <button
+              type="button"
+              (click)="generateBlueprintFromPrompt(sample)"
+              [disabled]="isDesigningJob()"
+              class="px-2.5 py-1 rounded-full bg-[#F8FAFC] hover:bg-[#C3A7FF]/25 border border-gray-200 text-[11px] font-semibold text-gray-700 hover:text-[#2E1065] transition"
+            >
+              + {{ sample }}
+            </button>
+          }
+        </div>
       </div>
 
-      <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200 space-y-3 text-xs">
-        <div class="flex items-center justify-between">
-          <span class="font-extrabold text-gray-900 text-sm">{{ generatedBlueprint().roleTitle }}</span>
-          <span class="px-2 py-0.5 rounded bg-[#274DEA]/10 text-[#274DEA] font-bold">
-            {{ generatedBlueprint().suggestedModality }} · {{ generatedBlueprint().suggestedLevel }}
-          </span>
+      @if (jobDesignError()) {
+        <div class="p-3 rounded-xl bg-[#FEE2E2] border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+          {{ jobDesignError() }}
         </div>
+      }
 
-        <p class="text-gray-700 leading-relaxed">{{ generatedBlueprint().optimizedDescription }}</p>
-
-        <div>
-          <p class="font-bold text-gray-800 mb-1.5">Habilidades sugeridas para maximizar el Match IA:</p>
-          <div class="flex flex-wrap gap-1.5">
-            @for (sk of generatedBlueprint().recommendedSkills; track sk) {
-              <span class="px-2.5 py-1 rounded-lg bg-[#DCFCE7] text-[#059669] font-semibold text-[11px]">
-                ✓ {{ sk }}
-              </span>
-            }
+      @if (isDesigningJob()) {
+        <div class="p-6 rounded-xl bg-[#F8FAFC] border border-[#C3A7FF]/50 text-center space-y-2">
+          <div class="w-7 h-7 border-2 border-[#2E1065]/25 border-t-[#2E1065] rounded-full animate-spin mx-auto"></div>
+          <p class="text-xs font-semibold text-[#2E1065]">
+            Estructurando vacante, habilidades clave y banda salarial en Soles (S/.)...
+          </p>
+        </div>
+      } @else if (generatedBlueprint(); as bp) {
+        <div class="p-4 rounded-xl bg-[#F8FAFC] border border-[#C3A7FF]/60 space-y-3 text-xs animate-fade-in">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-extrabold text-gray-900 text-sm">{{ bp.roleTitle }}</span>
+            <span class="px-2.5 py-0.5 rounded-full bg-[#274DEA]/10 text-[#274DEA] font-bold text-[11px]">
+              {{ modalityText(bp.suggestedModality) }} · {{ experienceText(bp.suggestedExperienceLevel) }}
+            </span>
           </div>
-        </div>
 
-        <p class="text-[#059669] font-bold pt-1">
-          💰 Rango salarial sugerido en el mercado: {{ generatedBlueprint().salaryRange }}
-        </p>
-      </div>
+          <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ bp.optimizedDescription }}</p>
+
+          @if (bp.recommendedSkills && bp.recommendedSkills.length > 0) {
+            <div>
+              <p class="font-bold text-gray-800 mb-1.5">Habilidades sugeridas para maximizar el Match IA:</p>
+              <div class="flex flex-wrap gap-1.5">
+                @for (sk of bp.recommendedSkills; track sk) {
+                  <span class="px-2.5 py-1 rounded-lg bg-[#ECFDF5] border border-[#059669]/25 text-[#059669] font-semibold text-[11px]">
+                    ✓ {{ sk }}
+                  </span>
+                }
+              </div>
+            </div>
+          }
+
+          @if (bp.estimatedSalaryRangeSoles) {
+            <p class="text-[#059669] font-bold pt-1">
+              Rango salarial estimado (Perú): {{ bp.estimatedSalaryRangeSoles }}
+            </p>
+          }
+        </div>
+      } @else {
+        <div class="p-5 rounded-xl bg-[#F8FAFC] border border-dashed border-gray-300 text-center space-y-1">
+          <p class="text-xs font-bold text-gray-800">Describe el perfil que necesitas y presiona "Generar con IA"</p>
+          <p class="text-[11px] text-[#6B7280]">
+            El agente sugerirá título optimizado, modalidad, nivel, habilidades demandadas y rango salarial en Soles (S/.).
+          </p>
+        </div>
+      }
 
       <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
         <button
@@ -1455,6 +1516,7 @@
         <button
           type="button"
           (click)="copyBlueprintAndGoToJobs()"
+          [disabled]="!generatedBlueprint() || isDesigningJob()"
           class="btn-primary text-xs py-2 px-5"
         >
           Ir a crear esta vacante →
@@ -1531,16 +1593,340 @@
   </div>
 }
 
-<!-- MODAL DE COMPATIBILIDAD IA PARA POSTULANTE -->
-@if (selectedJobForAi(); as jobAi) {
+<!-- MODAL DE COMPATIBILIDAD Y BRECHA DE HABILIDADES IA PARA POSTULANTE -->
+@if (showTalentAnalysisModal()) {
   <div class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-fade-in relative">
-      <button type="button" (click)="closeAiModal()" class="absolute top-4 right-4 text-[#6B7280] hover:text-gray-900 p-1.5 rounded-lg">✕</button>
-      <h3 class="text-[18px] font-bold text-gray-900 mb-3">Diagnóstico de Compatibilidad ({{ jobAi.compatibilityPercent }}%)</h3>
-      <p class="text-[13px] font-bold text-gray-900">{{ jobAi.title }} · {{ jobAi.companyName }}</p>
-      <div class="mt-4 flex justify-end gap-2">
-        <button type="button" (click)="closeAiModal()" class="px-4 py-2 rounded-xl text-gray-600 text-xs font-semibold">Cerrar</button>
-        <button type="button" (click)="handleApplyJob(jobAi); closeAiModal()" class="btn-primary text-xs py-2 px-5">Postular en 1 Clic</button>
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 shadow-2xl border border-gray-100 animate-fade-in space-y-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[#C3A7FF] text-[#2E1065] flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#2E1065] bg-[#C3A7FF]/30 px-2 py-0.5 rounded-full">
+              Diagnóstico de Talento IA
+            </span>
+            <h3 class="text-[18px] font-bold text-gray-900">
+              Análisis de Compatibilidad y Brechas
+            </h3>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="closeAiModal()"
+          class="text-[#6B7280] hover:text-gray-900 p-1.5 rounded-lg"
+          aria-label="Cerrar análisis IA"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      @if (selectedJobForAi(); as jobAi) {
+        <div class="p-3 rounded-xl bg-[#274DEA]/5 border border-[#274DEA]/20 flex flex-wrap items-center justify-between gap-2">
+          <div class="min-w-0">
+            <p class="text-[13px] font-bold text-gray-900 truncate">{{ jobAi.title }}</p>
+            <p class="text-[11px] text-[#6B7280] truncate">{{ jobAi.companyName }}</p>
+          </div>
+          <span class="px-2.5 py-1 rounded-full bg-[#C3A7FF] text-[#2E1065] text-[11px] font-extrabold shrink-0">
+            {{ jobAi.compatibilityPercent }}% Match
+          </span>
+        </div>
+      }
+
+      <div>
+        <label class="block text-xs font-bold text-gray-700 mb-1">
+          Objetivo profesional o puesto a evaluar (opcional)
+        </label>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            name="talentTargetRole"
+            [(ngModel)]="talentTargetRole"
+            maxlength="300"
+            (keyup.enter)="runTalentAnalysis()"
+            placeholder="Ej. Practicante Backend Java, Frontend Angular..."
+            class="field flex-1 text-xs"
+          />
+          <button
+            type="button"
+            (click)="runTalentAnalysis()"
+            [disabled]="isAnalyzingAi()"
+            class="btn-match text-xs py-2 px-4 shrink-0"
+          >
+            {{ isAnalyzingAi() ? 'Analizando...' : 'Recalcular análisis' }}
+          </button>
+        </div>
+      </div>
+
+      @if (talentAnalysisError()) {
+        <div class="p-3 rounded-xl bg-[#FEE2E2] border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+          {{ talentAnalysisError() }}
+        </div>
+      }
+
+      @if (isAnalyzingAi()) {
+        <div class="p-8 rounded-xl bg-[#F8FAFC] border border-[#C3A7FF]/40 text-center space-y-2">
+          <div class="w-8 h-8 border-2 border-[#2E1065]/25 border-t-[#2E1065] rounded-full animate-spin mx-auto"></div>
+          <p class="text-xs font-semibold text-[#2E1065]">
+            Comparando tus habilidades registradas con las vacantes activas en UNEXT...
+          </p>
+        </div>
+      } @else if (talentAnalysis(); as analysis) {
+        <div class="space-y-4 animate-fade-in">
+          <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-bold text-gray-900">
+                {{ analysis.postulantName }} · {{ analysis.career || 'Perfil Universitario' }}
+              </span>
+              <span class="px-2.5 py-0.5 rounded-full bg-[#274DEA]/10 text-[#274DEA] text-[11px] font-bold">
+                {{ analysis.activeVacanciesAnalyzed }} vacantes activas analizadas
+              </span>
+            </div>
+            <p class="text-[13px] text-gray-700 leading-relaxed">
+              {{ analysis.marketCompatibilitySummary }}
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3.5 rounded-xl bg-[#ECFDF5]/60 border border-[#059669]/25 space-y-2">
+              <p class="text-xs font-bold text-[#059669]">
+                ✓ Habilidades en demanda que ya posees ({{ analysis.matchedDemandSkills.length }})
+              </p>
+              <div class="flex flex-wrap gap-1.5">
+                @for (sk of analysis.matchedDemandSkills; track sk) {
+                  <span class="px-2.5 py-1 rounded-lg bg-white border border-[#059669]/30 text-[#059669] text-[11px] font-semibold">
+                    {{ sk }}
+                  </span>
+                } @empty {
+                  <span class="text-[11px] text-[#6B7280]">Registra habilidades técnicas en tu perfil para detectar coincidencias.</span>
+                }
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-[#FEF3C7]/60 border border-[#F59E0B]/35 space-y-2">
+              <p class="text-xs font-bold text-[#B45309]">
+                Competencias clave por reforzar ({{ analysis.missingKeySkills.length }})
+              </p>
+              <div class="flex flex-wrap gap-1.5">
+                @for (sk of analysis.missingKeySkills; track sk) {
+                  <span class="px-2.5 py-1 rounded-lg bg-white border border-[#F59E0B]/40 text-[#B45309] text-[11px] font-semibold">
+                    + {{ sk }}
+                  </span>
+                } @empty {
+                  <span class="text-[11px] text-[#059669] font-semibold">No se detectaron brechas críticas para las vacantes actuales.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          @if (analysis.actionPlan && analysis.actionPlan.length > 0) {
+            <div class="p-4 rounded-xl bg-white border border-[#C3A7FF]/60 space-y-2">
+              <p class="text-xs font-bold text-[#2E1065]">Plan de acción recomendado por el agente:</p>
+              <ol class="space-y-1.5">
+                @for (step of analysis.actionPlan; track step; let idx = $index) {
+                  <li class="text-[12px] text-gray-800 flex items-start gap-2">
+                    <span class="w-5 h-5 rounded-full bg-[#C3A7FF]/40 text-[#2E1065] text-[10px] font-extrabold flex items-center justify-center shrink-0 mt-0.5">
+                      {{ idx + 1 }}
+                    </span>
+                    <span class="leading-relaxed">{{ step }}</span>
+                  </li>
+                }
+              </ol>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-100">
+        <button
+          type="button"
+          (click)="closeAiModal()"
+          class="px-4 py-2 rounded-xl text-gray-600 text-xs font-semibold hover:bg-gray-100"
+        >
+          Cerrar
+        </button>
+        <a
+          routerLink="/profile/me"
+          (click)="closeAiModal()"
+          class="btn-secondary text-xs py-2 px-4"
+        >
+          Actualizar mis habilidades
+        </a>
+        @if (selectedJobForAi(); as jobAi) {
+          <button
+            type="button"
+            (click)="handleApplyJob(jobAi); closeAiModal()"
+            [disabled]="jobAi.isApplied"
+            class="btn-primary text-xs py-2 px-5"
+          >
+            {{ jobAi.isApplied ? '✓ Postulado' : 'Postular en 1 Clic' }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- MODAL EJECUTIVO DE EMPLEABILIDAD IA PARA INSTITUCIÓN -->
+@if (showInstitutionInsightsModal()) {
+  <div class="fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 shadow-2xl border border-gray-100 animate-fade-in space-y-4">
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-[#C3A7FF] text-[#2E1065] flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-[#2E1065] bg-[#C3A7FF]/30 px-2 py-0.5 rounded-full">
+              Inteligencia Académica UNEXT
+            </span>
+            <h3 class="text-[18px] font-bold text-gray-900">
+              Diagnóstico Ejecutivo de Empleabilidad IA
+            </h3>
+          </div>
+        </div>
+        <button
+          type="button"
+          (click)="closeInstitutionInsightsModal()"
+          class="text-[#6B7280] hover:text-gray-900 p-1.5 rounded-lg"
+          aria-label="Cerrar diagnóstico institucional"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Filtrar por carrera (opcional)</label>
+          <input
+            type="text"
+            name="insightsCareerFilter"
+            [(ngModel)]="insightsCareerFilter"
+            maxlength="150"
+            placeholder="Ej. Ingeniería de Software"
+            class="field text-xs"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Enfoque o pregunta estratégica (opcional)</label>
+          <input
+            type="text"
+            name="insightsFocusQuestion"
+            [(ngModel)]="insightsFocusQuestion"
+            maxlength="1000"
+            (keyup.enter)="runInstitutionInsights()"
+            placeholder="Ej. ¿Cómo aumentar convenios activos?"
+            class="field text-xs"
+          />
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button
+          type="button"
+          (click)="runInstitutionInsights()"
+          [disabled]="isLoadingInsights()"
+          class="btn-match text-xs py-2 px-4"
+        >
+          {{ isLoadingInsights() ? 'Generando diagnóstico...' : 'Generar diagnóstico IA' }}
+        </button>
+      </div>
+
+      @if (institutionInsightsError()) {
+        <div class="p-3 rounded-xl bg-[#FEE2E2] border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+          {{ institutionInsightsError() }}
+        </div>
+      }
+
+      @if (isLoadingInsights()) {
+        <div class="p-8 rounded-xl bg-[#F8FAFC] border border-[#C3A7FF]/40 text-center space-y-2">
+          <div class="w-8 h-8 border-2 border-[#2E1065]/25 border-t-[#2E1065] rounded-full animate-spin mx-auto"></div>
+          <p class="text-xs font-semibold text-[#2E1065]">
+            Analizando métricas reales de empleabilidad, convenios y empresas aliadas...
+          </p>
+        </div>
+      } @else if (institutionInsights(); as ins) {
+        <div class="space-y-4 animate-fade-in">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200">
+              <p class="text-lg font-black text-[#274DEA] font-mono">{{ ins.employabilityRate }}%</p>
+              <p class="text-[10px] font-semibold text-[#6B7280]">Empleabilidad</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200">
+              <p class="text-lg font-black text-gray-900 font-mono">{{ ins.totalVerifiedStudents }}</p>
+              <p class="text-[10px] font-semibold text-[#6B7280]">Acreditados</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200">
+              <p class="text-lg font-black text-[#059669] font-mono">{{ ins.totalHiredStudents }}</p>
+              <p class="text-[10px] font-semibold text-[#6B7280]">Contratados</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#F8FAFC] border border-gray-200">
+              <p class="text-lg font-black text-[#2E1065] font-mono">{{ ins.totalActiveAgreements }}</p>
+              <p class="text-[10px] font-semibold text-[#6B7280]">Convenios activos</p>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-[#F8FAFC] border border-gray-200 space-y-1.5">
+            <p class="text-xs font-bold text-gray-900">
+              Resumen ejecutivo · {{ ins.institutionName }}
+              @if (ins.careerFilter) {
+                <span class="text-[#274DEA]">({{ ins.careerFilter }})</span>
+              }
+            </p>
+            <p class="text-[13px] text-gray-700 leading-relaxed">{{ ins.executiveSummary }}</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3.5 rounded-xl bg-white border border-gray-200 space-y-2">
+              <p class="text-xs font-bold text-[#274DEA]">Hallazgos clave</p>
+              <ul class="space-y-1.5">
+                @for (item of ins.keyFindings; track item) {
+                  <li class="text-[12px] text-gray-700 flex items-start gap-1.5">
+                    <span class="text-[#274DEA] font-bold">•</span>
+                    <span>{{ item }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-[#ECFDF5]/60 border border-[#059669]/25 space-y-2">
+              <p class="text-xs font-bold text-[#059669]">Recomendaciones estratégicas</p>
+              <ul class="space-y-1.5">
+                @for (rec of ins.strategicRecommendations; track rec) {
+                  <li class="text-[12px] text-gray-800 flex items-start gap-1.5">
+                    <span class="text-[#059669] font-bold">✓</span>
+                    <span>{{ rec }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-100">
+        <button
+          type="button"
+          (click)="closeInstitutionInsightsModal()"
+          class="px-4 py-2 rounded-xl text-gray-600 text-xs font-semibold hover:bg-gray-100"
+        >
+          Cerrar
+        </button>
+        <a
+          routerLink="/institution/services"
+          (click)="closeInstitutionInsightsModal()"
+          class="btn-institutional text-xs py-2 px-5"
+        >
+          Ir a Gestión Académica →
+        </a>
       </div>
     </div>
   </div>

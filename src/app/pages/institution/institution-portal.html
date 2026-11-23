@@ -763,6 +763,126 @@
 
       </div>
 
+      <!-- TARJETA EJECUTIVA: DIAGNÓSTICO DE EMPLEABILIDAD IA -->
+      <section class="card p-5 sm:p-6 bg-gradient-to-br from-[#C3A7FF]/20 via-white to-[#F8FAFC] border-[#C3A7FF]/60 space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#C3A7FF] text-[#2E1065] flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-base font-bold text-[#2E1065]">
+                  Diagnóstico de Empleabilidad IA
+                </h3>
+                <span class="px-2 py-0.5 rounded-full bg-[#C3A7FF] text-[#2E1065] text-[10px] font-extrabold uppercase tracking-wider">
+                  Agente Ejecutivo
+                </span>
+                <span class="px-2 py-0.5 rounded-full bg-white border border-gray-200 text-[10px] font-bold text-[#6B7280]">
+                  Carrera: {{ selectedAnalyticsCareer() === 'ALL' ? 'Todas las carreras' : selectedAnalyticsCareer() }}
+                </span>
+              </div>
+              <p class="text-xs text-[#6B7280] mt-0.5">
+                Genera un análisis estratégico basado en las métricas reales de alumnos acreditados, convenios activos y empresas contratantes.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            (click)="generateAiEmployabilityInsights()"
+            [disabled]="isLoadingAiInsights()"
+            class="btn-match text-xs py-2.5 px-4 shrink-0 self-start lg:self-auto"
+          >
+            @if (isLoadingAiInsights()) {
+              <span class="w-3.5 h-3.5 border-2 border-[#2E1065]/30 border-t-[#2E1065] rounded-full animate-spin"></span>
+              <span>Analizando indicadores...</span>
+            } @else {
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <span>{{ aiInsights() ? 'Regenerar diagnóstico IA' : 'Generar diagnóstico IA' }}</span>
+            }
+          </button>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+          <input
+            type="text"
+            name="aiFocusQuestion"
+            [(ngModel)]="aiFocusQuestion"
+            maxlength="1000"
+            (keyup.enter)="generateAiEmployabilityInsights()"
+            placeholder="Enfoque opcional (ej. ¿Cómo impulsar convenios en carreras tecnológicas o mejorar la tasa de contratación?)"
+            class="field flex-1 text-xs bg-white"
+          />
+        </div>
+
+        @if (aiInsightsError()) {
+          <div class="p-3 rounded-xl bg-[#FEE2E2] border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+            {{ aiInsightsError() }}
+          </div>
+        }
+
+        @if (isLoadingAiInsights()) {
+          <div class="p-6 rounded-xl bg-white/80 border border-[#C3A7FF]/40 text-center space-y-2">
+            <div class="w-7 h-7 border-2 border-[#2E1065]/25 border-t-[#2E1065] rounded-full animate-spin mx-auto"></div>
+            <p class="text-xs font-semibold text-[#2E1065]">
+              Consolidando métricas institucionales y redactando recomendaciones estratégicas...
+            </p>
+          </div>
+        } @else if (aiInsights(); as insights) {
+          <div class="space-y-4 animate-fade-in">
+            <div class="p-4 rounded-xl bg-white border border-gray-200/90 space-y-1.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs font-bold text-gray-900">
+                  Resumen ejecutivo · {{ insights.institutionName }}
+                  @if (insights.careerFilter) {
+                    <span class="text-[#274DEA]">({{ insights.careerFilter }})</span>
+                  }
+                </p>
+                <span class="text-[11px] font-mono font-bold text-[#059669] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full">
+                  {{ insights.employabilityRate }}% empleabilidad · {{ insights.totalActiveAgreements }} convenios
+                </span>
+              </div>
+              <p class="text-[13px] text-gray-700 leading-relaxed">{{ insights.executiveSummary }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-4 rounded-xl bg-white border border-gray-200/90 space-y-2">
+                <h4 class="text-xs font-bold text-[#274DEA] uppercase tracking-wider">
+                  Hallazgos clave
+                </h4>
+                <ul class="space-y-1.5">
+                  @for (finding of insights.keyFindings; track finding) {
+                    <li class="text-xs text-gray-700 flex items-start gap-2 leading-relaxed">
+                      <span class="text-[#274DEA] font-bold">•</span>
+                      <span>{{ finding }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+
+              <div class="p-4 rounded-xl bg-[#ECFDF5]/60 border border-[#059669]/25 space-y-2">
+                <h4 class="text-xs font-bold text-[#059669] uppercase tracking-wider">
+                  Recomendaciones estratégicas
+                </h4>
+                <ul class="space-y-1.5">
+                  @for (rec of insights.strategicRecommendations; track rec) {
+                    <li class="text-xs text-gray-800 flex items-start gap-2 leading-relaxed">
+                      <span class="text-[#059669] font-bold">✓</span>
+                      <span>{{ rec }}</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+
     </div>
   }
 

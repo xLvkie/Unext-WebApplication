@@ -10,6 +10,8 @@ import { Navbar } from '../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../shared/components/toast/toast';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
+import { AgentService } from '../../core/services/agent.service';
+import { EmployabilityInsightsResponse } from '../../core/models/agent.model';
 import { InstitutionProfileResponse } from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
 
@@ -84,6 +86,7 @@ export class InstitutionPortal implements OnInit {
   private http = inject(HttpClient);
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
+  private agentService = inject(AgentService);
   private destroyRef = inject(DestroyRef);
   private router = inject(Router);
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -119,6 +122,12 @@ export class InstitutionPortal implements OnInit {
   analyticsSummary = signal<DashboardSummaryData | null>(null);
   topCompanies = signal<TopCompanyItem[]>([]);
   selectedAnalyticsCareer = signal<string>('ALL');
+
+  // Diagnóstico Ejecutivo de Empleabilidad IA
+  isLoadingAiInsights = signal(false);
+  aiInsights = signal<EmployabilityInsightsResponse | null>(null);
+  aiInsightsError = signal<string | null>(null);
+  aiFocusQuestion = '';
 
   maxDemandValue = computed(() => {
     const list = this.careerDemands();
@@ -522,6 +531,30 @@ export class InstitutionPortal implements OnInit {
   onAnalyticsCareerChange(career: string): void {
     this.selectedAnalyticsCareer.set(career);
     this.loadAnalyticsData();
+  }
+
+  generateAiEmployabilityInsights(): void {
+    if (this.isLoadingAiInsights()) return;
+
+    const careerFilter = this.selectedAnalyticsCareer();
+    const career = careerFilter !== 'ALL' ? careerFilter : undefined;
+    const focusQuestion = this.aiFocusQuestion.trim() || undefined;
+
+    this.isLoadingAiInsights.set(true);
+    this.aiInsightsError.set(null);
+
+    this.agentService.generateEmployabilityInsights({ career, focusQuestion }).subscribe({
+      next: (res) => {
+        this.aiInsights.set(res);
+        this.isLoadingAiInsights.set(false);
+      },
+      error: (err) => {
+        this.isLoadingAiInsights.set(false);
+        this.aiInsightsError.set(
+          readApiError(err, 'No se pudo generar el diagnóstico de empleabilidad IA.')
+        );
+      }
+    });
   }
 
   // =========================================================================

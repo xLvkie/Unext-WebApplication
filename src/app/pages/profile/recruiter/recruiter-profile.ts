@@ -6,6 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { Navbar } from '../../../shared/components/navbar/navbar';
 import { Toast, ToastData, ToastType } from '../../../shared/components/toast/toast';
+import { BioOptimizerButton } from '../../../shared/components/bio-optimizer-button/bio-optimizer-button';
 import { ProfileService } from '../../../core/services/profile.service';
 import { FeedService } from '../../../core/services/feed.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -28,7 +29,7 @@ import {
 @Component({
   selector: 'app-recruiter-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, Navbar, Toast],
+  imports: [CommonModule, FormsModule, RouterLink, Navbar, Toast, BioOptimizerButton],
   templateUrl: './recruiter-profile.html'
 })
 export class RecruiterProfile implements OnInit {

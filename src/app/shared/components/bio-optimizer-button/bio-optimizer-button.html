@@ -1,0 +1,82 @@
+<div class="space-y-2.5">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <button
+      type="button"
+      (click)="requestOptimization()"
+      [disabled]="isOptimizing()"
+      class="btn-match text-xs py-1.5 px-3"
+    >
+      @if (isOptimizing()) {
+        <span class="w-3.5 h-3.5 border-2 border-[#2E1065]/30 border-t-[#2E1065] rounded-full animate-spin"></span>
+        <span>Optimizando con IA...</span>
+      } @else {
+        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.1" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <span>{{ buttonLabel() }}</span>
+      }
+    </button>
+
+    <span class="text-[11px] text-[#6B7280]">
+      Mantiene la veracidad de tu borrador
+    </span>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="p-2.5 rounded-xl bg-[#FEE2E2] border border-[#EF4444]/30 text-[#EF4444] text-xs font-semibold">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (suggestion(); as sug) {
+    <div class="p-3.5 rounded-xl border border-[#C3A7FF]/70 bg-gradient-to-br from-[#C3A7FF]/20 via-white to-[#F8FAFC] space-y-2.5 animate-fade-in">
+      <div class="flex items-center justify-between gap-2">
+        <span class="px-2 py-0.5 rounded-full bg-[#C3A7FF] text-[#2E1065] text-[10px] font-extrabold uppercase tracking-wider">
+          Sugerencia IA
+        </span>
+        <button
+          type="button"
+          (click)="discardSuggestion()"
+          class="text-[11px] font-semibold text-[#6B7280] hover:text-gray-900"
+        >
+          Descartar
+        </button>
+      </div>
+
+      <p class="text-[13px] text-gray-800 leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-gray-200/80">
+        {{ sug.optimizedBio }}
+      </p>
+
+      @if (sug.keyImprovements && sug.keyImprovements.length > 0) {
+        <div class="space-y-1">
+          <p class="text-[11px] font-bold text-[#2E1065]">Mejoras aplicadas:</p>
+          <ul class="space-y-1">
+            @for (imp of sug.keyImprovements; track imp) {
+              <li class="text-[11px] text-gray-700 flex items-start gap-1.5">
+                <span class="text-[#059669] font-bold">✓</span>
+                <span>{{ imp }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          (click)="discardSuggestion()"
+          class="px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 text-xs font-semibold transition"
+        >
+          Mantener original
+        </button>
+        <button
+          type="button"
+          (click)="applySuggestion()"
+          class="px-4 py-1.5 rounded-full bg-[#274DEA] hover:bg-[#1E3BB8] text-white text-xs font-bold shadow-xs transition"
+        >
+          Aplicar sugerencia
+        </button>
+      </div>
+    </div>
+  }
+</div>

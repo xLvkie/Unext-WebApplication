@@ -10,6 +10,12 @@ import { FeedService } from '../../core/services/feed.service';
 import { JobService } from '../../core/services/job.service';
 import { ProfileService } from '../../core/services/profile.service';
 import { AuthService } from '../../core/services/auth.service';
+import { AgentService } from '../../core/services/agent.service';
+import {
+  EmployabilityInsightsResponse,
+  JobBlueprintSuggestion,
+  TalentAnalysisResponse
+} from '../../core/models/agent.model';
 import { FeedPostResponse } from '../../core/models/feed.model';
 import {
   JobApplication,
@@ -22,7 +28,7 @@ import {
   RecruiterProfileResponse
 } from '../../core/models/profile.model';
 import { readApiError } from '../../core/utils/api-error';
-import { applicationLabel } from '../../core/utils/labels';
+import { applicationLabel, experienceLabel, modalityLabel } from '../../core/utils/labels';
 import {
   formatExpirationRemaining as formatExpirationRemainingUtil,
   formatRelativeTime
@@ -60,15 +66,6 @@ export interface PendingValidationItem {
   status: string;
 }
 
-export interface AiJobBlueprint {
-  roleTitle: string;
-  suggestedModality: string;
-  suggestedLevel: string;
-  salaryRange: string;
-  recommendedSkills: string[];
-  optimizedDescription: string;
-}
-
 @Component({
   selector: 'app-dashboard',
   standalone: true,
@@ -81,6 +78,7 @@ export class Dashboard implements OnInit {
   private jobService = inject(JobService);
   private profileService = inject(ProfileService);
   private authService = inject(AuthService);
+  private agentService = inject(AgentService);
   private http = inject(HttpClient);
   private destroyRef = inject(DestroyRef);
   readonly router = inject(Router);
@@ -208,24 +206,30 @@ export class Dashboard implements OnInit {
   commentDrafts: Record<string, string> = {};
   toast = signal<ToastData | null>(null);
 
-  // Modales Postulante vs Reclutador
+  // Modales Postulante vs Reclutador vs Institución (IA)
+  showTalentAnalysisModal = signal(false);
   selectedJobForAi = signal<JobRecommendationResponse | null>(null);
   isAnalyzingAi = signal(false);
+  talentAnalysis = signal<TalentAnalysisResponse | null>(null);
+  talentAnalysisError = signal<string | null>(null);
+  talentTargetRole = '';
   showValidationModal = signal(false);
 
   // Modales de Funciones Inteligentes IA para el Reclutador
   showRecruiterOptimizerModal = signal(false);
   showRecruiterRadarModal = signal(false);
-  aiRolePrompt = 'Desarrollador Full Stack Junior / Practicante';
-  generatedBlueprint = signal<AiJobBlueprint>({
-    roleTitle: 'Desarrollador Full Stack Junior (Angular + Spring Boot)',
-    suggestedModality: 'HYBRID',
-    suggestedLevel: 'JUNIOR',
-    salaryRange: 'S/. 1,800 - S/. 2,800 al mes',
-    recommendedSkills: ['Angular', 'TypeScript', 'Java', 'Spring Boot', 'PostgreSQL', 'Git'],
-    optimizedDescription:
-      'Buscamos talento universitario o recién egresado apasionado por el desarrollo de aplicaciones web escalables, con bases sólidas en arquitectura REST, componentes standalone en Angular y persistencia relacional.'
-  });
+  isDesigningJob = signal(false);
+  jobDesignError = signal<string | null>(null);
+  aiRolePrompt = '';
+  generatedBlueprint = signal<JobBlueprintSuggestion | null>(null);
+
+  // Modal Ejecutivo de Empleabilidad IA para la Institución
+  showInstitutionInsightsModal = signal(false);
+  isLoadingInsights = signal(false);
+  institutionInsights = signal<EmployabilityInsightsResponse | null>(null);
+  institutionInsightsError = signal<string | null>(null);
+  insightsCareerFilter = '';
+  insightsFocusQuestion = '';
 
   ngOnInit(): void {
     if (!this.authService.getToken()) {
@@ -437,12 +441,11 @@ export class Dashboard implements OnInit {
   }
 
   // =========================================================================
-  // CONTENEDORES VISUALES DE IA (Lógica pendiente de implementar más adelante)
+  // INTEGRACIÓN DE INTELIGENCIA ARTIFICIAL GENERATIVA POR SEGMENTO
   // =========================================================================
   handleHeaderIntelligentAction(): void {
     if (this.currentRole() === 'INSTITUTION') {
-      // Función inteligente IA para institución (próximamente) - no hace nada por ahora
-      return;
+      this.openInstitutionInsightsModal();
     } else if (this.currentRole() === 'RECRUITER') {
       this.openRecruiterJobOptimizer();
     } else {
@@ -451,28 +454,120 @@ export class Dashboard implements OnInit {
   }
 
   openRecruiterJobOptimizer(): void {
-    // TODO: Conectar más adelante con el endpoint o servicio de IA para generar borradores
+    this.jobDesignError.set(null);
     this.showRecruiterOptimizerModal.set(true);
   }
 
-  generateBlueprintFromPrompt(): void {
-    // TODO: Aquí se implementará la lógica de generación y optimización de vacante con IA
-    this.showToast('El motor de IA se conectará en una siguiente fase.', 'info');
+  generateBlueprintFromPrompt(presetPrompt?: string): void {
+    const prompt = (presetPrompt ?? this.aiRolePrompt).trim();
+    if (!prompt) {
+      this.jobDesignError.set('Describe el puesto o perfil que deseas diseñar con IA.');
+      return;
+    }
+    if (presetPrompt) {
+      this.aiRolePrompt = presetPrompt;
+    }
+
+    this.isDesigningJob.set(true);
+    this.jobDesignError.set(null);
+
+    this.agentService.designJob(prompt.slice(0, 1000)).subscribe({
+      next: (blueprint) => {
+        this.generatedBlueprint.set(blueprint);
+        this.isDesigningJob.set(false);
+      },
+      error: (err) => {
+        this.isDesigningJob.set(false);
+        this.jobDesignError.set(
+          readApiError(err, 'No se pudo generar la propuesta de vacante con IA.')
+        );
+      }
+    });
   }
 
   copyBlueprintAndGoToJobs(): void {
-    // TODO: Pasar los parámetros generados por IA al creador de vacantes
+    const blueprint = this.generatedBlueprint();
+    if (blueprint) {
+      this.agentService.setPendingJobBlueprint(blueprint);
+    }
     this.showRecruiterOptimizerModal.set(false);
     this.router.navigate(['/recruiter/jobs']);
   }
 
-  openAiAnalysis(job: JobRecommendationResponse | undefined): void {
-    // TODO: Aquí se implementará el cálculo detallado de compatibilidad IA para el postulante
-    if (!job) {
-      this.showToast('Vista previa de compatibilidad IA (lógica pendiente).', 'info');
-      return;
+  openAiAnalysis(job?: JobRecommendationResponse): void {
+    this.selectedJobForAi.set(job ?? null);
+    this.talentTargetRole = job?.title || '';
+    this.talentAnalysisError.set(null);
+    this.showTalentAnalysisModal.set(true);
+    this.runTalentAnalysis();
+  }
+
+  runTalentAnalysis(): void {
+    if (this.isAnalyzingAi()) return;
+
+    const targetRole = this.talentTargetRole.trim();
+    this.isAnalyzingAi.set(true);
+    this.talentAnalysisError.set(null);
+
+    this.agentService
+      .analyzePostulantTalent(targetRole ? { targetRole: targetRole.slice(0, 300) } : {})
+      .subscribe({
+        next: (analysis) => {
+          this.talentAnalysis.set(analysis);
+          this.isAnalyzingAi.set(false);
+        },
+        error: (err) => {
+          this.isAnalyzingAi.set(false);
+          this.talentAnalysisError.set(
+            readApiError(err, 'No se pudo generar el diagnóstico de talento con IA.')
+          );
+        }
+      });
+  }
+
+  openInstitutionInsightsModal(): void {
+    this.institutionInsightsError.set(null);
+    this.showInstitutionInsightsModal.set(true);
+    if (!this.institutionInsights()) {
+      this.runInstitutionInsights();
     }
-    this.selectedJobForAi.set(job);
+  }
+
+  runInstitutionInsights(): void {
+    if (this.isLoadingInsights()) return;
+
+    this.isLoadingInsights.set(true);
+    this.institutionInsightsError.set(null);
+
+    this.agentService
+      .generateEmployabilityInsights({
+        career: this.insightsCareerFilter.trim() || undefined,
+        focusQuestion: this.insightsFocusQuestion.trim() || undefined
+      })
+      .subscribe({
+        next: (insights) => {
+          this.institutionInsights.set(insights);
+          this.isLoadingInsights.set(false);
+        },
+        error: (err) => {
+          this.isLoadingInsights.set(false);
+          this.institutionInsightsError.set(
+            readApiError(err, 'No se pudo generar el diagnóstico de empleabilidad.')
+          );
+        }
+      });
+  }
+
+  closeInstitutionInsightsModal(): void {
+    this.showInstitutionInsightsModal.set(false);
+  }
+
+  modalityText(value: string | null | undefined): string {
+    return modalityLabel(value);
+  }
+
+  experienceText(value: string | null | undefined): string {
+    return experienceLabel(value);
   }
 
   // =========================================================================
@@ -738,6 +833,7 @@ export class Dashboard implements OnInit {
   }
 
   closeAiModal(): void {
+    this.showTalentAnalysisModal.set(false);
     this.selectedJobForAi.set(null);
   }
 

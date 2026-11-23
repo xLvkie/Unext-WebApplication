@@ -9,6 +9,8 @@ import { JobService } from '../../../core/services/job.service';
 import { ProfileService } from '../../../core/services/profile.service';
 import { ConnectionService } from '../../../core/services/connection.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AgentService } from '../../../core/services/agent.service';
+import { JobBlueprintSuggestion } from '../../../core/models/agent.model';
 import {
   AgreementCreateRequest,
   AgreementResponse,
@@ -51,6 +53,7 @@ export class RecruiterJobs implements OnInit {
   private profileService = inject(ProfileService);
   private connectionService = inject(ConnectionService);
   private authService = inject(AuthService);
+  private agentService = inject(AgentService);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
   readonly router = inject(Router);
@@ -122,6 +125,13 @@ export class RecruiterJobs implements OnInit {
   isJobModalOpen = signal(false);
   editingJobId = signal<string | null>(null);
   jobFormError = signal<string | null>(null);
+
+  // Asistente IA dentro del Modal de Vacante
+  showAiJobAssistant = signal(false);
+  isDesigningWithAi = signal(false);
+  aiJobError = signal<string | null>(null);
+  aiSalaryHint = signal<string | null>(null);
+  aiJobPrompt = '';
 
   skillInput = '';
   skillSuggestions = signal<string[]>([]);
@@ -243,6 +253,14 @@ export class RecruiterJobs implements OnInit {
     this.loadMyJobs();
     this.loadMyAgreements();
     this.loadMarketJobs();
+
+    const pendingBlueprint = this.agentService.consumePendingJobBlueprint();
+    if (pendingBlueprint) {
+      this.activeTab.set('MY_JOBS');
+      this.openCreateJobModal();
+      this.applyJobBlueprintToForm(pendingBlueprint);
+      this.showToast('Propuesta de vacante IA cargada en el formulario.', 'success');
+    }
   }
 
   // =========================================================================
@@ -464,6 +482,10 @@ export class RecruiterJobs implements OnInit {
   openCreateJobModal(): void {
     this.editingJobId.set(null);
     this.jobFormError.set(null);
+    this.aiJobError.set(null);
+    this.aiSalaryHint.set(null);
+    this.showAiJobAssistant.set(false);
+    this.aiJobPrompt = '';
     this.skillInput = '';
     this.jobForm = {
       title: '',
@@ -483,6 +505,10 @@ export class RecruiterJobs implements OnInit {
     event?.stopPropagation();
     this.editingJobId.set(job.id);
     this.jobFormError.set(null);
+    this.aiJobError.set(null);
+    this.aiSalaryHint.set(null);
+    this.showAiJobAssistant.set(false);
+    this.aiJobPrompt = job.title || '';
     this.skillInput = '';
     this.jobForm = {
       title: job.title || '',
@@ -496,6 +522,71 @@ export class RecruiterJobs implements OnInit {
       maxSalary: job.maxSalary ?? null
     };
     this.isJobModalOpen.set(true);
+  }
+
+  toggleAiJobAssistant(): void {
+    const next = !this.showAiJobAssistant();
+    this.showAiJobAssistant.set(next);
+    this.aiJobError.set(null);
+    if (next && !this.aiJobPrompt.trim() && this.jobForm.title.trim()) {
+      this.aiJobPrompt = this.jobForm.title.trim();
+    }
+  }
+
+  generateJobDraftWithAi(): void {
+    const prompt = (this.aiJobPrompt.trim() || this.jobForm.title.trim()).slice(0, 1000);
+    if (!prompt) {
+      this.aiJobError.set('Escribe una idea breve o el título del puesto para asistirte con IA.');
+      return;
+    }
+
+    this.isDesigningWithAi.set(true);
+    this.aiJobError.set(null);
+
+    this.agentService.designJob(prompt).subscribe({
+      next: (blueprint) => {
+        this.applyJobBlueprintToForm(blueprint);
+        this.isDesigningWithAi.set(false);
+        this.showAiJobAssistant.set(false);
+        this.showToast('Formulario autocompletado con la propuesta de IA.', 'success');
+      },
+      error: (err) => {
+        this.isDesigningWithAi.set(false);
+        this.aiJobError.set(
+          readApiError(err, 'No se pudo generar el borrador de vacante con IA.')
+        );
+      }
+    });
+  }
+
+  applyJobBlueprintToForm(bp: JobBlueprintSuggestion): void {
+    const salary = this.agentService.parseSalaryRangeSoles(bp.estimatedSalaryRangeSoles);
+    const normalizedModality = this.agentService.normalizeModality(bp.suggestedModality);
+    const normalizedLevel = this.agentService.normalizeExperienceLevel(bp.suggestedExperienceLevel);
+    const cleanSkills = Array.from(
+      new Set((bp.recommendedSkills || []).map((s) => s.trim()).filter(Boolean))
+    );
+
+    const suggestedRequirements =
+      this.jobForm.requirements.trim() ||
+      `Nivel sugerido: ${experienceLabel(normalizedLevel)}.${
+        cleanSkills.length > 0
+          ? ` Conocimientos clave en ${cleanSkills.join(', ')}.`
+          : ''
+      }`;
+
+    this.jobForm = {
+      ...this.jobForm,
+      title: bp.roleTitle?.trim() || this.jobForm.title,
+      description: bp.optimizedDescription?.trim() || this.jobForm.description,
+      requirements: suggestedRequirements,
+      requiredSkills: cleanSkills.length > 0 ? cleanSkills : this.jobForm.requiredSkills,
+      modality: normalizedModality,
+      experienceLevel: normalizedLevel,
+      minSalary: salary.minSalary ?? this.jobForm.minSalary,
+      maxSalary: salary.maxSalary ?? this.jobForm.maxSalary
+    };
+    this.aiSalaryHint.set(bp.estimatedSalaryRangeSoles?.trim() || null);
   }
 
   onSkillInputKey(query: string): void {
